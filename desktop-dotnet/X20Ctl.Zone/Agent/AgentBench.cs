@@ -128,7 +128,7 @@ public static class AgentBench
         }
         var best = Best(runs);
         s.AppendLine();
-        s.AppendLine($"**Default chosen by the numbers: {best.Name}** (most right answers, then most valid first replies, then quickest).");
+        s.AppendLine($"**Top score: {best.Name}** (most right answers, then most valid first replies, then quickest). A one-turn lead is within run-to-run noise; read the failures before choosing a default.");
         s.AppendLine();
         s.AppendLine("## Right answers per sentence");
         s.AppendLine();
