@@ -8,7 +8,7 @@ using X20Ctl.Zone.Agent;
 namespace X20Ctl.Product.Development;
 
 /// <summary>
-/// --review-talk DIRECTORY: the Talk tab against the real local model. Opens an X20 Pro, sends sentences through the tab
+/// --review-talk DIRECTORY: the agent window against the real local model. Opens an X20 Pro, sends sentences through it
 /// exactly as typed, then an X20 for the paddle it doesn't have, and writes captures (rendered, never the screen) and a log
 /// of every turn: the model's raw output, each check, what changed, and the token counts and times the model reported.
 /// Settings go to a fixture file in DIRECTORY; PC mode stays off.
@@ -36,10 +36,12 @@ internal static class TalkReview
         async Task Controller(string model, int player, string prefix, string[] sentences)
         {
             window.Scene.AssignController(player, window.Host.Catalog.Get(model)); window.Host.EnterStudio(player); await Task.Delay(1400);
-            var studio = window.Host.Studio!; studio.ShowManagement("Talk"); var talk = studio.Talk!;
-            for (int i = 0; i < 600 && TalkPage.State is ModelState.Starting or ModelState.Loading; i++) await Task.Delay(250);
-            log.AppendLine($"#### {model} · model state {TalkPage.State}");
-            await Shot(prefix + "-0-ready");
+            var studio = window.Host.Studio!; studio.ShowButtons();
+            for (int i = 0; i < 600 && AgentPanel.State is ModelState.Starting or ModelState.Loading; i++) await Task.Delay(250);
+            log.AppendLine($"#### {model} · model state {AgentPanel.State}");
+            await Shot(prefix + "-0-closed");
+            studio.OpenAgent(); var talk = studio.AgentWindow!;
+            await Shot(prefix + "-0-open");
             int n = 0;
             foreach (var sentence in sentences)
             {
@@ -60,6 +62,8 @@ internal static class TalkReview
         async Task Shot(string name)
         {
             await Task.Delay(900); window.UpdateLayout();
+            foreach (var (what, e) in new (string, FrameworkElement?)[] { ("orb", window.Host.Studio?.AgentButton), ("window", window.Host.Studio?.AgentWindow?.Body) })
+                if (e is { IsVisible: true }) log.AppendLine($"[{name}] {what} at {e.TransformToAncestor(window.Stage).TransformBounds(new Rect(e.RenderSize))}");
             var bmp = new RenderTargetBitmap((int)window.Stage.ActualWidth, (int)window.Stage.ActualHeight, 96, 96, PixelFormats.Pbgra32); bmp.Render(window.Stage);
             var enc = new PngBitmapEncoder(); enc.Frames.Add(BitmapFrame.Create(bmp)); using var f = File.Create(Path.Combine(directory, name + ".png")); enc.Save(f);
         }
