@@ -23,7 +23,7 @@ internal static class TalkReview
         try
         {
             window.Show(); window.WindowState = WindowState.Maximized; await Task.Delay(500);
-            await Controller("x20_pro", 0, "1-pro", ["Make my right stick more precise for sniping", "I want faster triggers for shooting", "Put jump on M5", "Set my left stick dead zone to 260", "Turbo on X, 12 presses a second", "Can you change my RGB to red?"]);
+            await Controller("x20_pro", 0, "1-pro", ["Make my right stick good for sniping", "What's good and bad about hair triggers?", "I want faster triggers for shooting", "Turbo on X, 12 presses a second", "Put jump on M5", "Set my left stick dead zone to 260"]);
             window.Host.ReturnToZone(); await Task.Delay(700);
             await Controller("x20", 1, "2-x20", ["Put jump on M5"]);
             log.AppendLine("== fixture file after the run");
@@ -40,6 +40,9 @@ internal static class TalkReview
             for (int i = 0; i < 600 && AgentPanel.State is ModelState.Starting or ModelState.Loading; i++) await Task.Delay(250);
             log.AppendLine($"#### {model} · model state {AgentPanel.State}");
             await Shot(prefix + "-0-closed");
+            int stop = 0;
+            // the walk-through: a capture of each step once it has finished moving (the card holds it for a few seconds)
+            studio.AgentTourStarted += tour => tour.Held += step => _ = Shot($"{prefix}-tour-{++stop}-{step.Target}");
             studio.OpenAgent(); var talk = studio.AgentWindow!;
             await Shot(prefix + "-0-open");
             int n = 0;
@@ -53,6 +56,7 @@ internal static class TalkReview
                 foreach (var c in turn.Verdict.Checks) log.AppendLine($"  {c.State,-11} {c.Action.Action} {c.Action.Target} {c.Action.ValueText} · {c.Message}");
                 log.AppendLine("valid: " + turn.Verdict.Valid + (turn.Outcome.Error != null ? " · " + turn.Outcome.Error : ""));
                 foreach (var c in turn.Outcome.Changes) log.AppendLine($"  changed {c.What}: {c.Before} -> {c.After}");
+                if (turn.Verdict.Proposal?.Recap is { Length: > 0 } recap) log.AppendLine("recap: " + recap);
                 log.AppendLine("stats: " + AgentSession.Stats(turn));
             }
             await Shot($"{prefix}-1-conversation");

@@ -38,7 +38,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         var messages = new List<ChatMessage> { new("system", SystemPrompt(current)) };
         messages.AddRange(history.TakeLast(Remembered));
         messages.Add(new("user", sentence));
-        var attempts = new List<ModelReply> { await model.Chat(messages, Schema, cancel) };
+        var attempts = new List<ModelReply> { await model.Chat(messages, SchemaText, cancel) };
         var verdict = ProposalValidator.Check(attempts[0].Content, modelId);
         // one second chance: the model sees exactly what the validator objected to and answers again. Both attempts are
         // kept and shown; if the second is still wrong, it stands, and nothing changes
@@ -46,7 +46,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         {
             messages.Add(new("assistant", attempts[0].Content));
             messages.Add(new("user", "The app rejected that reply, so nothing changed: " + Problems(verdict) + " Answer again with only the JSON object. If what I asked isn't possible, say so with no actions."));
-            attempts.Add(await model.Chat(messages, Schema, cancel));
+            attempts.Add(await model.Chat(messages, SchemaText, cancel));
             verdict = ProposalValidator.Check(attempts[1].Content, modelId);
         }
         var outcome = AgentApplier.Apply(current, verdict);
@@ -66,9 +66,13 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     {
         string paddles = AgentVocabulary.Paddles(modelId) is { Length: > 0 } p ? string.Join(", ", p) : "none";
         return $"""
-            You are {controllerName}, a game controller, talking to your owner inside the X20CTL app. Speak as the controller, in first person, friendly and short (one or two sentences). Say what you will change ("I'll…"), never that it is already done: the app applies changes after checking them.
+            You are Agent XCTL, living inside your owner's {controllerName} game controller, talking to them in the X20CTL app. Speak as the controller, in first person, friendly and short. Say what you will change ("I'll…"), never that it is already done: the app applies changes after checking them.
 
-            Reply with one JSON object: "speech" (what you say), "actions" (the changes, empty when nothing should change), "assumptions" (anything you guessed, such as which button a game uses to jump).
+            Reply with one JSON object:
+            - "speech": one or two short sentences, what you'll do.
+            - "actions": the changes, empty when nothing should change.
+            - "recap": why these changes fit what the owner asked, from the meanings below: what each change does, what it is good for, and what to watch out for. Two to four short sentences, with the real numbers. When the owner asks a question instead (what is good or bad, what something does), answer it here, with no actions.
+            - "assumptions": anything you guessed, such as which button a game uses to jump.
 
             Actions (action, target, value):
             - stick_deadzone: LeftStick or RightStick, percent 0-40. How much of the centre is ignored. Drift or a stick that moves by itself: raise it a little.
@@ -83,7 +87,10 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - reset: a stick, trigger or button, or All, value 0. Back to default.
             - paddle: a paddle, value A or B. My paddles: {paddles}. Paddles only take this action, and only send A or B. Jump is A in most games.
 
-            What people mean: smooth -> stick_curve smooth. Fast or responsive sticks -> stick_curve quick, or stick_full_at about 80. Precise, slow, sniping -> stick_curve slow or fine. Fast triggers -> trigger_full_at 30-50 and trigger_deadzone 0. Slow, progressive triggers -> trigger_curve slow.
+            What people mean: smooth -> stick_curve smooth. Fast or responsive sticks -> stick_curve quick, or stick_full_at about 80. Precise, slow, sniping -> stick_curve slow (not fine: fine is slightly quick). Fast triggers -> trigger_full_at 30-50 and trigger_deadzone 0. Slow, progressive triggers -> trigger_curve slow.
+
+            {AgentKnowledge.Prompt()}
+
             Numbers are plain whole numbers (6, not "6%"). Use each action and target once.
             If the owner asks for a number outside its range, don't pick another number for them: tell them the range, with no actions.
             If the owner asks for something that isn't in this list, say you can't do that yet, with no actions.
@@ -99,10 +106,19 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
 
     /// <summary>The JSON Schema the model's output is constrained to (Ollama's "format"), built from the vocabulary so the
     /// two can't drift apart.</summary>
-    public static readonly string Schema = BuildSchema();
-    static string BuildSchema()
+    public static readonly string Schema = BuildSchema(false);
+    /// <summary>The same schema with values held tighter: whole numbers 0 to 100, and text only from the known names
+    /// (curve presets and buttons). Measured against <see cref="Schema"/> in the evaluation.</summary>
+    public static readonly string BoundedSchema = BuildSchema(true);
+    /// <summary>The schema this session sends.</summary>
+    public string SchemaText { get; set; } = Schema;
+    static string BuildSchema(bool bounded)
     {
         static JsonArray Enum(IEnumerable<string> values) => new(values.Select(v => (JsonNode)JsonValue.Create(v)!).ToArray());
+        JsonNode value = bounded
+            ? new JsonObject { ["anyOf"] = new JsonArray(new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 100 }, new JsonObject { ["type"] = "string", ["enum"] = Enum(AgentVocabulary.Curves.Concat(AgentVocabulary.Buttons).Distinct()) }) }
+            // whole numbers only: with "number", grammar-constrained sampling wanders into values like 30.000000122 (live run, 12 Oct)
+            : new JsonObject { ["type"] = new JsonArray("integer", "string") };
         var action = new JsonObject
         {
             ["type"] = "object",
@@ -110,8 +126,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             {
                 ["action"] = new JsonObject { ["type"] = "string", ["enum"] = Enum(AgentVocabulary.Actions) },
                 ["target"] = new JsonObject { ["type"] = "string", ["enum"] = Enum(AgentVocabulary.Targets) },
-                // whole numbers only: with "number", grammar-constrained sampling wanders into values like 30.000000122 (live run, 12 Oct)
-                ["value"] = new JsonObject { ["type"] = new JsonArray("integer", "string") },
+                ["value"] = value,
                 ["reason"] = new JsonObject { ["type"] = "string" },
             },
             ["required"] = new JsonArray("action", "target", "value", "reason"),
@@ -124,9 +139,10 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             {
                 ["speech"] = new JsonObject { ["type"] = "string" },
                 ["actions"] = new JsonObject { ["type"] = "array", ["items"] = action, ["maxItems"] = AgentVocabulary.MaxActions },
+                ["recap"] = new JsonObject { ["type"] = "string" },
                 ["assumptions"] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } },
             },
-            ["required"] = new JsonArray("speech", "actions", "assumptions"),
+            ["required"] = new JsonArray("speech", "actions", "recap", "assumptions"),
             ["additionalProperties"] = false,
         };
         return root.ToJsonString();

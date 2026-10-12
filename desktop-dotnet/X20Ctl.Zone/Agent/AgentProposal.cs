@@ -33,7 +33,9 @@ public sealed record AgentAction(string Action, string Target, JsonElement Value
 {
     public string ValueText => Value.ValueKind == JsonValueKind.String ? Value.GetString() ?? "" : Value.GetRawText();
 }
-public sealed record AgentProposal(string Speech, IReadOnlyList<AgentAction> Actions, IReadOnlyList<string> Assumptions);
+/// <summary>Speech: what the agent says, short. Recap: why the changes fit what was asked (or the answer to a question), from
+/// the settings' meanings in <see cref="AgentKnowledge"/>.</summary>
+public sealed record AgentProposal(string Speech, IReadOnlyList<AgentAction> Actions, string Recap, IReadOnlyList<string> Assumptions);
 
 public enum CheckState { Ok, Rejected, Unavailable }
 public sealed record ActionCheck(AgentAction Action, CheckState State, string Message);
@@ -47,13 +49,13 @@ public sealed record AgentVerdict(AgentProposal? Proposal, string? StructureErro
 }
 
 /// <summary>
-/// Layer 1 (structure): the reply is one JSON object with exactly speech, actions and assumptions, typed as expected.
+/// Layer 1 (structure): the reply is one JSON object with exactly speech, actions, recap and assumptions, typed as expected.
 /// Layer 2 (rules): every action is in the vocabulary, aimed at a target it accepts, with a value in range, on a control
 /// this model has. Pure: the same reply and model always give the same verdict.
 /// </summary>
 public static class ProposalValidator
 {
-    static readonly string[] Fields = ["speech", "actions", "assumptions"], ActionFields = ["action", "target", "value", "reason"];
+    static readonly string[] Fields = ["speech", "actions", "recap", "assumptions"], ActionFields = ["action", "target", "value", "reason"];
 
     public static AgentVerdict Check(string json, string modelId)
     {
@@ -91,7 +93,8 @@ public static class ProposalValidator
         }
         if (!root.TryGetProperty("assumptions", out var assumed) || assumed.ValueKind != JsonValueKind.Array || assumed.EnumerateArray().Any(a => a.ValueKind != JsonValueKind.String))
             throw new InvalidDataException("\"assumptions\" is missing or not a list of text.");
-        return new(speech, actions, assumed.EnumerateArray().Select(a => a.GetString()!).ToArray());
+        string recap = Text(root, "recap", "reply");
+        return new(speech, actions, recap, assumed.EnumerateArray().Select(a => a.GetString()!).ToArray());
     }
 
     static void Only(JsonElement element, string[] fields, string what)
@@ -102,7 +105,7 @@ public static class ProposalValidator
             if (!element.TryGetProperty(field, out _)) throw new InvalidDataException($"The {what} has no \"{field}\".");
     }
     static string Text(JsonElement element, string field, string what) =>
-        element.GetProperty(field) is { ValueKind: JsonValueKind.String } value ? value.GetString()! : throw new InvalidDataException($"The {what}'s \"{field}\" isn't text.");
+        element.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString()! : throw new InvalidDataException($"The {what}'s \"{field}\" is missing or isn't text.");
 
     static (CheckState, string) Rule(AgentAction a, string modelId)
     {

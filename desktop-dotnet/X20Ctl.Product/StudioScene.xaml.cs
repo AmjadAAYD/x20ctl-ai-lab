@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -134,15 +134,52 @@ public partial class StudioScene : UserControl
         {
             agentPanel = new(Model.Id, Model.Name, PcMode, RegisterFocus);
             agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 172);
-            agentPanel.CloseRequested += CloseAgent; agentPanel.Thinking += agentOrb.SetThinking;
+            agentPanel.CloseRequested += CloseAgent; agentPanel.Thinking += agentOrb.SetThinking; agentPanel.Walkthrough = PlayAgentTour;
             Grid.SetZIndex(agentPanel.Body, 41); StudioShell.Children.Add(agentPanel.Body);
         }
-        // tall enough to talk in, never over the tab strip
-        agentPanel.Body.Height = Math.Clamp(StudioShell.ActualHeight - 172 - 112, 380, 760);
-        agentPanel.Show(); agentOrb.ToolTip = "Put the agent away";
+        // the right side of the Studio, from just under the title bar to just above the round button (owner's sketch, 12 Oct)
+        agentPanel.Body.Width = Math.Clamp(StudioShell.ActualWidth * .46, 520, 860);
+        agentPanel.Body.Height = Math.Max(380, StudioShell.ActualHeight - 66 - 172);
+        agentPanel.Show(); agentOrb.ToolTip = "Put Agent XCTL away";
         Dispatcher.BeginInvoke(() => agentPanel?.Input.Focus(), System.Windows.Threading.DispatcherPriority.Input);
     }
-    public void CloseAgent() { if (agentPanel == null) return; agentPanel.Hide(); agentOrb.ToolTip = "Agent"; agentOrb.Focus(); }
+    public void CloseAgent() { if (agentPanel == null) return; agentPanel.Hide(); agentOrb.ToolTip = "Agent XCTL"; agentOrb.Focus(); }
+
+    private Agent.AgentTour? agentTour;
+    /// <summary>The walk-through playing now, if any.</summary>
+    public Agent.AgentTour? AgentTour => agentTour;
+    /// <summary>A walk-through started (for review captures).</summary>
+    public event Action<Agent.AgentTour>? AgentTourStarted;
+    /// <summary>After the agent changes something: the window steps aside, each change is shown on the page where it lives,
+    /// then the window comes back.</summary>
+    private async Task PlayAgentTour(X20Ctl.Zone.PcMode.PcModeProfile before, X20Ctl.Zone.PcMode.PcModeProfile after)
+    {
+        var steps = X20Ctl.Zone.Agent.AgentKnowledge.Tour(before, after);
+        if (steps.Count == 0 || agentTour != null) return;
+        CloseAgent();
+        var tour = agentTour = new Agent.AgentTour();
+        Grid.SetZIndex(tour.Card, 45); StudioShell.Children.Add(tour.Card); Fx.Appear(tour.Card, .96, 320);
+        AgentTourStarted?.Invoke(tour);
+        try { await tour.Play(steps, before, after, Visit); }
+        finally
+        {
+            agentTour = null;
+            Fx.Leave(tour.Card, () => StudioShell.Children.Remove(tour.Card), .97, 220);
+            OpenAgent();
+        }
+
+        void Visit(X20Ctl.Zone.Agent.TourStep step)
+        {
+            if (step.Kind == X20Ctl.Zone.Agent.TourKind.Button)
+            {
+                ShowButtons();
+                if (controls.ContainsKey(step.Target)) SelectControl(step.Target);
+                return;
+            }
+            if (!IsCurves) ShowCurves(true);
+            Curves.SelectChannel(Enum.Parse<CurveChannel>(step.Target));
+        }
+    }
     private readonly ButtonsConsolePage? buttonsPage;
     /// <summary>Title-bar pills: Support (Ko-fi, opens only when chosen) in the same quiet glass as the Zone, and the controller name.</summary>
     private void BuildTitlePills()
@@ -691,6 +728,7 @@ public partial class StudioScene : UserControl
         // the Advanced stick tools own the keyboard while open (arrows nudge their sliders); Esc closes them
         if (stickToolsLayer != null) { if (e.Key == Key.Escape) { CloseStickTools(); e.Handled = true; } return; }
         // the agent window: Esc puts it away, and while typing to it every key is the text box's
+        if (agentTour != null) { if (e.Key == Key.Escape) agentTour.Skip(); e.Handled = true; return; }
         if (AgentOpen && e.Key == Key.Escape) { CloseAgent(); e.Handled = true; return; }
         if (AgentOpen && agentPanel!.Body.IsKeyboardFocusWithin && Keyboard.FocusedElement is TextBox) return;
         if (CapturingRemap)

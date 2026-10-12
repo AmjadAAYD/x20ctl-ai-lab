@@ -44,8 +44,8 @@ public sealed class AgentOrb : Button
 
     public AgentOrb()
     {
-        Width = Height = 68; Cursor = Cursors.Hand; FocusVisualStyle = null; ToolTip = "Agent";
-        System.Windows.Automation.AutomationProperties.SetName(this, "Open the agent");
+        Width = Height = 68; Cursor = Cursors.Hand; FocusVisualStyle = null; ToolTip = "Agent XCTL";
+        System.Windows.Automation.AutomationProperties.SetName(this, "Open Agent XCTL");
         Template = new ControlTemplate(typeof(Button)) { VisualTree = new FrameworkElementFactory(typeof(ContentPresenter)) };
         ring.Stroke = new LinearGradientBrush(Color.FromArgb(0, 169, 207, 255), Color.FromArgb(255, 169, 207, 255), 0);
         ring.RenderTransform = new RotateTransform();

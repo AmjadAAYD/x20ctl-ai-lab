@@ -22,6 +22,8 @@ public sealed class OllamaClient : IAgentModel
     public double Temperature { get; set; } = 0.2;
     public int MaxTokens { get; set; } = 600;
     public int Context { get; set; } = 4096;
+    /// <summary>Hold replies to the JSON schema (Ollama's "format"). Off only to measure what the schema is worth.</summary>
+    public bool UseSchema { get; set; } = true;
     public OllamaClient(string model = DefaultModel) { Name = model; }
 
     /// <summary>Gets the server up and the model loaded, reporting each step. Returns the final state.</summary>
@@ -54,10 +56,10 @@ public sealed class OllamaClient : IAgentModel
         var body = new JsonObject
         {
             ["model"] = Name, ["stream"] = false, ["think"] = false, ["keep_alive"] = "30m",
-            ["format"] = JsonNode.Parse(schema),
             ["options"] = new JsonObject { ["temperature"] = Temperature, ["num_predict"] = MaxTokens, ["num_ctx"] = Context },
             ["messages"] = new JsonArray(messages.Select(m => (JsonNode)new JsonObject { ["role"] = m.Role, ["content"] = m.Content }).ToArray()),
         };
+        if (UseSchema) body["format"] = JsonNode.Parse(schema);
         using var response = await http.PostAsync("api/chat", Json(body), cancel);
         string text = await response.Content.ReadAsStringAsync(cancel);
         if (!response.IsSuccessStatusCode) throw new HttpRequestException(Error(text) ?? $"Ollama answered {(int)response.StatusCode}");

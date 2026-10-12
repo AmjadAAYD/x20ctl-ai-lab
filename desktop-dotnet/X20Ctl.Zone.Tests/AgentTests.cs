@@ -6,7 +6,7 @@ namespace X20Ctl.Zone.Tests;
 /// <summary>The Talk agent: what the model says is checked against fixed rules, and only a valid proposal changes settings.</summary>
 public sealed class AgentTests
 {
-    static string Reply(params string[] actions) => $$"""{"speech":"I'll do it.","actions":[{{string.Join(",", actions)}}],"assumptions":[]}""";
+    static string Reply(params string[] actions) => $$"""{"speech":"I'll do it.","actions":[{{string.Join(",", actions)}}],"recap":"","assumptions":[]}""";
     static string Act(string action, string target, string value) => $$"""{"action":"{{action}}","target":"{{target}}","value":{{value}},"reason":"asked"}""";
 
     [Fact]
@@ -57,9 +57,11 @@ public sealed class AgentTests
 
     [Theory]
     [InlineData("not json at all")]
-    [InlineData("""{"speech":"hi","actions":[]}""")] // assumptions missing
-    [InlineData("""{"speech":"hi","actions":[],"assumptions":[],"mood":"happy"}""")] // a field that isn't in the schema
-    [InlineData("""{"speech":"hi","actions":[{"action":"turbo","target":"A","reason":"x"}],"assumptions":[]}""")] // value missing
+    [InlineData("""{"speech":"hi","actions":[],"recap":""}""")] // assumptions missing
+    [InlineData("""{"speech":"hi","actions":[],"assumptions":[]}""")] // recap missing
+    [InlineData("""{"actions":[],"recap":"","assumptions":[]}""")] // speech missing (threw KeyNotFoundException before 12 Oct)
+    [InlineData("""{"speech":"hi","actions":[],"recap":"","assumptions":[],"mood":"happy"}""")] // a field that isn't in the schema
+    [InlineData("""{"speech":"hi","actions":[{"action":"turbo","target":"A","reason":"x"}],"recap":"","assumptions":[]}""")] // value missing
     public void Malformed_replies_are_structure_errors(string json)
     {
         var verdict = ProposalValidator.Check(json, "x20_pro");
@@ -199,6 +201,17 @@ public sealed class AgentTests
     }
 
     [Fact]
+    public void The_bounded_schema_holds_numbers_to_0_100_and_text_to_known_names()
+    {
+        using var schema = JsonDocument.Parse(AgentSession.BoundedSchema);
+        var options = schema.RootElement.GetProperty("properties").GetProperty("actions").GetProperty("items").GetProperty("properties").GetProperty("value").GetProperty("anyOf");
+        Assert.Equal(100, options[0].GetProperty("maximum").GetInt32());
+        var names = options[1].GetProperty("enum").EnumerateArray().Select(e => e.GetString()).ToList();
+        Assert.Contains("slow", names); Assert.Contains("A", names); Assert.DoesNotContain("M5", names);
+        Assert.Contains("\"recap\"", AgentSession.BoundedSchema);
+    }
+
+    [Fact]
     public async Task The_prompt_carries_the_current_settings_and_recent_conversation()
     {
         var model = new ScriptedModel(Reply(), Reply());
@@ -208,5 +221,81 @@ public sealed class AgentTests
         var second = model.Seen[1];
         Assert.Contains("X turbo: 10/s", second[0].Content);
         Assert.Equal(["system", "user", "assistant", "user"], second.Select(m => m.Role));
+    }
+
+    [Fact]
+    public void The_bench_scores_what_the_sentence_asked_for()
+    {
+        var swap = new BenchCase("Swap A and B", "x20_pro", ["remap:A=B"], ["remap:B=A"]);
+        Assert.True(AgentBench.Matches(swap, ProposalValidator.Check(Reply(Act("remap", "A", "\"B\""), Act("remap", "B", "\"A\"")), "x20_pro")));
+        Assert.False(AgentBench.Matches(swap, ProposalValidator.Check(Reply(Act("remap", "A", "\"B\"")), "x20_pro"))); // half a swap
+        var drift = new BenchCase("drift", "x20_pro", ["stick_deadzone:RightStick"]);
+        Assert.True(AgentBench.Matches(drift, ProposalValidator.Check(Reply(Act("stick_deadzone", "RightStick", "5")), "x20_pro")));
+        Assert.False(AgentBench.Matches(drift, ProposalValidator.Check(Reply(Act("stick_deadzone", "LeftStick", "5")), "x20_pro")));
+        Assert.False(AgentBench.Matches(drift, ProposalValidator.Check(Reply(Act("stick_deadzone", "RightStick", "90")), "x20_pro"))); // right idea, rejected
+        var decline = new BenchCase("RGB red", "x20_pro");
+        Assert.True(AgentBench.Matches(decline, ProposalValidator.Check(Reply(), "x20_pro")));
+        Assert.False(AgentBench.Matches(decline, ProposalValidator.Check(Reply(Act("reset", "All", "0")), "x20_pro")));
+        Assert.False(AgentBench.Matches(decline, ProposalValidator.Check("```json\n" + Reply() + "\n```", "x20_pro"))); // fenced: not JSON
+    }
+
+    [Fact]
+    public async Task The_bench_keeps_the_first_reply_and_the_repaired_turn_apart()
+    {
+        var model = new ScriptedModel("not json", Reply(Act("turbo", "X", "12")));
+        var c = AgentBench.Cases.First(x => x.Sentence.StartsWith("Turbo on X"));
+        var run = BenchRun.Of(AgentBench.Variants[0], c, 1, await new AgentSession(model, c.ModelId, "X20 Pro").Ask(c.Sentence, new PcModeProfile()));
+        Assert.False(run.FirstJson); Assert.False(run.FirstRules);
+        Assert.True(run.FinalRules); Assert.True(run.Correct);
+        Assert.Equal(2, run.Attempts); Assert.Equal(200, run.TotalMs); Assert.Equal(40, run.OutputTokens);
+        string report = AgentBench.Report([run], "scripted", 1);
+        Assert.Contains("| T 0.2 · schema | 0% | 0% | 0% | 100% | 100% | **100%** |", report);
+    }
+
+    [Fact]
+    public void Every_bench_case_names_real_actions_and_targets()
+    {
+        foreach (var c in AgentBench.Cases)
+            foreach (var need in c.Needs.SelectMany(g => g))
+            {
+                var parts = need.Split('=')[0].Split(':');
+                Assert.Contains(parts[0], AgentVocabulary.Actions);
+                Assert.Contains(parts[1], AgentVocabulary.Targets);
+            }
+        Assert.Equal(27, AgentBench.Cases.Length);
+    }
+
+    [Fact]
+    public void Every_action_has_a_meaning_and_the_prompt_carries_them()
+    {
+        Assert.Equal(AgentVocabulary.Actions.Order(), AgentKnowledge.Settings.Select(m => m.Action).Order());
+        string prompt = AgentSession.DefaultPrompt("X20 Pro", "x20_pro");
+        Assert.Contains("Agent XCTL", prompt);
+        foreach (var m in AgentKnowledge.Settings.Where(m => m.Action != AgentVocabulary.Reset)) Assert.Contains($"{m.Name} ({m.Action})", prompt);
+        foreach (var preset in CurveDraft.Presets.Keys) Assert.Contains(AgentKnowledge.Preset(preset), prompt);
+    }
+
+    [Fact]
+    public void The_walkthrough_stops_once_per_control_with_each_settings_meaning()
+    {
+        var verdict = ProposalValidator.Check(Reply(Act("stick_curve", "RightStick", "\"slow\""), Act("stick_deadzone", "RightStick", "5"), Act("trigger_full_at", "RightTrigger", "40"), Act("turbo", "X", "12"), Act("remap", "LB", "\"RB\"")), "x20_pro");
+        var after = AgentApplier.Apply(new PcModeProfile(), verdict).Next!;
+        var tour = AgentKnowledge.Tour(new PcModeProfile(), after);
+        Assert.Equal(["RightStick", "RightTrigger", "LB", "X"], tour.Select(s => s.Target));
+        Assert.Equal([TourKind.Stick, TourKind.Trigger, TourKind.Button, TourKind.Button], tour.Select(s => s.Kind));
+        Assert.Equal(["stick_deadzone", "stick_curve"], tour[0].Rows.Select(r => r.Meaning.Action));
+        Assert.Equal("trigger_full_at", tour[1].Rows.Single().Meaning.Action);
+        Assert.Equal("remap", tour[2].Rows.Single().Meaning.Action);
+        Assert.Equal("turbo", tour[3].Rows.Single().Meaning.Action);
+        Assert.Empty(AgentKnowledge.Tour(after, after));
+    }
+
+    [Fact]
+    public void Curve_meanings_come_from_the_response_PC_mode_runs()
+    {
+        Assert.Equal((50, 75), AgentKnowledge.Shape("default"));
+        Assert.True(AgentKnowledge.Shape("slow").Half < 45);   // the sniper's curve: less output until the edge
+        Assert.True(AgentKnowledge.Shape("quick").Half > 55);
+        Assert.True(AgentKnowledge.Shape("fine").Half > 50);   // "fine" is slightly quick, not precise (found 12 Oct)
     }
 }

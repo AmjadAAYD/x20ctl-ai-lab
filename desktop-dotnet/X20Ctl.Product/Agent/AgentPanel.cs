@@ -32,6 +32,8 @@ public sealed class AgentPanel
     public TextBox Input { get; }
     /// <summary>Minimise or close was chosen: the host puts the window away (the conversation stays).</summary>
     public event Action? CloseRequested;
+    /// <summary>Plays the walk-through of a change (before, after) on the host's pages, and returns when it is over.</summary>
+    public Func<PcModeProfile, PcModeProfile, Task>? Walkthrough { get; set; }
     /// <summary>The agent started or stopped thinking.</summary>
     public event Action<bool>? Thinking;
     readonly string modelId, greeting;
@@ -57,11 +59,11 @@ public sealed class AgentPanel
         this.modelId = modelId; this.link = link;
         string name = controllerName.Replace("EasySMX ", "");
         session = new AgentSession(model, modelId, name);
-        greeting = name + " here. Tell me how you play, or what feels wrong, and I'll set myself up.";
+        greeting = "Agent XCTL, in your " + name + ". Tell me how you play, or what feels wrong, and I'll set myself up.";
 
         // title bar: the mark, the name, the model's state; drag it to move the window
         var mark = new Grid { Width = 40, Height = 40, Margin = new(0, 0, 12, 0), Children = { new System.Windows.Shapes.Ellipse { Fill = AgentMark.Field() }, AgentMark.Glyph(26) } };
-        var title = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Text("Agent", 18, "DS.Text", FontWeights.SemiBold), new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 2, 0, 0), Children = { statusDot, status } } } };
+        var title = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Text("Agent XCTL", 18, "DS.Text", FontWeights.SemiBold), new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 2, 0, 0), Children = { statusDot, status } } } };
         var fresh = Chrome("", "New conversation"); fresh.Click += (_, _) => Restart();
         var away = Chrome("", "Minimise"); away.Click += (_, _) => CloseRequested?.Invoke();
         var close = Chrome("", "Close"); close.Click += (_, _) => CloseRequested?.Invoke();
@@ -187,8 +189,11 @@ public sealed class AgentPanel
             transcript.Children.Remove(thinking);
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
-                try { Store(next); Say(turn, before); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet()); }
-                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); }
+                try { Store(next); }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); return turn; }
+                // the walk-through first, so the answer and its recap are waiting when the window comes back
+                if (Walkthrough != null) await Walkthrough(before, next);
+                Say(turn, before); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
             else Say(turn, null);
             return turn;
@@ -231,6 +236,9 @@ public sealed class AgentPanel
         stack.Children.Add(Wrap(v.Proposal?.Speech is { Length: > 0 } speech ? speech : "I didn't give a usable answer.", 15, "DS.Text"));
         foreach (var c in turn.Outcome.Changes)
             stack.Children.Add(Wrap($"{c.What}   {c.Before} → {c.After}", 14, "DS.AccentHi", 6));
+        // why it fits, or the answer to a question: the model's words, from the settings' meanings
+        if (v.Valid && v.Proposal?.Recap is { Length: > 0 } recap)
+            stack.Children.Add(new Border { BorderBrush = DS.Brush("DS.AccentHi"), BorderThickness = new(2, 0, 0, 0), Padding = new(12, 2, 0, 2), Margin = new(0, 10, 0, 0), Child = Wrap(recap, 14.5, "DS.TextSoft") });
         foreach (var skipped in v.Checks.Where(c => c.State == CheckState.Unavailable))
             stack.Children.Add(Wrap($"{skipped.Action.Target}: {skipped.Message}", 14, "DS.Warn", 6));
         // the app's own line: the truth about what happened, whatever the model said
