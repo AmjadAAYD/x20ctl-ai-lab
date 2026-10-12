@@ -506,12 +506,13 @@ public partial class StudioScene : UserControl
     private void ResetVibration(object sender,RoutedEventArgs e)=>Vibration?.Reset();
     public void ShowManagement(string page)
     {
-        if(page is not ("Dashboard" or "PcMode" or "Device" or "Diagnostics" or "Mouse" or "Tester" or "Setups"))throw new ArgumentException("Unknown Studio page.");
+        if(page is not ("Dashboard" or "PcMode" or "Device" or "Diagnostics" or "Mouse" or "Tester" or "Setups" or "Talk"))throw new ArgumentException("Unknown Studio page.");
         if(IsCurves)ShowCurves(false);if(IsMacros)ShowMacros(false);if(IsVibration)ShowVibration(false);HideManagement();ManagementPage=page;
         HardwareStage.Visibility=InspectorStage.Visibility=AssignmentShelf.Visibility=OverviewChoice.Visibility=ResetAllChoice.Visibility=Visibility.Collapsed;
         ManagementBodyHost.Visibility=ManagementShelfFrame.Visibility=Visibility.Visible;ManagementBodyHost.Children.Clear();ManagementShelfHost.Children.Clear();
-        ButtonsNav.IsChecked=CurvesNav.IsChecked=MacrosNav.IsChecked=VibrationNav.IsChecked=false;DeviceNav.IsChecked=page=="Device";DiagnosticsNav.IsChecked=page=="Diagnostics";MouseNav.IsChecked=page=="Mouse";PcModeNav.IsChecked=page=="PcMode";TesterNav.IsChecked=page=="Tester";SetupsNav.IsChecked=page=="Setups";DashboardNav.IsChecked=page=="Dashboard";
-        if(page=="Dashboard"){Dashboard??=CreateDashboard();ManagementBodyHost.Children.Add(Dashboard);ChangeCount.Text="Select the controller to configure it · Your games are found automatically";PrimaryHint.Text=" Select";OverviewHint.Text="";DraftChip.Text="Dashboard";Dashboard.FocusHero();}
+        ButtonsNav.IsChecked=CurvesNav.IsChecked=MacrosNav.IsChecked=VibrationNav.IsChecked=false;DeviceNav.IsChecked=page=="Device";DiagnosticsNav.IsChecked=page=="Diagnostics";MouseNav.IsChecked=page=="Mouse";PcModeNav.IsChecked=page=="PcMode";TesterNav.IsChecked=page=="Tester";SetupsNav.IsChecked=page=="Setups";DashboardNav.IsChecked=page=="Dashboard";TalkNav.IsChecked=page=="Talk";
+        if(page=="Talk"){Talk??=new(Model.Id,Model.Name,PcMode,RegisterFocus);ManagementBodyHost.Children.Add(Talk.Body);ChangeCount.Text="Talk · Changes apply straight away, each with an Undo";PrimaryHint.Text=" Select";OverviewHint.Text="";DraftChip.Text="Talk";Dispatcher.BeginInvoke(()=>Talk.Input.Focus(),System.Windows.Threading.DispatcherPriority.Input);}
+        else if(page=="Dashboard"){Dashboard??=CreateDashboard();ManagementBodyHost.Children.Add(Dashboard);ChangeCount.Text="Select the controller to configure it · Your games are found automatically";PrimaryHint.Text=" Select";OverviewHint.Text="";DraftChip.Text="Dashboard";Dashboard.FocusHero();}
         else if(page=="Device"){Device??=new(Model,Player,this,RegisterFocus,()=>{},()=>ShowManagement("Setups"));Device.OpenTester.Visibility=Visibility.Collapsed;Device.UpdateEngineStatus(NativeEngineStatus);ManagementBodyHost.Children.Add(Device.Body);ManagementShelfHost.Children.Add(Device.Shelf);ChangeCount.Text="Assigned model · Gameplay and configuration remain separate";PrimaryHint.Text=" Open";OverviewHint.Text=" My setups";DraftChip.Text="Controller overview";}
         else if(page=="Diagnostics"){Diagnostics??=new(Player,RegisterFocus,PcMode);ManagementBodyHost.Children.Add(Diagnostics.Body);Diagnostics.Start();ChangeCount.Text="Diagnostics owns the controller's input · Hold B to leave";PrimaryHint.Text="";OverviewHint.Text="";DraftChip.Text="Diagnostics";Diagnostics.Reset.Focus();}
         else if(page=="PcMode")
@@ -529,9 +530,9 @@ public partial class StudioScene : UserControl
         else if(page=="Tester"){Tester??=new(Model,layout,this,RegisterFocus,()=>ShowManagement("Device"),animate);Tester.Enter();ManagementBodyHost.Children.Add(Tester.Body);ManagementShelfHost.Children.Add(Tester.Shelf);ChangeCount.Text="Tester owns gameplay input · UI input navigation paused";PrimaryHint.Text=" Exit Tester";OverviewHint.Text="";DraftChip.Text="Gameplay tester";navigationBeforeTester=navigationMode;navigationMode=true;Tester.Exit.Focus();}
         else {if(Setups==null){Setups=new(setupStore,new ControllerCatalog(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Data/catalog.json"))),Model.Id,this,RegisterFocus,()=>SetupSnapshot.Capture(Model.Id,Draft,Curves.Draft,macroDraft,vibrationDraft),LoadSetup,legacySources,activeSetup);Setups.Changed+=UpdateSetupContext;}Setups.RefreshCurrent();ManagementBodyHost.Children.Add(Setups.Body);ManagementShelfHost.Children.Add(Setups.Shelf);UpdateSetupContext();}
         PrimaryGlyph.Text=page=="Tester"?"↵":"A";BackGlyph.Text=page is "Tester" or "Diagnostics"?"Esc":"B";SecondaryFooterHint.Visibility=ActualWidth<1100 || page is "Tester" or "Diagnostics"?Visibility.Collapsed:Visibility.Visible;
-        Grid.SetRowSpan(StudioBody,page is "Setups" or "Dashboard" or "Diagnostics" or "Mouse" or "PcMode"?2:1);if(page is "Setups" or "Dashboard" or "Diagnostics" or "Mouse" or "PcMode")ManagementShelfFrame.Visibility=Visibility.Collapsed;InputContextChanged?.Invoke();Apply.IsEnabled=false;EnterMotion(ManagementBodyHost,14,220);EnterMotion(ManagementShelfHost,14,220);UpdateButtonsPage();
+        Grid.SetRowSpan(StudioBody,page is "Setups" or "Dashboard" or "Diagnostics" or "Mouse" or "PcMode" or "Talk"?2:1);if(page is "Setups" or "Dashboard" or "Diagnostics" or "Mouse" or "PcMode" or "Talk")ManagementShelfFrame.Visibility=Visibility.Collapsed;InputContextChanged?.Invoke();Apply.IsEnabled=false;EnterMotion(ManagementBodyHost,14,220);EnterMotion(ManagementShelfHost,14,220);UpdateButtonsPage();
     }
-    private void HideManagement(){StopTry();if(ManagementPage==null)return;if(ManagementPage=="Diagnostics")Diagnostics?.Stop();Grid.SetRowSpan(StudioBody,1);if(ManagementPage=="Tester")navigationMode=navigationBeforeTester;Tester?.ExitCapture();ManagementPage=null;InputContextChanged?.Invoke();PrimaryGlyph.Text="A";BackGlyph.Text="B";SecondaryFooterHint.Visibility=ActualWidth<1100?Visibility.Collapsed:Visibility.Visible;ManagementBodyHost.Children.Clear();ManagementShelfHost.Children.Clear();ManagementBodyHost.Visibility=ManagementShelfFrame.Visibility=Visibility.Collapsed;DeviceNav.IsChecked=DiagnosticsNav.IsChecked=MouseNav.IsChecked=PcModeNav.IsChecked=TesterNav.IsChecked=SetupsNav.IsChecked=DashboardNav.IsChecked=false;HardwareStage.Visibility=InspectorStage.Visibility=AssignmentShelf.Visibility=OverviewChoice.Visibility=ResetAllChoice.Visibility=Visibility.Visible;UpdateButtonsPage();}
+    private void HideManagement(){StopTry();if(ManagementPage==null)return;if(ManagementPage=="Diagnostics")Diagnostics?.Stop();Grid.SetRowSpan(StudioBody,1);if(ManagementPage=="Tester")navigationMode=navigationBeforeTester;Tester?.ExitCapture();ManagementPage=null;InputContextChanged?.Invoke();PrimaryGlyph.Text="A";BackGlyph.Text="B";SecondaryFooterHint.Visibility=ActualWidth<1100?Visibility.Collapsed:Visibility.Visible;ManagementBodyHost.Children.Clear();ManagementShelfHost.Children.Clear();ManagementBodyHost.Visibility=ManagementShelfFrame.Visibility=Visibility.Collapsed;DeviceNav.IsChecked=DiagnosticsNav.IsChecked=MouseNav.IsChecked=PcModeNav.IsChecked=TesterNav.IsChecked=SetupsNav.IsChecked=DashboardNav.IsChecked=TalkNav.IsChecked=false;HardwareStage.Visibility=InspectorStage.Visibility=AssignmentShelf.Visibility=OverviewChoice.Visibility=ResetAllChoice.Visibility=Visibility.Visible;UpdateButtonsPage();}
     private void LoadSetup(SetupSnapshot snapshot){if(snapshot.ModelId!=Model.Id)throw new InvalidOperationException("Setup model does not match this player.");snapshot.LoadInto(Draft,Curves.Draft,macroDraft,vibrationDraft);Curves.Refresh();Macros?.Refresh();Vibration?.Refresh();SyncPcMode();}
     private void UpdateSetupContext(){if(ManagementPage!="Setups"||Setups==null)return;activeSetup=Setups.ActiveId;ActiveSetupChanged?.Invoke(activeSetup);ChangeCount.Text=activeSetup==null?"Local setup library · Hardware application unavailable":"Setup open in local editor · Hardware unchanged";PrimaryHint.Text=" Select / Open";OverviewHint.Text=" New setup";DraftChip.Text="My setups";Apply.IsEnabled=false;}
     public bool DeliverGameplayFrame(TesterFrame frame)=>ManagementPage=="Tester" && Tester?.Receive(frame)==true;
@@ -647,7 +648,9 @@ public partial class StudioScene : UserControl
         if (!MacroDraft.Slots.Contains(key)) return false;
         StopTry(); ShowMacros(true); Macros?.SelectSlot(key); return Macros != null;
     }
-    private void DeviceTab(object sender,RoutedEventArgs e)=>ShowManagement("Device");private void TesterTab(object sender,RoutedEventArgs e)=>ShowManagement("Tester");private void DiagnosticsTab(object sender,RoutedEventArgs e)=>ShowManagement("Diagnostics");private void MouseTab(object sender,RoutedEventArgs e)=>ShowManagement("Mouse");private void SetupsTab(object sender,RoutedEventArgs e)=>ShowManagement("Setups");
+    private void DeviceTab(object sender,RoutedEventArgs e)=>ShowManagement("Device");private void TesterTab(object sender,RoutedEventArgs e)=>ShowManagement("Tester");private void DiagnosticsTab(object sender,RoutedEventArgs e)=>ShowManagement("Diagnostics");private void MouseTab(object sender,RoutedEventArgs e)=>ShowManagement("Mouse");private void SetupsTab(object sender,RoutedEventArgs e)=>ShowManagement("Setups");private void TalkTab(object sender,RoutedEventArgs e)=>ShowManagement("Talk");
+    /// <summary>The Talk tab, built on first open; its conversation lasts as long as this Studio.</summary>
+    public Agent.TalkPage? Talk { get; private set; }
     private void Front(object sender, RoutedEventArgs e) { ShowController(false); ClearSelection(); }
     private void Rear(object sender, RoutedEventArgs e) { ShowController(true); ClearSelection(); }
     private void Back(object sender, RoutedEventArgs e) => BackRequested?.Invoke();
@@ -658,6 +661,8 @@ public partial class StudioScene : UserControl
     {
         // the Advanced stick tools own the keyboard while open (arrows nudge their sliders); Esc closes them
         if (stickToolsLayer != null) { if (e.Key == Key.Escape) { CloseStickTools(); e.Handled = true; } return; }
+        // typing to the controller: every key is the text box's, except the bumpers' tab keys
+        if (ManagementPage == "Talk" && Keyboard.FocusedElement is TextBox && e.Key is not (Key.PageUp or Key.PageDown)) return;
         if (CapturingRemap)
         {
             e.Handled = true; if (e.IsRepeat) return;
@@ -678,14 +683,14 @@ public partial class StudioScene : UserControl
         if(IsVibration && Vibration?.HandleKey(e)==true)return;
         if(IsMacros && Macros?.HandleKey(e)==true)return;
         if (IsCurves && Curves.HandleKey(e)) return;
-        // LB/RB walk the tabs: Dashboard, Buttons, Curves, Macros, Vibration, PC mode, Device, Diagnostics, Mouse, Setups (the Tester is no longer a tab)
+        // LB/RB walk the tabs: Dashboard, Buttons, Curves, Macros, Vibration, PC mode, Device, Diagnostics, Mouse, Setups, Talk (the Tester is no longer a tab)
         if(e.Key is Key.PageDown or Key.PageUp && !e.IsRepeat)
         {
-            int step=e.Key==Key.PageDown?1:-1;int index=ManagementPage switch {"Dashboard"=>0,"PcMode"=>5,"Device"=>6,"Diagnostics"=>7,"Mouse"=>8,"Setups"=>9,_=>IsVibration?4:IsMacros?3:IsCurves?2:1};
-            int next=Math.Clamp(index+step,0,9);
+            int step=e.Key==Key.PageDown?1:-1;int index=ManagementPage switch {"Dashboard"=>0,"PcMode"=>5,"Device"=>6,"Diagnostics"=>7,"Mouse"=>8,"Setups"=>9,"Talk"=>10,_=>IsVibration?4:IsMacros?3:IsCurves?2:1};
+            int next=Math.Clamp(index+step,0,10);
             // a model X20CTL can't write skips the tabs it can't use; with PC mode on only Vibration stays out of reach
             while(Model.Id!="x20"&&(next==4||!Draft.PcMode&&next is 2 or 3))next+=step;
-            if(next==0)ShowManagement("Dashboard");else if(next>=5)ShowManagement(next switch {5=>"PcMode",6=>"Device",7=>"Diagnostics",8=>"Mouse",_=>"Setups"});else if(next==4)ShowVibration(true);else if(next==3)ShowMacros(true);else if(next==2)ShowCurves(true);else ShowButtons();e.Handled=true;return;
+            if(next==0)ShowManagement("Dashboard");else if(next>=5)ShowManagement(next switch {5=>"PcMode",6=>"Device",7=>"Diagnostics",8=>"Mouse",9=>"Setups",_=>"Talk"});else if(next==4)ShowVibration(true);else if(next==3)ShowMacros(true);else if(next==2)ShowCurves(true);else ShowButtons();e.Handled=true;return;
         }
         if (e.Key == Key.F6) { if (!e.IsRepeat) SetNavigationPreview(!navigationMode); e.Handled = true; return; }
         if (e.Key == Key.Escape || navigationMode && e.Key == Key.B) { if (AssignmentsVisible) ShowAssignments(false);else if(IsVibration && ReferenceEquals(Vibration?.Strength,Keyboard.FocusedElement))FocusSelectedControl(); else if (IsCurves && (Curves.PointHandles.Any(p=>ReferenceEquals(p,Keyboard.FocusedElement)) || ReferenceEquals(Curves.Inner,Keyboard.FocusedElement) || ReferenceEquals(Curves.Outer,Keyboard.FocusedElement))) FocusSelectedControl(); else if (navigationMode && Keyboard.FocusedElement is Button && Keyboard.FocusedElement is not PhysicalHotspot) FocusSelectedControl(); else BackRequested?.Invoke(); e.Handled = true; return; }

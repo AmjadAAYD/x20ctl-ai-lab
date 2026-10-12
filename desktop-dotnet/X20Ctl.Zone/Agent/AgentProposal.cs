@@ -1,0 +1,154 @@
+using System.Text.Json;
+using X20Ctl.Zone.PcMode;
+namespace X20Ctl.Zone.Agent;
+
+/// <summary>
+/// Everything the agent may do, as a fixed list. The language model picks from it; nothing outside it can run. Ranges come
+/// from the settings' own limits (StickTuning, PcModeProfile), so a proposal the validator passes is one the app can hold.
+/// </summary>
+public static class AgentVocabulary
+{
+    public const string StickDeadzone = "stick_deadzone", StickFullAt = "stick_full_at", StickAntiDeadzone = "stick_anti_deadzone", StickCurve = "stick_curve",
+        TriggerDeadzone = "trigger_deadzone", TriggerFullAt = "trigger_full_at", TriggerCurve = "trigger_curve", Remap = "remap", Turbo = "turbo", Reset = "reset", Paddle = "paddle";
+    public static readonly string[] Actions = [StickDeadzone, StickFullAt, StickAntiDeadzone, StickCurve, TriggerDeadzone, TriggerFullAt, TriggerCurve, Remap, Turbo, Reset, Paddle];
+    public static readonly string[] Sticks = ["LeftStick", "RightStick"], Triggers = ["LeftTrigger", "RightTrigger"];
+    public static readonly string[] Buttons = [.. PadButtons.Mask.Keys, "LT", "RT"];
+    public static readonly string[] AllPaddles = ["M1", "M2", "M3", "M4", "M5", "M6"];
+    public static IReadOnlyCollection<string> Curves => CurveDraft.Presets.Keys.ToArray();
+    public const string All = "All";
+    public static readonly string[] Targets = [.. Sticks, .. Triggers, .. Buttons, .. AllPaddles, All];
+    public const int MaxTriggerDeadzone = 40, MinTriggerFullAt = 10, MaxActions = 8;
+
+    /// <summary>The rear paddles a model has, from x20ctl/controllers/catalog.json (macroSlots).</summary>
+    public static string[] Paddles(string modelId) => modelId switch
+    {
+        "x20_pro" => AllPaddles,
+        "x20" or "dune" => AllPaddles[..4],
+        "x05_pro" or "x10" or "d10" or "x15" => AllPaddles[..2],
+        _ => [],
+    };
+}
+
+public sealed record AgentAction(string Action, string Target, JsonElement Value, string Reason)
+{
+    public string ValueText => Value.ValueKind == JsonValueKind.String ? Value.GetString() ?? "" : Value.GetRawText();
+}
+public sealed record AgentProposal(string Speech, IReadOnlyList<AgentAction> Actions, IReadOnlyList<string> Assumptions);
+
+public enum CheckState { Ok, Rejected, Unavailable }
+public sealed record ActionCheck(AgentAction Action, CheckState State, string Message);
+
+/// <summary>What validation made of one model reply: either a structure error (nothing usable), or one check per action.
+/// One rejected action rejects the whole proposal; an unavailable one is skipped and the rest still apply.</summary>
+public sealed record AgentVerdict(AgentProposal? Proposal, string? StructureError, IReadOnlyList<ActionCheck> Checks)
+{
+    public bool Valid => StructureError == null && Checks.All(c => c.State != CheckState.Rejected);
+    public IEnumerable<AgentAction> Applicable => Valid ? Checks.Where(c => c.State == CheckState.Ok).Select(c => c.Action) : [];
+}
+
+/// <summary>
+/// Layer 1 (structure): the reply is one JSON object with exactly speech, actions and assumptions, typed as expected.
+/// Layer 2 (rules): every action is in the vocabulary, aimed at a target it accepts, with a value in range, on a control
+/// this model has. Pure: the same reply and model always give the same verdict.
+/// </summary>
+public static class ProposalValidator
+{
+    static readonly string[] Fields = ["speech", "actions", "assumptions"], ActionFields = ["action", "target", "value", "reason"];
+
+    public static AgentVerdict Check(string json, string modelId)
+    {
+        AgentProposal proposal;
+        try { proposal = Parse(json); }
+        catch (Exception error) when (error is JsonException or InvalidDataException) { return new(null, error is JsonException ? "Not valid JSON." : error.Message, []); }
+        var checks = new List<ActionCheck>();
+        for (int i = 0; i < proposal.Actions.Count; i++)
+        {
+            var action = proposal.Actions[i];
+            var earlier = proposal.Actions.Take(i).FirstOrDefault(a => a.Action == action.Action && a.Target == action.Target);
+            if (earlier != null && earlier.ValueText != action.ValueText) { checks.Add(new(action, CheckState.Rejected, $"Conflicts with an earlier change to {action.Target}.")); continue; }
+            var (state, message) = Rule(action, modelId);
+            checks.Add(new(action, state, earlier != null && state == CheckState.Ok ? "Same as an earlier change." : message));
+        }
+        return new(proposal, null, checks);
+    }
+
+    static AgentProposal Parse(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object) throw new InvalidDataException("The reply isn't a JSON object.");
+        Only(root, Fields, "reply");
+        string speech = Text(root, "speech", "reply");
+        if (!root.TryGetProperty("actions", out var list) || list.ValueKind != JsonValueKind.Array) throw new InvalidDataException("\"actions\" is missing or not a list.");
+        if (list.GetArrayLength() > AgentVocabulary.MaxActions) throw new InvalidDataException($"More than {AgentVocabulary.MaxActions} actions.");
+        var actions = new List<AgentAction>();
+        foreach (var item in list.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object) throw new InvalidDataException("An action isn't an object.");
+            Only(item, ActionFields, "action");
+            if (!item.TryGetProperty("value", out var value) || value.ValueKind is not (JsonValueKind.Number or JsonValueKind.String)) throw new InvalidDataException("An action's \"value\" is missing or not a number or text.");
+            actions.Add(new(Text(item, "action", "action"), Text(item, "target", "action"), value.Clone(), Text(item, "reason", "action")));
+        }
+        if (!root.TryGetProperty("assumptions", out var assumed) || assumed.ValueKind != JsonValueKind.Array || assumed.EnumerateArray().Any(a => a.ValueKind != JsonValueKind.String))
+            throw new InvalidDataException("\"assumptions\" is missing or not a list of text.");
+        return new(speech, actions, assumed.EnumerateArray().Select(a => a.GetString()!).ToArray());
+    }
+
+    static void Only(JsonElement element, string[] fields, string what)
+    {
+        foreach (var property in element.EnumerateObject())
+            if (!fields.Contains(property.Name)) throw new InvalidDataException($"Unknown field \"{property.Name}\" in the {what}.");
+        foreach (var field in fields)
+            if (!element.TryGetProperty(field, out _)) throw new InvalidDataException($"The {what} has no \"{field}\".");
+    }
+    static string Text(JsonElement element, string field, string what) =>
+        element.GetProperty(field) is { ValueKind: JsonValueKind.String } value ? value.GetString()! : throw new InvalidDataException($"The {what}'s \"{field}\" isn't text.");
+
+    static (CheckState, string) Rule(AgentAction a, string modelId)
+    {
+        static (CheckState, string) No(string why) => (CheckState.Rejected, why);
+        if (!AgentVocabulary.Actions.Contains(a.Action)) return No($"\"{a.Action}\" isn't something I can do.");
+        bool stick = AgentVocabulary.Sticks.Contains(a.Target), trigger = AgentVocabulary.Triggers.Contains(a.Target), button = AgentVocabulary.Buttons.Contains(a.Target);
+        // a paddle named anywhere: first, does this controller have it at all
+        foreach (var named in new[] { a.Target, a.ValueText }.Where(AgentVocabulary.AllPaddles.Contains))
+            if (!AgentVocabulary.Paddles(modelId).Contains(named)) return No($"This controller has no {named}.");
+        if (AgentVocabulary.AllPaddles.Contains(a.ValueText)) return No($"Buttons can't send {a.ValueText}: it's a paddle. Use {{\"action\":\"paddle\",\"target\":\"{a.ValueText}\",\"value\":\"A\"}} (or \"B\").");
+        if (AgentVocabulary.AllPaddles.Contains(a.Target) && a.Action != AgentVocabulary.Paddle) return No($"{a.Target} is a paddle. Use {{\"action\":\"paddle\",\"target\":\"{a.Target}\",\"value\":\"A\"}} (or \"B\").");
+        switch (a.Action)
+        {
+            case AgentVocabulary.StickDeadzone or AgentVocabulary.StickFullAt or AgentVocabulary.StickAntiDeadzone:
+                if (!stick) return No($"{a.Action} needs LeftStick or RightStick, not {a.Target}.");
+                var (low, high) = a.Action switch { AgentVocabulary.StickDeadzone => (0.0, StickTuning.MaxInner), AgentVocabulary.StickAntiDeadzone => (0.0, StickTuning.MaxAnti), _ => (StickTuning.MinOuter, 100.0) };
+                return Number(a, low, high, decimals: true);
+            case AgentVocabulary.TriggerDeadzone or AgentVocabulary.TriggerFullAt:
+                if (!trigger) return No($"{a.Action} needs LeftTrigger or RightTrigger, not {a.Target}.");
+                return a.Action == AgentVocabulary.TriggerDeadzone ? Number(a, 0, AgentVocabulary.MaxTriggerDeadzone, decimals: false) : Number(a, AgentVocabulary.MinTriggerFullAt, 100, decimals: false);
+            case AgentVocabulary.StickCurve or AgentVocabulary.TriggerCurve:
+                if (a.Action == AgentVocabulary.StickCurve ? !stick : !trigger) return No($"{a.Action} can't be aimed at {a.Target}.");
+                return Word(a, AgentVocabulary.Curves);
+            case AgentVocabulary.Remap:
+                if (!button) return No($"{a.Target} isn't a button that can be remapped.");
+                return Word(a, AgentVocabulary.Buttons);
+            case AgentVocabulary.Turbo:
+                if (!button) return No($"{a.Target} isn't a button that can have turbo.");
+                if (a.Value.ValueKind != JsonValueKind.Number || !a.Value.TryGetInt32(out int hz)) return No("Turbo needs a whole number of presses a second.");
+                return hz == 0 || hz is >= PcModeProfile.MinTurboHz and <= PcModeProfile.MaxTurboHz ? (CheckState.Ok, "In range.") : No($"Turbo is {PcModeProfile.MinTurboHz} to {PcModeProfile.MaxTurboHz} presses a second, or 0 for off; {hz} is outside.");
+            case AgentVocabulary.Reset:
+                return stick || trigger || button || a.Target == AgentVocabulary.All ? (CheckState.Ok, "Back to default.") : No($"{a.Target} has nothing to reset.");
+            default: // paddle
+                if (!AgentVocabulary.AllPaddles.Contains(a.Target)) return No($"{a.Target} isn't a paddle.");
+                if (!AgentVocabulary.Paddles(modelId).Contains(a.Target)) return No($"This controller has no {a.Target}.");
+                var output = Word(a, ["A", "B"]);
+                return output.Item1 == CheckState.Rejected ? (CheckState.Rejected, "Paddles can only send A or B.") : (CheckState.Unavailable, "Valid, but paddles are programmed on the controller itself, which isn't supported yet.");
+        }
+    }
+
+    static (CheckState, string) Number(AgentAction a, double low, double high, bool decimals)
+    {
+        if (a.Value.ValueKind != JsonValueKind.Number || !a.Value.TryGetDouble(out double v)) return (CheckState.Rejected, $"{a.Action} needs a number, not \"{a.ValueText}\".");
+        if (!decimals && v != Math.Floor(v)) return (CheckState.Rejected, $"{a.Action} needs a whole number.");
+        return v >= low && v <= high ? (CheckState.Ok, "In range.") : (CheckState.Rejected, $"{a.Action} is {low:0.#} to {high:0.#}; {v:0.#} is outside.");
+    }
+    static (CheckState, string) Word(AgentAction a, IReadOnlyCollection<string> allowed) =>
+        a.Value.ValueKind == JsonValueKind.String && allowed.Contains(a.Value.GetString()) ? (CheckState.Ok, "Known value.") : (CheckState.Rejected, $"\"{a.ValueText}\" isn't one of: {string.Join(", ", allowed)}.");
+}

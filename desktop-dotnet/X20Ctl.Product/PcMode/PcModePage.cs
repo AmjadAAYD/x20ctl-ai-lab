@@ -92,6 +92,8 @@ public sealed class PcModePage : Border
     }
     /// <summary>The settings being edited were replaced (another game picked, an import, a reset): the controller tabs reload.</summary>
     public static event Action? ProfileChanged;
+    /// <summary>Something outside this page (the Talk agent) replaced the settings: the controller tabs reload.</summary>
+    public static void Replaced() => ProfileChanged?.Invoke();
     /// <summary>"I understand" was pressed: the controller tabs may now save what they hold.</summary>
     public static event Action? NoticeAccepted;
     /// <summary>The switch changed. The Studio reopens, so its tabs unlock (or lock) for this controller.</summary>
