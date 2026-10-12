@@ -75,7 +75,7 @@ jobs:
           Copy-Item publish/X20Ctl.exe "out/X20CTL-$env:VERSION-windows-x64.exe"
       - name: Upload the unsigned exe
         id: unsigned
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-unsigned
           path: out/*.exe
@@ -102,7 +102,7 @@ jobs:
             if ($sig.Status -ne 'Valid') { throw "The signed exe's signature is $($sig.Status)" }
             "Signed by: $($sig.SignerCertificate.Subject)"
           } else { 'Published unsigned: SignPath is not set up for this repository yet.' }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: final/*.exe
@@ -124,7 +124,7 @@ jobs:
           cp tools/linux_controller_check/x20ctl-check.py tools/linux_controller_check/x20ctl-pcmode.py tools/linux_controller_check/README.txt LICENSE NOTICE pkg/
           chmod 755 pkg/x20ctl-check.py
           (cd pkg && zip -X "../out/X20CTL-${version}-linux-check.zip" README.txt x20ctl-check.py x20ctl-pcmode.py LICENSE NOTICE)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux
           path: out/*.zip
