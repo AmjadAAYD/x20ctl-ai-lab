@@ -32,7 +32,7 @@ public sealed class VibrationVisual : Grid
         var tracks = Flow.Load(model);
         var rim = Flow.LoadRim(model);
         var islands = Flow.Islands(model);
-        behind = new Flow(tracks, false) { Rim = rim }; over = new Flow(tracks, true) { Rim = rim, Parts = islands };
+        behind = new Flow(tracks, false) { Rim = rim }; over = new Flow(tracks, true) { Rim = rim, Parts = islands, Palette = Flow.LedColors(model) };
         Children.Add(behind); Children.Add(new PhotoController(model)); Children.Add(over);
         RenderTransform = shake;
         Loaded += (_, _) => UpdateClock(); Unloaded += (_, _) => Stop(); IsVisibleChanged += (_, _) => UpdateClock();
@@ -241,29 +241,46 @@ public sealed class VibrationVisual : Grid
                 Pulse(dc, part, q, m, 1, moving ? time : 0);
             }
         }
-        private static Color Rgb(double t)
+        public Color[] Palette { get; init; } = [Color.FromRgb(80, 225, 255)];
+        /// <summary>The colours of each model's own LEDs, read off its photo: strips, stick rings, the D-pad ring. The X10 and
+        /// X15 show no lit LEDs, so they take the colour of their shell accents.</summary>
+        public static Color[] LedColors(string model) => model switch
         {
-            t -= Math.Floor(t);
-            Color[] stops = { Color.FromRgb(60, 120, 255), Color.FromRgb(80, 225, 255), Color.FromRgb(255, 80, 210), Color.FromRgb(255, 155, 60), Color.FromRgb(60, 120, 255) };
-            double x = t * 4; int i = Math.Min((int)x, 3); return Mix(stops[i], stops[i + 1], x - i);
+            "x20" => [Color.FromRgb(255, 150, 45), Color.FromRgb(255, 60, 200), Color.FromRgb(80, 90, 255)],
+            "x20_pro" => [Color.FromRgb(255, 90, 220), Color.FromRgb(160, 110, 255), Color.FromRgb(90, 230, 255)],
+            "x05" => [Color.FromRgb(80, 225, 255), Color.FromRgb(100, 120, 255), Color.FromRgb(255, 80, 220)],
+            "x05_pro" => [Color.FromRgb(255, 70, 200), Color.FromRgb(255, 215, 60), Color.FromRgb(80, 230, 255)],
+            "x10" => [Color.FromRgb(110, 160, 255), Color.FromRgb(175, 210, 255)],
+            "d10" => [Color.FromRgb(255, 190, 240), Color.FromRgb(255, 80, 210), Color.FromRgb(160, 90, 255)],
+            "x15" => [Color.FromRgb(210, 175, 255), Color.FromRgb(150, 110, 255)],
+            "dune" => [Color.FromRgb(170, 90, 255), Color.FromRgb(80, 140, 255), Color.FromRgb(90, 230, 255), Color.FromRgb(255, 100, 220)],
+            _ => [Color.FromRgb(80, 225, 255)],
+        };
+        private static Color Rgb(Color[] stops, double t)
+        {
+            t -= Math.Floor(t); int n = stops.Length; if (n == 1) return stops[0];
+            double x = t * n; int i = Math.Min((int)x, n - 1); return Mix(stops[i], stops[(i + 1) % n], x - i);
         }
         /// <summary>One pulse at progress q round the loop (outside 0..1 it is resting): a short bright strip of RGB light with
         /// feathered ends, a soft bloom under it, easing in as it starts and out as it ends.</summary>
-        private static void Pulse(DrawingContext dc, Island part, double q, double m, double weight, double time)
+        private void Pulse(DrawingContext dc, Island part, double q, double m, double weight, double time)
         {
             if (q is < 0 or > 1 || weight <= 0) return;
             double envelope = q < .12 ? Math.Sin(q / .12 * Math.PI / 2) : q > .88 ? Math.Sin((1 - q) / .12 * Math.PI / 2) : 1;
             double span = part.Length * (part.Grip ? .2 : .42), head = part.Closed ? part.Length * q : (part.Length + span) * q;
-            double core = part.Grip ? 9 : 7, bloom = part.Grip ? 18 : 13;
+            double core = part.Grip ? 14 : 10;
             for (int i = 0; i + 1 < part.Points.Length; i++)
             {
                 double behind = head - part.Along[i]; if (behind < 0) { if (!part.Closed) continue; behind += part.Length; } // a loop: the tail wraps past the start
                 if (behind > span) continue;
                 double x = 1 - behind / span, feather = Math.Pow(Math.Sin(x * Math.PI), .8);
                 double a = envelope * feather * weight * (.6 + .4 * m);
-                var c = Rgb(part.Along[i] / part.Length * .9 + time * .05);
-                dc.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(80 * a, 0, 255), c.R, c.G, c.B)), bloom) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Points[i], part.Points[i + 1]);
-                dc.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(255 * a, 0, 255), c.R, c.G, c.B)), core) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Points[i], part.Points[i + 1]);
+                var c = Rgb(Palette, part.Along[i] / part.Length * .9 + time * .05);
+                // neon tube: a wide haze, a bloom, the coloured core, and a near-white hot centre
+                Neon(dc, c, 40 * a, core * 3.6, part.Points[i], part.Points[i + 1]);
+                Neon(dc, c, 110 * a, core * 2, part.Points[i], part.Points[i + 1]);
+                Neon(dc, c, 255 * a, core, part.Points[i], part.Points[i + 1]);
+                Neon(dc, Mix(c, Colors.White, .7), 255 * a, core * .38, part.Points[i], part.Points[i + 1]);
             }
         }        /// <summary>A polyline through <paramref name="count"/> points starting at <paramref name="start"/>, wrapping round the contour.</summary>
         private static StreamGeometry Poly(Point[] points, int start, int count, bool closed)
@@ -278,6 +295,8 @@ public sealed class VibrationVisual : Grid
             }
             g.Freeze(); return g;
         }
+        private static void Neon(DrawingContext dc, Color c, double alpha, double width, Point a, Point b) =>
+            dc.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(alpha, 0, 255), c.R, c.G, c.B)), width) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, a, b);
         private static Color Mix(Color a, Color b, double k) => Color.FromRgb((byte)(a.R + (b.R - a.R) * k), (byte)(a.G + (b.G - a.G) * k), (byte)(a.B + (b.B - a.B) * k));
     }
 }
