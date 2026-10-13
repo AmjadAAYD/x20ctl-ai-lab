@@ -67,6 +67,9 @@ public sealed class AgentPanel
     public TextBox Search { get; }
     /// <summary>Minimise or close was chosen: the host puts the window away (the conversation stays).</summary>
     public event Action? CloseRequested;
+    /// <summary>"Change controller" was asked: the host goes to the Controller Zone.</summary>
+    public event Action? ChangeControllerRequested;
+    readonly string padName;
     /// <summary>Plays the walk-through of a change (before, after) on the host's pages, and returns when it is over.</summary>
     public Func<PcModeProfile, PcModeProfile, DriftReport?, Task>? Walkthrough { get; set; }
     /// <summary>The agent started or stopped thinking.</summary>
@@ -115,7 +118,7 @@ public sealed class AgentPanel
     public AgentPanel(string modelId, string controllerName, PcModeLink? link, Action<Button> register, int player = 0, Func<Action<string, int>, IDriftMeter>? meter = null)
     {
         this.modelId = modelId; this.link = link; this.player = player; this.register = register;
-        string name = controllerName.Replace("EasySMX ", "");
+        string name = controllerName.Replace("EasySMX ", ""); padName = name;
         // drift is read from the real controller; a review harness can hand in its own reading instead
         session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
         greeting = AgentCharacter.Greeting(name);
@@ -402,6 +405,34 @@ public sealed class AgentPanel
         shake.BeginAnimation(TranslateTransform.XProperty, jolt);
     }
 
+    async Task Do(AgentCommand command)
+    {
+        switch (command)
+        {
+            case AgentCommand.AboutController:
+                Say(AgentCommands.AboutController, null); Look(Gaze.Typing); _ = Lights(AgentMood.Good); break;
+            case AgentCommand.Battery:
+                Searching(true);
+                string? level = await Task.Run(() => XInputDriftMeter.BatteryLevel(player));
+                Searching(false); Say(AgentCommands.Battery(level, padName), null); _ = Lights(level == null ? AgentMood.Unsure : AgentMood.Good);
+                break;
+            case AgentCommand.ChangeController:
+                Say(AgentCommands.ChangeController, null); _ = Lights(AgentMood.Good);
+                await Task.Delay(1400); ChangeControllerRequested?.Invoke(); break;
+            case AgentCommand.Star:
+                Say(AgentCommands.Star, null); _ = Lights(AgentMood.Good); Open(ExternalLinks.Repository); break;
+            case AgentCommand.Donate:
+                Say(AgentCommands.Donate, null); _ = Lights(AgentMood.Good); Open(ProductLinks.Support); break;
+        }
+    }
+
+    static void Open(string url)
+    {
+        if (ReviewSandbox.Active) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true })?.Dispose(); }
+        catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+    }
+
     /// <summary>The search settled: the agent speaks up about it, once per search.</summary>
     void Announce()
     {
@@ -516,6 +547,8 @@ public sealed class AgentPanel
         // the help list is the app's own answer: instant, the same online and offline
         if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say("Here's everything I can do, on the left. Pick one, or search it. *proudly clicks every button*", null); _ = Lights(AgentMood.Good); return null; }
         // a topic alone is a search: the ideas narrow to it, and the app answers itself
+        // the app's own commands: the controller's name, the battery, another controller, a star, a donation
+        if (AgentCommands.Parse(sentence) is var command and not AgentCommand.None) { Bubble(sentence, mine: true); await Do(command); return null; }
         if (AgentIdeas.Topic(sentence) is { } topic)
         {
             Bubble(sentence, mine: true); announced = topic; Search.Text = topic; settle.Stop();

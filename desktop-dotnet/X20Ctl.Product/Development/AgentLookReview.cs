@@ -30,6 +30,8 @@ internal static class AgentLookReview
             talk.Search.Text = "sti"; await Shot("2-typing-sti"); talk.Search.Text = "sticks"; await Task.Delay(1500); await Shot("2-searched-sticks");
             await talk.Ask("What's 12 times 7?"); await Shot("2-silly");
             await talk.Ask("banana telescope"); await Shot("2-lost");
+            await talk.Ask("EasySMX X20 Pro"); await Shot("2-about-controller");
+            await talk.Ask("What's my current battery?"); await Shot("2-battery");
             await talk.Ask("Turbo on X, 12 a second"); await Shot("4-after");
             await talk.Ask("Make my right stick good for sniping"); await Shot("5-after-curve");
         }

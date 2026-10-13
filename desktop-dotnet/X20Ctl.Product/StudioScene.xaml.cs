@@ -134,7 +134,7 @@ public partial class StudioScene : UserControl
         {
             agentPanel = new(Model.Id, Model.Name, PcMode, RegisterFocus, Player, AgentMeter);
             agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 170);
-            agentPanel.CloseRequested += CloseAgent; agentPanel.Thinking += agentOrb.SetThinking; agentPanel.Walkthrough = PlayAgentTour;
+            agentPanel.CloseRequested += CloseAgent; agentPanel.ChangeControllerRequested += () => { CloseAgent(); BackRequested?.Invoke(); }; agentPanel.Thinking += agentOrb.SetThinking; agentPanel.Walkthrough = PlayAgentTour;
             Grid.SetZIndex(agentPanel.Body, 41); StudioShell.Children.Add(agentPanel.Body);
         }
         // across the Studio, from under the tabs to above the round button (owner's sketch, 13 Oct), keeping a controller's

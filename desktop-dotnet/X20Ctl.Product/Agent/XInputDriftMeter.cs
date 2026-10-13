@@ -50,6 +50,18 @@ public sealed class XInputDriftMeter(int player, Action<string, int> progress) :
     /// <summary>The real controller's XInput slot (the player's own first, never PC mode's virtual pad), or -1.</summary>
     internal static int Slot(int player) { using var reader = Open(); return reader == null ? -1 : Find(reader, player); }
 
+    /// <summary>What Windows reports for the controller's battery: empty, low, medium, full, or wired; null when it isn't
+    /// reported (no controller, or a receiver that doesn't say). Read-only.</summary>
+    internal static string? BatteryLevel(int player)
+    {
+        using var reader = Open();
+        if (reader == null) return null;
+        int slot = Find(reader, player);
+        if (slot < 0) return null;
+        var (type, level, known) = reader.Battery(slot);
+        return type == "wired" ? "wired" : known ? level : null;
+    }
+
     static int Find(WindowsReader reader, int player)
     {
         if (player is >= 0 and < 4 && !PcModeService.IsVirtual(player) && reader.Read(player, out _)) return player;
