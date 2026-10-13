@@ -56,7 +56,10 @@ public sealed class DashboardConsolePage : Grid
         var hint = new Border { CornerRadius = new(14), Padding = new(14, 6, 14, 6), Background = new SolidColorBrush(Color.FromArgb(150, 8, 14, 32)), BorderBrush = new SolidColorBrush(Color.FromArgb(70, 140, 180, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(24, 0, 0, 6),
             Child = GlyphHint.Footer(("A", "Configure buttons")) };
         heroButton.GotKeyboardFocus += (_, _) => hint.BorderBrush = Brushes.White; heroButton.LostKeyboardFocus += (_, _) => hint.BorderBrush = new SolidColorBrush(Color.FromArgb(70, 140, 180, 255));
-        heroFocus = heroButton; top.Children.Add(new Grid { Children = { heroButton } });
+        heroFocus = heroButton;
+        // the same framed panel the Buttons page puts its controller in (owner request, 13 Oct 2026)
+        var heroPanel = Kit.Panel(null, null, null, new Grid { Children = { heroButton } }, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
+        top.Children.Add(heroPanel);
 
         var status = new StackPanel { Width = 560 };
         status.Children.Add(new StatusChip("Controller offline", ChipKind.Warn));
