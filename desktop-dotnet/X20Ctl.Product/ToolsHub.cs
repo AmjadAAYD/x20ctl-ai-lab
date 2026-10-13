@@ -82,7 +82,7 @@ public sealed class ProductSettings : Grid
         // hub: the Controller Check hero on the left, four tiles on the right
         hub.ColumnDefinitions.Add(new() { Width = new(1.05, GridUnitType.Star) }); hub.ColumnDefinitions.Add(new() { Width = new(24) }); hub.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
         Grid.SetRow(hub, 1); page.Children.Add(hub);
-        Check = Card("", "Controller not working?", "Open the Read scan. See every button, stick and trigger live, run a guided test, and save a report you can share.", Kit.Blue, hero: true);
+        Check = Card("", "Controller not working?", "Read scan, then Write scan, then send both reports online together.", Kit.Blue, hero: true);
         Check.Click += (_, _) => check(); hub.Children.Add(Check);
         var tiles = new Grid(); tiles.RowDefinitions.Add(new()); tiles.RowDefinitions.Add(new() { Height = new(24) }); tiles.RowDefinitions.Add(new());
         tiles.RowDefinitions.Add(new() { Height = new(24) }); tiles.RowDefinitions.Add(new());
@@ -291,14 +291,9 @@ public sealed class ProductSettings : Grid
             Fill = new RadialGradientBrush(Color.FromArgb(hero ? (byte)70 : (byte)52, accent.R, accent.G, accent.B), Color.FromArgb(0, accent.R, accent.G, accent.B)) };
         art.Children.Add(glow);
         if (hero)
-        {   // the Controller Check card shows a controller being scanned: a line of light sweeping down over it
-            var pad = new Grid { Width = 1536, Height = 1024 }; pad.Children.Add(new PhotoController("x20"));
-            var sweep = new Rectangle { Height = 90, VerticalAlignment = VerticalAlignment.Top, IsHitTestVisible = false,
-                Fill = new LinearGradientBrush(new GradientStopCollection { new GradientStop(Color.FromArgb(0, 125, 182, 255), 0), new GradientStop(Color.FromArgb(150, 125, 182, 255), .5), new GradientStop(Color.FromArgb(0, 125, 182, 255), 1) }, 90) };
-            var move = new TranslateTransform(); sweep.RenderTransform = move; pad.Children.Add(sweep);
-            pad.OpacityMask = new VisualBrush(new PhotoController("x20")) { Stretch = Stretch.None };
-            if (DS.Motion) move.BeginAnimation(TranslateTransform.YProperty, Ambient.Rate(new DoubleAnimation(80, 900, TimeSpan.FromSeconds(2.6)) { RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }, AutoReverse = true }, 24)); // capped, like every endless animation
-            art.Children.Add(new Viewbox { Child = pad, Width = 520, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new(0, 40, -10, 0), IsHitTestVisible = false });
+        {   // the Controller Check card shows a computer running a scan (owner request 13 Oct 2026), not a controller
+            var computer = new Scanner.PcScanArt();
+            art.Children.Add(new Viewbox { Child = computer, Width = 520, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new(0, -4, 0, 0), IsHitTestVisible = false });
         }
         else art.Children.Add(new TextBlock { Text = icon, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 150, Foreground = new SolidColorBrush(Color.FromArgb(14, 255, 255, 255)), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new(0, 26, 10, 0), IsHitTestVisible = false });
         var disc = new Grid { Width = hero ? 92 : 56, Height = hero ? 92 : 56, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = hero ? VerticalAlignment.Top : VerticalAlignment.Center,
@@ -310,7 +305,7 @@ public sealed class ProductSettings : Grid
         var words = new StackPanel { VerticalAlignment = hero ? VerticalAlignment.Bottom : VerticalAlignment.Center, Margin = new(hero ? 0 : 74, 0, hero ? 70 : 54, 0) };
         words.Children.Add(Kit.Text(title, hero ? 38 : 21, "DS.Text", FontWeights.Bold).Also(t => { t.TextWrapping = TextWrapping.Wrap; t.TextTrimming = TextTrimming.None; }));
         var d = Kit.Text(detail, hero ? 17 : 14.5, "DS.TextSoft"); d.TextWrapping = TextWrapping.Wrap; d.TextTrimming = TextTrimming.None; d.Margin = new(0, 8, 0, 0); words.Children.Add(d);
-        if (hero) words.Children.Add(new WrapPanel { Margin = new(0, 20, 0, 0), Children = { Chip("Live input"), Chip("Guided test"), Chip("Device list"), Chip("Report") } });
+        if (hero) words.Children.Add(new WrapPanel { Margin = new(0, 20, 0, 0), Children = { Chip("1  Read scan"), Chip("2  Write scan"), Chip("3  Send online") } });
         art.Children.Add(words);
         var arrow = new Border { Width = 42, Height = 42, CornerRadius = new(21), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Background = new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), BorderBrush = new SolidColorBrush(Color.FromArgb(70, 255, 255, 255)), BorderThickness = new(1),
             Child = Kit.Icon("", 15, "DS.Text").Also(i => i.HorizontalAlignment = HorizontalAlignment.Center) };
