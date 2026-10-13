@@ -22,6 +22,16 @@ public sealed class AgentPanel
     static readonly OllamaClient model = new();
     static Task<ModelState>? preparing;
     static ModelState state = ModelState.Starting;
+    // offline mode: the phrasebook agent, chosen with the switch, or used when the model can't run on this PC at all
+    static readonly OfflineAgent offlineAgent = new();
+    static bool offlineChosen;
+    public static bool Offline => offlineChosen || state is ModelState.NotInstalled or ModelState.Missing or ModelState.Failed;
+    /// <summary>Asks whichever agent is in use now, so the switch works mid-conversation.</summary>
+    sealed class Either : IAgentModel
+    {
+        public string Name => Offline ? offlineAgent.Name : model.Name;
+        public Task<ModelReply> Chat(IReadOnlyList<ChatMessage> messages, string schema, CancellationToken cancel) => (Offline ? offlineAgent : (IAgentModel)model).Chat(messages, schema, cancel);
+    }
     static string stateText = "";
     /// <summary>The model's readiness changed (starting, loading, ready, missing…).</summary>
     public static event Action? StateChanged;
@@ -50,6 +60,7 @@ public sealed class AgentPanel
     readonly TextBlock settingsToggle = Kit.Text("", 13.5, "DS.TextSoft");
     readonly TextBlock target = Kit.Text("", 13, "DS.TextMuted").Also(t => { t.TextWrapping = TextWrapping.Wrap; t.TextTrimming = TextTrimming.None; });
     readonly TranslateTransform offset = new();
+    readonly Button offlineSwitch;
     readonly ScaleTransform pop = new(1, 1);
     PcModeProfile preview = new(); // the settings when PC mode isn't reachable from this window
     bool busy;
@@ -59,16 +70,19 @@ public sealed class AgentPanel
         this.modelId = modelId; this.link = link;
         string name = controllerName.Replace("EasySMX ", "");
         // drift is read from the real controller; a review harness can hand in its own reading instead
-        session = new AgentSession(model, modelId, name) { Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
+        session = new AgentSession(new Either(), modelId, name) { Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
         greeting = "Agent XCTL, in your " + name + ". Tell me how you play, or what feels wrong, and I'll set myself up.";
 
         // title bar: the mark, the name, the model's state; drag it to move the window
         var mark = new Grid { Width = 40, Height = 40, Margin = new(0, 0, 12, 0), Children = { new System.Windows.Shapes.Ellipse { Fill = AgentMark.Field() }, AgentMark.Glyph(26) } };
         var title = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Text("Agent XCTL", 18, "DS.Text", FontWeights.SemiBold), new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 2, 0, 0), Children = { statusDot, status } } } };
         var fresh = Chrome("", "New conversation"); fresh.Click += (_, _) => Restart();
+        offlineSwitch = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 34, MinHeight = 0, Padding = new(12, 0, 12, 0), Margin = new(6, 0, 0, 0), Content = Kit.Text("Offline", 13, "DS.TextSoft") };
+        offlineSwitch.Click += (_, _) => { offlineChosen = !offlineChosen; StateChanged?.Invoke(); };
+        register(offlineSwitch);
         var away = Chrome("", "Minimise"); away.Click += (_, _) => CloseRequested?.Invoke();
         var close = Chrome("", "Close"); close.Click += (_, _) => CloseRequested?.Invoke();
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { fresh, away, close } };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { offlineSwitch, fresh, away, close } };
         var bar = new DockPanel { Background = Brushes.Transparent, Cursor = Cursors.SizeAll, Margin = new(0, 0, 0, 12) };
         DockPanel.SetDock(buttons, Dock.Right); bar.Children.Add(buttons); DockPanel.SetDock(mark, Dock.Left); bar.Children.Add(mark); bar.Children.Add(title);
         Drag(bar);
@@ -166,9 +180,12 @@ public sealed class AgentPanel
 
     void ShowState()
     {
-        status.Text = state == ModelState.Starting && stateText.Length == 0 ? "Starting…" : stateText;
-        statusDot.Background = DS.Brush(state switch { ModelState.Ready => "DS.Success", ModelState.Starting or ModelState.Loading => "DS.Warn", _ => "DS.Danger" });
-        send.IsEnabled = !busy && state == ModelState.Ready;
+        status.Text = Offline ? (offlineChosen ? "Offline · phrasebook" : "Offline · phrasebook (the model isn't available)") : state == ModelState.Starting && stateText.Length == 0 ? "Starting…" : stateText;
+        statusDot.Background = DS.Brush(Offline ? "DS.AccentHi" : state switch { ModelState.Ready => "DS.Success", ModelState.Starting or ModelState.Loading => "DS.Warn", _ => "DS.Danger" });
+        send.IsEnabled = !busy && (Offline || state == ModelState.Ready);
+        if (offlineChosen) offlineSwitch.Background = new SolidColorBrush(Color.FromArgb(150, 36, 82, 160)); else offlineSwitch.ClearValue(Control.BackgroundProperty);
+        ((TextBlock)offlineSwitch.Content).Foreground = DS.Brush(offlineChosen ? "DS.Text" : "DS.TextSoft");
+        offlineSwitch.ToolTip = offlineChosen ? "Back to the model (Qwen)" : "Offline: answers from a phrasebook, no model";
     }
     public static string StateText => stateText;
 
@@ -179,7 +196,7 @@ public sealed class AgentPanel
     public async Task<AgentTurn?> Ask(string sentence)
     {
         if (busy) return null;
-        if (state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); return null; }
+        if (!Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); return null; }
         busy = true; ShowState(); Thinking?.Invoke(true); chips.Visibility = Visibility.Collapsed;
         Bubble(sentence, mine: true);
         var thinking = Bubble("…", mine: false);

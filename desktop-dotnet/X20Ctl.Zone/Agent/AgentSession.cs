@@ -175,7 +175,9 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     /// <summary>A short line of what a turn cost: real token counts and times as the model reported them.</summary>
     public static string Stats(AgentTurn turn)
     {
-        var r = turn.Reply; string s = string.Format(CultureInfo.InvariantCulture, "{0} in · {1} out · {2:0.0} s", r.PromptTokens, r.OutputTokens, r.TotalMs / 1000);
+        var r = turn.Reply;
+        if (turn.Attempts.All(a => a.PromptTokens == 0 && a.OutputTokens == 0)) return string.Create(CultureInfo.InvariantCulture, $"offline · {turn.Attempts.Sum(a => a.TotalMs):0.#} ms");
+        string s = string.Format(CultureInfo.InvariantCulture, "{0} in · {1} out · {2:0.0} s", r.PromptTokens, r.OutputTokens, r.TotalMs / 1000);
         if (r.LoadMs > 500) s += string.Format(CultureInfo.InvariantCulture, " (loading {0:0.0} s)", r.LoadMs / 1000);
         return turn.Attempts.Count > 1 ? s + " · after a second attempt" : s;
     }

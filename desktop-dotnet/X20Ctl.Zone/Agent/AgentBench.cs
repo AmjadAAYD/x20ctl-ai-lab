@@ -71,6 +71,32 @@ public static class AgentBench
         new("Make my sticks smooth and turn PC mode on", "x20_pro", ["pc_mode:PcMode=on"], ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),
     ];
 
+    /// <summary>Offline mode's held-out sentences: never in its seeds, and kept out of the phrasebook Qwen writes, so they measure
+    /// how it handles wording it has never seen.</summary>
+    public static readonly BenchCase[] OfflineHeldOut =
+    [
+        new("can u make my right analog better for long shots", "x20_pro", ["stick_curve:RightStick=slow"]),
+        new("my crosshair is way too shaky", "x20_pro", ["stick_curve:RightStick=slow"]),
+        new("smoother sticks pls", "x20_pro", ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),
+        new("left stick deadzone 7", "x20_pro", ["stick_deadzone:LeftStick=7"]),
+        new("my left thumbstick is drifting", "x20_pro", ["stick_deadzone:LeftStick"]),
+        new("the camera spins slowly when i'm not touching anything", "x20_pro", ["stick_deadzone:RightStick"]),
+        new("i want hair triggers", "x20_pro", ["trigger_full_at:RightTrigger", "trigger_deadzone:RightTrigger"]),
+        new("set up my triggers for forza", "x20_pro", ["trigger_curve:RightTrigger=slow", "trigger_curve:LeftTrigger=slow"]),
+        new("rapid fire on Y at 8", "x20_pro", ["turbo:Y=8"]),
+        new("turn turbo off on Y", "x20_pro", ["turbo:Y=0", "reset:Y"]),
+        new("swap X and Y", "x20_pro", ["remap:X=Y"], ["remap:Y=X"]),
+        new("make RB do what LB does", "x20_pro", ["remap:RB=LB"]),
+        new("jump on paddle 2", "x20_pro", ["paddle:M2=A"]),
+        new("reset my left stick", "x20_pro", ["reset:LeftStick"]),
+        new("go back to the default settings for everything", "x20_pro", ["reset:All"]),
+        new("enable pc mode please", "x20_pro", ["pc_mode:PcMode=on"]),
+        new("my changes aren't showing up in game", "x20_pro", ["pc_mode:PcMode=on"]),
+        new("change the lights to blue", "x20_pro"),
+        new("set the right stick dead zone to 75", "x20_pro"),
+        new("What does the anti dead zone do?", "x20_pro"),
+    ];
+
     public static readonly BenchCase[] Cases =
     [
         new("Make my sticks smooth", "x20_pro", ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),
