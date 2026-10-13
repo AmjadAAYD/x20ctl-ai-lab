@@ -27,8 +27,9 @@ internal static class AgentLookReview
             studio.AgentTourStarted += tour => tour.Held += step => _ = Shot($"3-tour-{++stop}-{step.Target}");
             studio.OpenAgent(); var talk = studio.AgentWindow!;
             await Shot("1-open");
-            talk.Input.Text = "sti"; await Shot("2-typing-sti"); talk.Input.Text = "";
-            await talk.Ask("Sticks"); await Shot("2-searched-sticks");
+            talk.Search.Text = "sti"; await Shot("2-typing-sti"); talk.Search.Text = "sticks"; await Task.Delay(1500); await Shot("2-searched-sticks");
+            await talk.Ask("What's 12 times 7?"); await Shot("2-silly");
+            await talk.Ask("banana telescope"); await Shot("2-lost");
             await talk.Ask("Turbo on X, 12 a second"); await Shot("4-after");
             await talk.Ask("Make my right stick good for sniping"); await Shot("5-after-curve");
         }

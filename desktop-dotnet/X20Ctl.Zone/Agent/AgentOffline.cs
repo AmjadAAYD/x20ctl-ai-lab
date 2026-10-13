@@ -55,7 +55,7 @@ public sealed class OfflineAgent : IAgentModel
         var plan = Answer(sentence);
         // nothing matched, or a question about something that isn't a setting: the closest doc passage, if one was given
         string? docs = messages.LastOrDefault(m => m.Role == "system" && m.Content.StartsWith("From the X20CTL docs", StringComparison.Ordinal))?.Content;
-        if (docs != null && plan.Actions.Count == 0 && (plan.Speech.StartsWith("I didn't catch", StringComparison.Ordinal) || plan.Speech.StartsWith("Ask me about", StringComparison.Ordinal))
+        if (docs != null && plan.Actions.Count == 0 && (plan.Speech.StartsWith(AgentCharacter.NotUnderstood, StringComparison.Ordinal) || plan.Speech.StartsWith("Ask me about", StringComparison.Ordinal))
             && Regex.Match(docs, @"^\[1\] (.+?): (.+)$", RegexOptions.Multiline) is { Success: true } top)
             plan = OfflinePlan.Say($"Here's what the docs say, from {top.Groups[1].Value}.", Sentences(top.Groups[2].Value, 3)) with { Sources = [1] };
         return Task.FromResult(new ModelReply(Json(plan), 0, 0, 0, clock.Elapsed.TotalMilliseconds));
@@ -81,6 +81,8 @@ public sealed class OfflineAgent : IAgentModel
         if (Regex.IsMatch(lower, @"\b(rgb|leds?|lights?|lighting|colou?rs?|vibration|vibrate|rumble|haptics?|battery|firmware|gyro|motion|volume|sound|mic|microphone|bluetooth)\b"))
             return OfflinePlan.Say("I can't change that yet. I can set sticks, triggers, buttons, turbo, paddles, PC mode, and measure drift.");
         if (Regex.IsMatch(lower, @"^\s*(hi|hello|hey|help|what can you do|who are you)\W*$")) return Intents.First(i => i.Id == "greeting").Build(new OfflineSlots());
+        // not about controllers at all: in character
+        if (AgentCharacter.OffTopic(sentence) is { } thing) return OfflinePlan.Say(AgentCharacter.Silly(thing));
         if (IsQuestion(lower)) return Question(lower);
 
         // several requests in one sentence: each part on its own, when each part is clearly a different request
@@ -118,7 +120,7 @@ public sealed class OfflineAgent : IAgentModel
     public static bool IsQuestion(string lower) =>
         Regex.IsMatch(lower, @"^\s*(what|why|explain|tell me about|is it|does|do i need|should i|which)\b|^\s*how (does|do|is|would)\b(?!.*\b(make|set|change|get|fix|turn)\b)");
 
-    static OfflinePlan NotUnderstood() => OfflinePlan.Say("I didn't catch that. Offline I understand things like \"make my sticks smooth\", \"hair triggers\", \"turbo on X at 12\", \"swap A and B\", \"my right stick drifts\" or \"turn PC mode on\".");
+    static OfflinePlan NotUnderstood() => OfflinePlan.Say(AgentCharacter.NotUnderstood + " Offline I understand things like \"make my sticks smooth\", \"hair triggers\", \"turbo on X at 12\", \"swap A and B\", \"my right stick drifts\" or \"turn PC mode on\".");
 
     static OfflinePlan Merge(IReadOnlyList<OfflinePlan> plans) => new(
         plans.SelectMany(p => p.Actions).GroupBy(a => (a.Action, a.Target)).Select(g => g.Last()).ToList(),

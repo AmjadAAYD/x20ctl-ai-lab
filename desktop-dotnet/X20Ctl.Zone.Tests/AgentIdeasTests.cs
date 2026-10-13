@@ -42,10 +42,10 @@ public class AgentIdeasTests
 
     [Theory]
     [InlineData("Sticks", "Sticks")]
-    [InlineData("sticks", "Sticks")]
-    [InlineData("dead zone", "Dead zone")]
-    [InlineData("my triggers?", "My triggers")]
-    [InlineData("turbo", "Turbo")]
+    [InlineData("sticks", "sticks")]
+    [InlineData("dead zone", "dead zone")]
+    [InlineData("my triggers?", "my triggers")]
+    [InlineData("turbo", "turbo")]
     public void A_topic_alone_is_a_search(string sentence, string topic) => Assert.Equal(topic, AgentIdeas.Topic(sentence));
 
     [Theory]
@@ -59,5 +59,51 @@ public class AgentIdeasTests
 
     [Fact]
     public void The_reply_says_what_was_searched() =>
-        Assert.Equal("I can see that you searched about Sticks, do you need any help?", AgentIdeas.TopicReply("Sticks"));
+        Assert.Equal("I've seen you search about “sticks”. Is there any help you need?", AgentIdeas.TopicReply("sticks"));
+}
+
+/// <summary>The character: off-topic questions in character, and the mood the player lights show.</summary>
+public class AgentCharacterTests
+{
+    static Task<AgentTurn> Ask(string sentence, string model = "x20_pro") =>
+        new AgentSession(new OfflineAgent(), model, "X20 Pro") { Meter = new BenchMeter() }.Ask(sentence, new X20Ctl.Zone.PcMode.PcModeProfile());
+
+    [Theory]
+    [InlineData("What's 12 times 7?", "a calculator")]
+    [InlineData("will it rain tomorrow?", "a weather app")]
+    [InlineData("give me a pizza recipe", "a chef")]
+    [InlineData("What is the capital of France?", "a history book")]
+    [InlineData("Who is the best footballer?", "a search engine")]
+    public void Off_topic_is_named(string sentence, string thing) => Assert.Equal(thing, AgentCharacter.OffTopic(sentence));
+
+    [Theory]
+    [InlineData("Make my sticks smooth")]
+    [InlineData("What's good and bad about hair triggers?")]
+    [InlineData("How much does the X20 Pro cost?")]
+    [InlineData("Does X20CTL work on a PlayStation 5?")]
+    [InlineData("How many hours does the X20's battery last?")]
+    [InlineData("Turbo on X, 12 presses a second")]
+    [InlineData("banana telescope")]
+    public void Controller_talk_is_never_off_topic(string sentence) => Assert.Null(AgentCharacter.OffTopic(sentence));
+
+    [Fact]
+    public async Task Offline_answers_off_topic_in_character()
+    {
+        var turn = await Ask("What's 12 times 7?");
+        Assert.Equal("How silly, I'm a controller, not a calculator! Ask me about sticks, triggers, buttons or turbo, and watch me shine.", turn.Verdict.Proposal!.Speech);
+        Assert.Empty(turn.Outcome.Changes);
+        Assert.Equal(AgentMood.Unsure, AgentCharacter.Mood(turn));
+    }
+
+    [Theory]
+    [InlineData("banana telescope", AgentMood.Failed)]
+    [InlineData("Put all my settings back to default", AgentMood.Unsure)]
+    [InlineData("Turbo on X, 12 presses a second", AgentMood.Good)]
+    [InlineData("Make my sticks smooth", AgentMood.Good)]
+    [InlineData("What's good and bad about hair triggers?", AgentMood.Good)]
+    [InlineData("hello", AgentMood.Good)]
+    public async Task Mood_follows_the_answer(string sentence, AgentMood mood) => Assert.Equal(mood, AgentCharacter.Mood(await Ask(sentence)));
+
+    [Fact]
+    public void The_prompt_carries_the_character() => Assert.Contains("How silly, I'm a controller, not a <thing>!", AgentSession.DefaultPrompt("X20 Pro", "x20_pro"));
 }

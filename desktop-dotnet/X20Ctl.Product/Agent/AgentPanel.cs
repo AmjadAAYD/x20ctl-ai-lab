@@ -63,6 +63,8 @@ public sealed class AgentPanel
 
     public Border Body { get; }
     public TextBox Input { get; }
+    /// <summary>The ideas' own search box (the left half of the screen).</summary>
+    public TextBox Search { get; }
     /// <summary>Minimise or close was chosen: the host puts the window away (the conversation stays).</summary>
     public event Action? CloseRequested;
     /// <summary>Plays the walk-through of a change (before, after) on the host's pages, and returns when it is over.</summary>
@@ -77,6 +79,10 @@ public sealed class AgentPanel
     readonly Button send = null!;
     readonly Action<Button> register;
     readonly StackPanel ideasList = new();
+    // the agent speaks up once the owner stops typing a search (owner request, 13 Oct 2026)
+    readonly System.Windows.Threading.DispatcherTimer settle = new() { Interval = TimeSpan.FromSeconds(1.2) };
+    string announced = "";
+    int lightShow; bool lightsOn;
     readonly TextBlock ideasFor = Kit.Text("", 12.5, "DS.TextMuted").Also(t => { t.TextWrapping = TextWrapping.Wrap; t.TextTrimming = TextTrimming.None; t.Margin = new(0, 2, 0, 0); });
     readonly TextBlock status = Kit.Text("", 13, "DS.TextSoft");
     readonly Border statusDot = new() { Width = 8, Height = 8, CornerRadius = new(4), Margin = new(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -109,7 +115,7 @@ public sealed class AgentPanel
         string name = controllerName.Replace("EasySMX ", "");
         // drift is read from the real controller; a review harness can hand in its own reading instead
         session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
-        greeting = "Agent XCTL, in your " + name + ". Tell me how you play, or what feels wrong, and I'll set myself up. Search the ideas on the left, or say HELP.";
+        greeting = AgentCharacter.Greeting(name);
 
         // ---- the screen, right: the conversation ----
         var heading = new DockPanel { Margin = new(0, 0, 0, 8) };
@@ -123,21 +129,32 @@ public sealed class AgentPanel
         var chat = new DockPanel(); DockPanel.SetDock(top, Dock.Top); chat.Children.Add(top); chat.Children.Add(scroller);
 
         // ---- the screen, left: ideas, narrowed by what's typed ----
-        var ideasHead = new StackPanel { Margin = new(0, 0, 0, 10), Children = { Kit.Text("Ideas", 15, "DS.Text", FontWeights.SemiBold), ideasFor } };
+        Search = new TextBox { FontSize = 14, MinHeight = 38, Padding = new(24, 8, 10, 7), VerticalContentAlignment = VerticalAlignment.Center, ToolTip = "Search the ideas: sticks, triggers, turbo…" };
+        Search.TextChanged += (_, _) =>
+        {
+            ShowIdeas(Search.Text); settle.Stop();
+            bool typing = Search.Text.Trim().Length > 0;
+            if (!busy) { Look(typing ? Gaze.Ideas : Gaze.Idle); Searching(typing); }
+            if (typing) settle.Start();
+        };
+        Search.KeyDown += (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; settle.Stop(); Announce(); } };
+        settle.Tick += (_, _) => { settle.Stop(); Announce(); };
+        var searchBar = new Grid { Margin = new(0, 8, 0, 0), Children = { Search, Kit.Icon("\uE721", 13, "DS.TextMuted").Also(i => { i.Margin = new(10, 0, 0, 0); i.HorizontalAlignment = HorizontalAlignment.Left; i.IsHitTestVisible = false; }) } };
+        var ideasHead = new StackPanel { Margin = new(0, 0, 0, 10), Children = { Kit.Text("Ideas", 15, "DS.Text", FontWeights.SemiBold), searchBar, ideasFor.Also(t => t.Margin = new(0, 6, 0, 0)) } };
         var ideas = new DockPanel(); DockPanel.SetDock(ideasHead, Dock.Top); ideas.Children.Add(ideasHead);
         ideas.Children.Add(new ScrollViewer { Content = ideasList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new(0, 0, 8, 0) });
 
-        // ---- one bar under both: it searches the ideas as you type, and sends to the agent on Enter ----
-        Input = new TextBox { AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 42, MaxHeight = 84, MaxLength = 600, FontSize = 14, Padding = new(24, 9, 12, 8), VerticalContentAlignment = VerticalAlignment.Center, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ToolTip = "Type to search the ideas; Enter or A to send" };
+        // ---- the chat bar, under the conversation ----
+        Input = new TextBox { AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 42, MaxHeight = 84, MaxLength = 600, FontSize = 14, Padding = new(24, 9, 12, 8), VerticalContentAlignment = VerticalAlignment.Center, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ToolTip = "Talk to the agent: Enter or A to send" };
         Input.KeyDown += (_, e) => { if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; Send(); } };
-        Input.TextChanged += (_, _) => { ShowIdeas(Input.Text); if (!busy) Look(Input.Text.Length > 0 ? Gaze.Typing : Gaze.Idle); };
-        var bar = new Grid { Margin = new(0, 12, 0, 0), Children = { Input, Kit.Icon("", 14, "DS.TextMuted").Also(i => { i.Margin = new(14, 0, 0, 0); i.HorizontalAlignment = HorizontalAlignment.Left; i.IsHitTestVisible = false; }) } };
+        Input.TextChanged += (_, _) => { if (!busy) Look(Input.Text.Length > 0 ? Gaze.Typing : Gaze.Idle); };
+        var bar = new Grid { Margin = new(0, 12, 0, 0), Children = { Input, Kit.Icon("\uE8BD", 14, "DS.TextMuted").Also(i => { i.Margin = new(14, 0, 0, 0); i.HorizontalAlignment = HorizontalAlignment.Left; i.IsHitTestVisible = false; }) } };
 
         var split = new Grid { ColumnDefinitions = { new() { Width = new GridLength(400) }, new() { Width = new GridLength(25) }, new() }, RowDefinitions = { new(), new() { Height = GridLength.Auto } } };
         split.Children.Add(ideas);
         var divider = new Border { Width = 1, Background = new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)) }; Grid.SetColumn(divider, 1); split.Children.Add(divider);
         Grid.SetColumn(chat, 2); split.Children.Add(chat);
-        Grid.SetRow(bar, 1); Grid.SetColumnSpan(bar, 3); split.Children.Add(bar);
+        Grid.SetRow(bar, 1); Grid.SetColumn(bar, 2); split.Children.Add(bar);
         var screen = new Border
         {
             Width = 990, Height = 418, CornerRadius = new(18), Padding = new(18, 14, 16, 14), BorderThickness = new(1.5), Child = split,
@@ -168,8 +185,8 @@ public sealed class AgentPanel
         // the player lights: this player's is lit in the model's state; they chase while it thinks
         for (int i = 0; i < 4; i++)
         {
-            leds[i] = new Border { Width = 16, Height = 5, CornerRadius = new(2.5), IsHitTestVisible = false };
-            Canvas.SetLeft(leds[i], DesignWidth / 2 - 41 + i * 22); Canvas.SetTop(leds[i], 58); pad.Children.Add(leds[i]);
+            leds[i] = new Border { Width = 22, Height = 7, CornerRadius = new(3.5), IsHitTestVisible = false };
+            Canvas.SetLeft(leds[i], DesignWidth / 2 - 56 + i * 28); Canvas.SetTop(leds[i], 56); pad.Children.Add(leds[i]);
         }
         Canvas.SetLeft(screen, (DesignWidth - 990) / 2); Canvas.SetTop(screen, 72); pad.Children.Add(screen);
 
@@ -203,7 +220,7 @@ public sealed class AgentPanel
         // right: the face buttons. A sends, B puts it away, X starts over, Y shows every idea
         var face = new (string Letter, double X, double Y, string Tip, Action Act)[]
         {
-            ("Y", 0, -1, "All ideas", () => { Input.Text = ""; ShowIdeas(""); Look(Gaze.Ideas); }),
+            ("Y", 0, -1, "Search the ideas", () => { Search.Focus(); Search.SelectAll(); Look(Gaze.Ideas); }),
             ("X", -1, 0, "New conversation", Restart),
             ("B", 1, 0, "Put away", () => CloseRequested?.Invoke()),
             ("A", 0, 1, "Send", Send),
@@ -223,7 +240,7 @@ public sealed class AgentPanel
             register(cap); pad.Children.Add(cap);
             if (primary) send = cap;
         }
-        Legend(pad, RightX, PadY + 74, "A send · B away\nX new · Y ideas");
+        Legend(pad, RightX, PadY + 74, "A send · B away\nX new · Y search");
         send ??= new Button();
         ShowIdeas("");
 
@@ -281,12 +298,12 @@ public sealed class AgentPanel
         next.Focus(); next.BringIntoView(); Look(Gaze.Ideas);
     }
 
-    /// <summary>The ideas half: what matches the words typed so far, or everything (the HELP list first).</summary>
-    void ShowIdeas(string query)
+    /// <summary>The ideas half: empty until a word is searched, then what matches it; HELP shows everything.</summary>
+    void ShowIdeas(string query, bool everything = false)
     {
         query = query.Trim();
-        var found = AgentIdeas.Search(query, 10);
-        ideasFor.Text = query.Length == 0 ? "What you can ask. Type a word to search." : found.Count == 0 ? $"Nothing for “{query}”. Try sticks, triggers, turbo, buttons, paddles or PC mode." : $"For “{query}”";
+        IReadOnlyList<AgentIdea> found = query.Length == 0 && !everything ? [] : AgentIdeas.Search(query, everything ? 30 : 10);
+        ideasFor.Text = everything ? "Everything you can ask." : query.Length == 0 ? "Type a word: sticks, triggers, turbo, buttons, paddles or PC mode." : found.Count == 0 ? $"Nothing for “{query}”. Try sticks, triggers, turbo, buttons, paddles or PC mode." : $"For “{query}”";
         ideasList.Children.Clear();
         foreach (var idea in found)
         {
@@ -355,13 +372,45 @@ public sealed class AgentPanel
         shake.BeginAnimation(TranslateTransform.XProperty, jolt);
     }
 
-    void Chase(bool on)
+    /// <summary>The search settled: the agent speaks up about it, once per search.</summary>
+    void Announce()
+    {
+        string q = Search.Text.Trim();
+        if (q.Length < 2 || q == announced || busy) return;
+        announced = q; Look(Gaze.Ideas);
+        if (AgentIdeas.Search(q).Count > 0) { Say(AgentIdeas.TopicReply(q), null); _ = Lights(AgentMood.Good); }
+        else { Say(AgentCharacter.NothingFound(q), null); _ = Lights(AgentMood.Unsure); }
+    }
+
+    // ---- the player lights (owner request, 13 Oct 2026): blinking blue while it searches or thinks, then green for a good
+    // result, violet when it isn't sure, red when it failed; afterwards the steady light of this player ----
+    static readonly Color Blue = Color.FromRgb(70, 150, 255), Green = Color.FromRgb(61, 214, 140), Violet = Color.FromRgb(168, 110, 255);
+    void Blink(Color color, int ms, bool wave)
     {
         for (int i = 0; i < 4; i++)
         {
-            if (!on || !DS.Motion) { leds[i].BeginAnimation(UIElement.OpacityProperty, null); leds[i].Opacity = 1; continue; }
-            leds[i].BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(1, .15, TimeSpan.FromMilliseconds(300)) { AutoReverse = true, BeginTime = TimeSpan.FromMilliseconds(150 * i), RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever });
+            leds[i].Background = new SolidColorBrush(color);
+            leds[i].BeginAnimation(UIElement.OpacityProperty, DS.Motion ? new System.Windows.Media.Animation.DoubleAnimation(1, .15, TimeSpan.FromMilliseconds(ms)) { AutoReverse = true, BeginTime = TimeSpan.FromMilliseconds(wave ? 120 * i : 0), RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever } : null);
         }
+    }
+    void Steady()
+    {
+        lightsOn = false;
+        foreach (var led in leds) { led.BeginAnimation(UIElement.OpacityProperty, null); led.Opacity = 1; }
+        ShowState();
+    }
+    /// <summary>Searching or thinking: blue, blinking along the row until a result.</summary>
+    void Searching(bool on)
+    {
+        lightShow++;
+        if (on) { lightsOn = true; Blink(Blue, 300, wave: true); } else Steady();
+    }
+    async Task Lights(AgentMood mood)
+    {
+        int me = ++lightShow; lightsOn = true;
+        Blink(mood switch { AgentMood.Good => Green, AgentMood.Unsure => Violet, _ => AgentMark.Red }, mood == AgentMood.Failed ? 200 : 320, wave: false);
+        await Task.Delay(3000);
+        if (me == lightShow) Steady();
     }
 
     /// <summary>Move the window by its title bar, kept inside its host.</summary>
@@ -404,7 +453,7 @@ public sealed class AgentPanel
     void Restart()
     {
         if (busy) return;
-        session.Forget(); transcript.Children.Clear(); Input.Text = ""; ShowIdeas(""); Say(greeting, null); Input.Focus();
+        session.Forget(); transcript.Children.Clear(); Input.Text = ""; announced = ""; Search.Text = ""; settle.Stop(); Say(greeting, null); Input.Focus();
     }
 
     PcModeProfile Current => link == null ? preview : link.Store.Get(PcModePage.StoreKey);
@@ -419,7 +468,7 @@ public sealed class AgentPanel
     {
         status.Text = Offline ? (offlineChosen ? "Offline · phrasebook" : "Offline · phrasebook (the model isn't available)") : state == ModelState.Starting && stateText.Length == 0 ? "Starting…" : stateText;
         statusDot.Background = DS.Brush(Offline ? "DS.AccentHi" : state switch { ModelState.Ready => "DS.Success", ModelState.Starting or ModelState.Loading => "DS.Warn", _ => "DS.Danger" });
-        for (int i = 0; i < 4; i++) leds[i].Background = i == Math.Clamp(player, 0, 3) || busy ? statusDot.Background : new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+        if (!lightsOn) for (int i = 0; i < 4; i++) leds[i].Background = i == Math.Clamp(player, 0, 3) || busy ? statusDot.Background : new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
         send.IsEnabled = !busy && (Offline || state == ModelState.Ready);
         offlineCap.Background = offlineChosen ? new LinearGradientBrush(Color.FromRgb(52, 104, 196), Color.FromRgb(28, 62, 132), 90) : new LinearGradientBrush(CapLight, CapDark, 90);
         offlineLabel.Foreground = DS.Brush(offlineChosen ? "DS.Text" : "DS.TextSoft");
@@ -435,24 +484,30 @@ public sealed class AgentPanel
     {
         if (busy) return null;
         // the help list is the app's own answer: instant, the same online and offline
-        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); ShowIdeas(""); Look(Gaze.Ideas); Say("Have a look at the ideas on the left: pick one, or type a word to search them.", null); return null; }
+        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say("Here's everything I can do, on the left. Pick one, or search it. I'm very talented.", null); _ = Lights(AgentMood.Good); return null; }
         // a topic alone is a search: the ideas narrow to it, and the app answers itself
-        if (AgentIdeas.Topic(sentence) is { } topic) { Bubble(sentence, mine: true); ShowIdeas(sentence); Look(Gaze.Ideas); Say(AgentIdeas.TopicReply(topic), null); return null; }
-        if (!Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); return null; }
-        busy = true; ShowState(); Thinking?.Invoke(true); Look(Gaze.Thinking); Chase(true);
+        if (AgentIdeas.Topic(sentence) is { } topic)
+        {
+            Bubble(sentence, mine: true); announced = topic; Search.Text = topic; settle.Stop();
+            Look(Gaze.Ideas); Say(AgentIdeas.TopicReply(topic), null); _ = Lights(AgentMood.Good); return null;
+        }
+        if (!Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); _ = Lights(AgentMood.Failed); return null; }
+        busy = true; settle.Stop(); Searching(true); ShowState(); Thinking?.Invoke(true); Look(Gaze.Thinking);
         Bubble(sentence, mine: true);
         var thinking = Bubble("…", mine: false);
         var before = Current;
+        AgentMood? mood = null;
         try
         {
             var turn = await session.Ask(sentence, before);
+            mood = AgentCharacter.Mood(turn);
             transcript.Children.Remove(thinking);
             // PC mode on or off, when asked: the switch itself, not a setting
             string? switched = turn.Outcome.PcMode is { } on ? (link == null ? "PC mode isn't reachable from this window." : PcModePage.SwitchFromAgent(link, on) ?? "") : null;
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
                 try { Store(next); Applied(); }
-                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); return turn; }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
                 if (Walkthrough != null) await Walkthrough(before, next, turn.Measured);
                 Say(turn, before, switched: switched); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
@@ -464,10 +519,10 @@ public sealed class AgentPanel
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
             transcript.Children.Remove(thinking);
-            Say(error is TaskCanceledException ? "I took too long to answer. Try again." : "I couldn't reach the model: " + error.Message, null);
-            return null;
+            Say(error is TaskCanceledException ? AgentCharacter.Dozed : "My brain isn't answering: " + error.Message, null);
+            mood = AgentMood.Failed; return null;
         }
-        finally { busy = false; if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Chase(false); Look(Gaze.Idle); ShowState(); Thinking?.Invoke(false); Input.Focus(); }
+        finally { busy = false; if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
     }
 
     // ---- the drift reading: a countdown while the sticks are read ----

@@ -7,7 +7,7 @@ public sealed record AgentIdea(string Have, string Say, string Intent);
 /// <summary>
 /// The agent's search bar (owner request, 13 Oct 2026): the ideas half of the window lists what can be asked, and narrows
 /// as the owner types ("sticks", even "sti"). Empty, it is the HELP list. A message that is only a topic ("Sticks") is
-/// answered by the app itself, without the model: "I can see that you searched about Sticks, do you need any help?"
+/// answered by the app itself, without the model: I've seen you search about "sticks". Is there any help you need?
 /// </summary>
 public static class AgentIdeas
 {
@@ -68,9 +68,8 @@ public static class AgentIdeas
         if (all.Count == 0 || all.Count > 3) return null;
         var meaningful = all.Where(w => !Filler.Contains(w)).ToList();
         if (meaningful.Count == 0 || !meaningful.All(TopicWords.Contains) || Search(sentence).Count == 0) return null;
-        string typed = sentence.Trim().TrimEnd('?', '!', '.').Trim();
-        return char.ToUpperInvariant(typed[0]) + typed[1..];
+        return sentence.Trim().TrimEnd('?', '!', '.').Trim();
     }
 
-    public static string TopicReply(string topic) => $"I can see that you searched about {topic}, do you need any help?";
+    public static string TopicReply(string topic) => $"I've seen you search about “{topic}”. Is there any help you need?";
 }

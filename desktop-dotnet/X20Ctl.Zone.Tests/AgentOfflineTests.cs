@@ -75,6 +75,6 @@ public sealed class AgentOfflineTests(ITestOutputHelper output)
         var turn = await new AgentSession(new OfflineAgent(), "x20_pro", "X20 Pro").Ask("banana telescope", new PcModeProfile());
         Assert.True(turn.Verdict.Valid);
         Assert.Empty(turn.Verdict.Proposal!.Actions);
-        Assert.Contains("didn't catch", turn.Verdict.Proposal.Speech);
+        Assert.StartsWith(AgentCharacter.NotUnderstood, turn.Verdict.Proposal.Speech);
     }
 }
