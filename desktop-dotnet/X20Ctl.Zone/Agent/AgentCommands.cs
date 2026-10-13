@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 namespace X20Ctl.Zone.Agent;
 
 /// <summary>Things the app does itself when asked in the chat, instantly and without the model.</summary>
-public enum AgentCommand { None, AboutController, Battery, ChangeController, Star, Donate }
+public enum AgentCommand { None, AboutController, Battery, ChangeController, Star, Donate, Diagnostics }
 
 /// <summary>
 /// The agent's app commands (owner request, 13 Oct 2026): naming the controller ("EasySMX X20 Pro") gets "That's your
@@ -19,6 +19,8 @@ public static class AgentCommands
         sentence = AgentSpelling.Fix(sentence);
         string lower = " " + Regex.Replace(sentence.ToLowerInvariant().Replace('’', '\''), @"[^a-z0-9' ]", " ") + " ";
         lower = Regex.Replace(lower, @"\s+", " ");
+        // owner, 14 Oct 2026: asking for a diagnostic goes straight to the Diagnostics page
+        if (Regex.IsMatch(lower, @"\b(diagnos\w*|diagnost\w*|test (my |the )?(controller|pad|sticks?|buttons?|triggers?)|check (my |the )?(controller|pad|sticks?|buttons?))\b")) return AgentCommand.Diagnostics;
         // the battery now, not how long batteries last in general (that's a docs question)
         if (Regex.IsMatch(lower, @"\b(battery|batteries|charge left|charged|how much charge|power left)\b") && !Regex.IsMatch(lower, @"\b(hours?|last|lasts|life|lifespan|long|replace|buy)\b")) return AgentCommand.Battery;
         if (Regex.IsMatch(lower, @"\b(change|switch|swap|another|different|other|pick|choose)\b.*\b(controllers?|pads?|gamepads?)\b|\bcontroller zone\b|\b(use|switch to|change to) (my |the )?(x20 pro|x20|x05 pro|x05|dune)\b")) return AgentCommand.ChangeController;
@@ -37,6 +39,11 @@ public static class AgentCommands
         $"You called? That's your {name}, right here. What needs fixing?",
         "That's me! *waves a stick* What's bothering you?",
         $"Yep, your {name}, at your service. What's wrong?",
+    ]);
+    public static string Diagnostics() => AgentVariety.Pick("diagnostics", [
+        "Opening Diagnostics: roll each stick round its edge, squeeze both triggers and press every button. I'll watch.",
+        "To Diagnostics! Move everything on me and we'll see what's off. Hold B for a second to come back.",
+        "Taking you to Diagnostics. Wiggle, squeeze, press: I'm all yours.",
     ]);
     public static string ChangeController() => AgentVariety.Pick("change", [
         "Taking you to the Controller Zone. Pick another controller there, I'll wait right here. *taps foot*",

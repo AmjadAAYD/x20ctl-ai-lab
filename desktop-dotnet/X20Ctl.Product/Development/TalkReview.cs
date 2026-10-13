@@ -69,7 +69,7 @@ internal static class TalkReview
         async Task Shot(string name)
         {
             await Task.Delay(900); window.UpdateLayout();
-            foreach (var (what, e) in new (string, FrameworkElement?)[] { ("orb", window.Host.Studio?.AgentButton), ("window", window.Host.Studio?.AgentWindow?.Body) })
+            foreach (var (what, e) in new (string, FrameworkElement?)[] { ("pill", window.Host.Studio?.AgentButton), ("window", window.Host.Studio?.AgentWindow?.Body) })
                 if (e is { IsVisible: true }) log.AppendLine($"[{name}] {what} at {e.TransformToAncestor(window.Stage).TransformBounds(new Rect(e.RenderSize))}");
             var bmp = new RenderTargetBitmap((int)window.Stage.ActualWidth, (int)window.Stage.ActualHeight, 96, 96, PixelFormats.Pbgra32); bmp.Render(window.Stage);
             var enc = new PngBitmapEncoder(); enc.Frames.Add(BitmapFrame.Create(bmp)); using var f = File.Create(Path.Combine(directory, name + ".png")); enc.Save(f);

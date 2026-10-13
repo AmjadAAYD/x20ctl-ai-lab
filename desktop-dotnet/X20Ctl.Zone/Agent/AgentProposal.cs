@@ -9,14 +9,18 @@ namespace X20Ctl.Zone.Agent;
 public static class AgentVocabulary
 {
     public const string StickDeadzone = "stick_deadzone", StickFullAt = "stick_full_at", StickAntiDeadzone = "stick_anti_deadzone", StickCurve = "stick_curve",
-        TriggerDeadzone = "trigger_deadzone", TriggerFullAt = "trigger_full_at", TriggerCurve = "trigger_curve", Remap = "remap", Turbo = "turbo", Reset = "reset", Paddle = "paddle", MeasureDrift = "measure_drift", PcMode = "pc_mode";
-    public static readonly string[] Actions = [StickDeadzone, StickFullAt, StickAntiDeadzone, StickCurve, TriggerDeadzone, TriggerFullAt, TriggerCurve, Remap, Turbo, Reset, Paddle, MeasureDrift, PcMode];
+        TriggerDeadzone = "trigger_deadzone", TriggerFullAt = "trigger_full_at", TriggerCurve = "trigger_curve", Remap = "remap", Turbo = "turbo", Reset = "reset", Paddle = "paddle", MeasureDrift = "measure_drift", PcMode = "pc_mode",
+        StickCurvePoints = "stick_curve_points", TriggerCurvePoints = "trigger_curve_points", StickMaxOutput = "stick_max_output", StickAxisRatio = "stick_axis_ratio", StickSquareGate = "stick_square_gate",
+        MouseMode = "mouse_mode", OpenPage = "open_page";
+    public static readonly string[] Actions = [StickDeadzone, StickFullAt, StickAntiDeadzone, StickCurve, StickCurvePoints, StickMaxOutput, StickAxisRatio, StickSquareGate, TriggerDeadzone, TriggerFullAt, TriggerCurve, TriggerCurvePoints, Remap, Turbo, Reset, Paddle, MeasureDrift, PcMode, MouseMode, OpenPage];
+    /// <summary>Pages the agent can take the owner to.</summary>
+    public static readonly string[] Pages = ["Diagnostics", "Tools", "Mouse", "Curves", "Buttons", "Macros", "Vibration", "PcMode", "Device"];
     public static readonly string[] Sticks = ["LeftStick", "RightStick"], Triggers = ["LeftTrigger", "RightTrigger"];
     public static readonly string[] Buttons = [.. PadButtons.Mask.Keys, "LT", "RT"];
     public static readonly string[] AllPaddles = ["M1", "M2", "M3", "M4", "M5", "M6"];
     public static IReadOnlyCollection<string> Curves => CurveDraft.Presets.Keys.ToArray();
-    public const string All = "All", PcModeTarget = "PcMode";
-    public static readonly string[] Targets = [.. Sticks, .. Triggers, .. Buttons, .. AllPaddles, All, PcModeTarget];
+    public const string All = "All", PcModeTarget = "PcMode", MouseTarget = "Mouse", PageTarget = "Page";
+    public static readonly string[] Targets = [.. Sticks, .. Triggers, .. Buttons, .. AllPaddles, All, PcModeTarget, MouseTarget, PageTarget];
     public const int MaxTriggerDeadzone = 40, MinTriggerFullAt = 10, MaxActions = 8;
 
     /// <summary>The rear paddles a model has, from x20ctl/controllers/catalog.json (macroSlots).</summary>
@@ -35,8 +39,9 @@ public sealed record AgentAction(string Action, string Target, JsonElement Value
 }
 /// <summary>Speech: what the agent says, short. Recap: why the changes fit what was asked (or the answer to a question), from
 /// the settings' meanings in <see cref="AgentKnowledge"/>.
-/// Sources: the numbers of the doc passages the recap was taken from (M5), empty when none were used.</summary>
-public sealed record AgentProposal(string Speech, IReadOnlyList<AgentAction> Actions, string Recap, IReadOnlyList<string> Assumptions, IReadOnlyList<int> Sources);
+/// Sources: the numbers of the doc passages the recap was taken from (M5), empty when none were used.
+/// Question: what the agent asks back: the detail it still needs, or a check that the change fits; empty when none.</summary>
+public sealed record AgentProposal(string Speech, IReadOnlyList<AgentAction> Actions, string Recap, IReadOnlyList<string> Assumptions, IReadOnlyList<int> Sources, string Question = "");
 
 public enum CheckState { Ok, Rejected, Unavailable }
 public sealed record ActionCheck(AgentAction Action, CheckState State, string Message);
@@ -86,7 +91,7 @@ public static class ProposalValidator
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         if (root.ValueKind != JsonValueKind.Object) throw new InvalidDataException("The reply isn't a JSON object.");
-        Only(root, Fields, "reply", optional: "sources");
+        Only(root, Fields, "reply", optional: ["sources", "question"]);
         string speech = Text(root, "speech", "reply");
         if (!root.TryGetProperty("actions", out var list) || list.ValueKind != JsonValueKind.Array) throw new InvalidDataException("\"actions\" is missing or not a list.");
         if (list.GetArrayLength() > AgentVocabulary.MaxActions) throw new InvalidDataException($"More than {AgentVocabulary.MaxActions} actions.");
@@ -107,13 +112,14 @@ public static class ProposalValidator
             if (cited.ValueKind != JsonValueKind.Array || cited.EnumerateArray().Any(n => n.ValueKind != JsonValueKind.Number || !n.TryGetInt32(out _))) throw new InvalidDataException("\"sources\" is not a list of whole numbers.");
             sources.AddRange(cited.EnumerateArray().Select(n => n.GetInt32()).Distinct());
         }
-        return new(speech, actions, recap, assumed.EnumerateArray().Select(a => a.GetString()!).ToArray(), sources);
+        string question = root.TryGetProperty("question", out var q) && q.ValueKind == JsonValueKind.String ? q.GetString()!.Trim() : "";
+        return new(speech, actions, recap, assumed.EnumerateArray().Select(a => a.GetString()!).ToArray(), sources, question);
     }
 
-    static void Only(JsonElement element, string[] fields, string what, string? optional = null)
+    static void Only(JsonElement element, string[] fields, string what, string[]? optional = null)
     {
         foreach (var property in element.EnumerateObject())
-            if (!fields.Contains(property.Name) && property.Name != optional) throw new InvalidDataException($"Unknown field \"{property.Name}\" in the {what}.");
+            if (!fields.Contains(property.Name) && optional?.Contains(property.Name) != true) throw new InvalidDataException($"Unknown field \"{property.Name}\" in the {what}.");
         foreach (var field in fields)
             if (!element.TryGetProperty(field, out _)) throw new InvalidDataException($"The {what} has no \"{field}\".");
     }
@@ -156,6 +162,24 @@ public static class ProposalValidator
             case AgentVocabulary.PcMode:
                 if (a.Target != AgentVocabulary.PcModeTarget) return No($"pc_mode needs the target PcMode, not {a.Target}.");
                 return Word(a, ["on", "off"]);
+            case AgentVocabulary.MouseMode:
+                if (a.Target != AgentVocabulary.MouseTarget) return No($"mouse_mode needs the target Mouse, not {a.Target}.");
+                return Word(a, ["on", "off"]);
+            case AgentVocabulary.OpenPage:
+                if (a.Target != AgentVocabulary.PageTarget) return No($"open_page needs the target Page, not {a.Target}.");
+                return Word(a, AgentVocabulary.Pages);
+            case AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints:
+                if (a.Action == AgentVocabulary.StickCurvePoints ? !stick : !trigger) return No($"{a.Action} can't be aimed at {a.Target}.");
+                return CurvePoints.TryParse(a.ValueText, out _, out string why) ? (CheckState.Ok, "A custom curve.") : No(why);
+            case AgentVocabulary.StickMaxOutput:
+                if (!stick) return No($"{a.Action} needs LeftStick or RightStick, not {a.Target}.");
+                return Number(a, 60, 100, decimals: true);
+            case AgentVocabulary.StickAxisRatio:
+                if (!stick) return No($"{a.Action} needs LeftStick or RightStick, not {a.Target}.");
+                return Number(a, StickTuning.MinRatio, StickTuning.MaxRatio, decimals: false);
+            case AgentVocabulary.StickSquareGate:
+                if (!stick) return No($"{a.Action} needs LeftStick or RightStick, not {a.Target}.");
+                return Word(a, ["on", "off"]);
             case AgentVocabulary.MeasureDrift:
                 return stick ? (CheckState.Ok, "A reading: changes nothing.") : No($"measure_drift needs LeftStick or RightStick, not {a.Target}.");
             case AgentVocabulary.Reset:
@@ -176,4 +200,22 @@ public static class ProposalValidator
     }
     static (CheckState, string) Word(AgentAction a, IReadOnlyCollection<string> allowed) =>
         a.Value.ValueKind == JsonValueKind.String && allowed.Contains(a.Value.GetString()) ? (CheckState.Ok, "Known value.") : (CheckState.Rejected, $"\"{a.ValueText}\" isn't one of: {string.Join(", ", allowed)}.");
+}
+
+/// <summary>A custom curve from the agent: "x1,y1,x2,y2", two points as push and output percents (0–100), the first push
+/// before the second. The curve runs through them (PadProcessor.Through), like the points on the Curves page.</summary>
+public static class CurvePoints
+{
+    public static bool TryParse(string text, out (int X1, int Y1, int X2, int Y2) points, out string why)
+    {
+        points = default; why = "";
+        var parts = text.Replace(" ", "").Split(',');
+        if (parts.Length != 4 || !parts.All(p => int.TryParse(p, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _)))
+        { why = $"Curve points are four whole numbers \"push1,output1,push2,output2\", such as \"25,15,70,60\"; not \"{text}\"."; return false; }
+        var n = parts.Select(p => int.Parse(p, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+        if (n.Any(v => v is < 0 or > 100)) { why = "Curve points are percents, 0 to 100."; return false; }
+        if (n[0] >= n[2]) { why = "The first point's push must be before the second's."; return false; }
+        points = (n[0], n[1], n[2], n[3]); return true;
+    }
+    public static int ToByte(int percent) => (int)Math.Round(percent * 2.55);
 }

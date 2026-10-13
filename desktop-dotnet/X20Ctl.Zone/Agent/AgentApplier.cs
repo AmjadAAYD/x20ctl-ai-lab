@@ -6,7 +6,9 @@ namespace X20Ctl.Zone.Agent;
 public sealed record AgentChange(string What, string Before, string After);
 /// <summary>The profile a verdict leads to, and what changed. Next is null when the proposal was rejected: nothing moves.</summary>
 /// <param name="PcMode">PC mode switched on (true) or off (false) by the proposal; null when it doesn't say.</param>
-public sealed record AgentOutcome(PcModeProfile? Next, IReadOnlyList<AgentChange> Changes, string? Error, bool? PcMode = null);
+/// <param name="Mouse">Mouse mode switched on or off; null when the proposal doesn't say.</param>
+/// <param name="Page">The page the owner should be taken to, if any.</param>
+public sealed record AgentOutcome(PcModeProfile? Next, IReadOnlyList<AgentChange> Changes, string? Error, bool? PcMode = null, bool? Mouse = null, string? Page = null);
 
 /// <summary>
 /// Turns a validated proposal into the next PC mode profile. Pure: it copies the current profile, never touches it, and
@@ -22,7 +24,9 @@ public static class AgentApplier
         try { next.Validate(); }
         catch (InvalidDataException error) { return new(null, [], "The result wouldn't be a valid setting (" + error.Message.TrimEnd('.') + "), so nothing was changed."); }
         bool? pc = verdict.Applicable.LastOrDefault(a => a.Action == AgentVocabulary.PcMode) is { } s ? s.ValueText == "on" : null;
-        return new(next, Diff(current, next), null, pc);
+        bool? mouse = verdict.Applicable.LastOrDefault(a => a.Action == AgentVocabulary.MouseMode) is { } m ? m.ValueText == "on" : null;
+        string? page = verdict.Applicable.LastOrDefault(a => a.Action == AgentVocabulary.OpenPage)?.ValueText;
+        return new(next, Diff(current, next), null, pc, mouse, page);
     }
 
     static void Do(PcModeProfile p, AgentAction a)
@@ -37,6 +41,12 @@ public static class AgentApplier
             case AgentVocabulary.StickCurve or AgentVocabulary.TriggerCurve:
                 string preset = a.Value.GetString()!; var (first, second) = CurveDraft.Presets[preset];
                 p.Curves[a.Target] = Curve(p, a.Target) with { Preset = preset, BasePreset = preset, X1 = first.Item1, Y1 = first.Item2, X2 = second.Item1, Y2 = second.Item2 }; break;
+            case AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints:
+                CurvePoints.TryParse(a.ValueText, out var pts, out _);
+                p.Curves[a.Target] = Curve(p, a.Target) with { Preset = "custom", X1 = CurvePoints.ToByte(pts.X1), Y1 = CurvePoints.ToByte(pts.Y1), X2 = CurvePoints.ToByte(pts.X2), Y2 = CurvePoints.ToByte(pts.Y2) }; break;
+            case AgentVocabulary.StickMaxOutput: Stick(p, a.Target).MaxOutput = Round(a.Value.GetDouble()); break;
+            case AgentVocabulary.StickAxisRatio: Stick(p, a.Target).AxisRatio = a.Value.GetInt32(); break;
+            case AgentVocabulary.StickSquareGate: Stick(p, a.Target).SquareGate = a.ValueText == "on"; break;
             case AgentVocabulary.Remap:
                 string output = a.Value.GetString()!; if (output == a.Target) p.Remap.Remove(a.Target); else p.Remap[a.Target] = output; break;
             case AgentVocabulary.Turbo:
@@ -72,12 +82,13 @@ public static class AgentApplier
         {
             var (b, a) = (Tuning(before, stick), Tuning(after, stick)); string name = Name(stick);
             Add(name + " dead zone", Pct(b.Inner), Pct(a.Inner)); Add(name + " full at", Pct(b.Outer), Pct(a.Outer)); Add(name + " anti-deadzone", Pct(b.AntiDeadzone), Pct(a.AntiDeadzone));
-            Add(name + " curve", Curve(before, stick).Preset, Curve(after, stick).Preset);
+            Add(name + " max output", Pct(b.MaxOutput), Pct(a.MaxOutput)); Add(name + " vertical ratio", Pct(b.AxisRatio), Pct(a.AxisRatio)); Add(name + " square gate", b.SquareGate ? "on" : "off", a.SquareGate ? "on" : "off");
+            Add(name + " curve", Shape(Curve(before, stick)), Shape(Curve(after, stick)));
         }
         foreach (var trigger in AgentVocabulary.Triggers)
         {
             var (b, a) = (Curve(before, trigger), Curve(after, trigger)); string name = Name(trigger);
-            Add(name + " dead zone", Pct(b.Inner), Pct(a.Inner)); Add(name + " full at", Pct(b.Outer), Pct(a.Outer)); Add(name + " curve", b.Preset, a.Preset);
+            Add(name + " dead zone", Pct(b.Inner), Pct(a.Inner)); Add(name + " full at", Pct(b.Outer), Pct(a.Outer)); Add(name + " curve", Shape(b), Shape(a));
         }
         foreach (var button in AgentVocabulary.Buttons)
         {
@@ -87,6 +98,8 @@ public static class AgentApplier
         return changes;
     }
     static StickTuning Tuning(PcModeProfile p, string stick) => p.Sticks.TryGetValue(stick, out var s) ? s : new StickTuning { Inner = Curve(p, stick).Inner, Outer = Curve(p, stick).Outer };
+    /// <summary>A preset by name; a custom curve by its two points, as push → output percents.</summary>
+    public static string Shape(SetupCurve c) => c.Preset != "custom" ? c.Preset : string.Create(CultureInfo.InvariantCulture, $"custom {Math.Round(c.X1 / 2.55)}→{Math.Round(c.Y1 / 2.55)}, {Math.Round(c.X2 / 2.55)}→{Math.Round(c.Y2 / 2.55)}");
     static string Pct(double v) => v.ToString("0.#", CultureInfo.InvariantCulture) + "%";
     static string Hz(int hz) => hz == 0 ? "off" : hz + "/s";
     public static string Name(string target) => target switch { "LeftStick" => "Left stick", "RightStick" => "Right stick", "LeftTrigger" => "Left trigger", "RightTrigger" => "Right trigger", _ => target };

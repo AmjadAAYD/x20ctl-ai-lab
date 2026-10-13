@@ -113,19 +113,15 @@ public partial class StudioScene : UserControl
         BuildAgent();
     }
 
-    // ---- the agent (class project, 12 Oct 2026): a round button over every page, and the window it opens ----
-    private readonly Agent.AgentOrb agentOrb = new() { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(0, 0, 30, 92) };
+    // ---- the agent (class project, 12 Oct 2026): the title-bar pill, and the window it opens (the round button went, 14 Oct) ----
+    private Button? agentPill;
+    private FrameworkElement? agentInvite;
     private Agent.AgentPanel? agentPanel;
-    public Agent.AgentOrb AgentButton => agentOrb;
+    public FrameworkElement? AgentButton => agentPill;
     public Agent.AgentPanel? AgentWindow => agentPanel;
     public bool AgentOpen => agentPanel?.IsShown == true;
     private void BuildAgent()
     {
-        Grid.SetZIndex(agentOrb, 40); StudioShell.Children.Add(agentOrb);
-        agentOrb.Click += (_, _) => { if (AgentOpen) CloseAgent(); else OpenAgent(); };
-        void Ready() => agentOrb.SetState(Agent.AgentPanel.State);
-        Loaded += (_, _) => { Agent.AgentPanel.StateChanged -= Ready; Agent.AgentPanel.StateChanged += Ready; Ready(); };
-        Unloaded += (_, _) => Agent.AgentPanel.StateChanged -= Ready;
         Agent.AgentPanel.Prepare();
     }
     public void OpenAgent()
@@ -134,19 +130,35 @@ public partial class StudioScene : UserControl
         {
             agentPanel = new(Model.Id, Model.Name, PcMode, RegisterFocus, Player, AgentMeter);
             agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 170);
-            agentPanel.CloseRequested += CloseAgent; agentPanel.ChangeControllerRequested += () => { CloseAgent(); BackRequested?.Invoke(); }; agentPanel.Thinking += agentOrb.SetThinking; agentPanel.Walkthrough = PlayAgentTour;
+            agentPanel.CloseRequested += CloseAgent; agentPanel.ChangeControllerRequested += () => { CloseAgent(); BackRequested?.Invoke(); }; agentPanel.Walkthrough = PlayAgentTour;
+            agentPanel.PageRequested += AgentGoTo;
+            agentPanel.MouseSwitch = on => { if (MouseService == null) return "Mouse mode isn't available in this window."; MouseService.Active = on; if (ManagementPage == "Mouse") ShowManagement("Mouse"); return null; };
             Grid.SetZIndex(agentPanel.Body, 41); StudioShell.Children.Add(agentPanel.Body);
         }
         // across the Studio, from under the tabs to above the round button (owner's sketch, 13 Oct), keeping a controller's
         // shape: as wide as the room allows, centred
-        double room = Math.Max(300, StudioShell.ActualHeight - 130 - 170), wide = Math.Max(700, StudioShell.ActualWidth - 60);
+        double room = Math.Max(300, StudioShell.ActualHeight - 130 - 100), wide = Math.Max(700, StudioShell.ActualWidth - 60);
         double high = Math.Min(room, wide * Agent.AgentPanel.DesignHeight / Agent.AgentPanel.DesignWidth), across = high * Agent.AgentPanel.DesignWidth / Agent.AgentPanel.DesignHeight;
         agentPanel.Body.Height = high; agentPanel.Body.Width = across;
-        agentPanel.Body.Margin = new(0, 0, Math.Max(20, (StudioShell.ActualWidth - across) / 2), 170);
-        agentPanel.Show(); agentOrb.ToolTip = "Put Agent XCTL away";
+        agentPanel.Body.Margin = new(0, 0, Math.Max(20, (StudioShell.ActualWidth - across) / 2), 100);
+        agentPanel.Show(); if (agentPill != null) agentPill.ToolTip = "Put Agent XCTL away"; if (agentInvite != null) agentInvite.Visibility = Visibility.Collapsed;
         Dispatcher.BeginInvoke(() => agentPanel?.Input.Focus(), System.Windows.Threading.DispatcherPriority.Input);
     }
-    public void CloseAgent() { if (agentPanel == null) return; agentPanel.Hide(); agentOrb.ToolTip = "Agent XCTL"; agentOrb.Focus(); }
+    public void CloseAgent() { if (agentPanel == null) return; agentPanel.Hide(); if (agentPill != null) agentPill.ToolTip = "Agent XCTL"; }
+    /// <summary>The agent sent the owner to a page: put the window away and go there.</summary>
+    private void AgentGoTo(string page)
+    {
+        CloseAgent();
+        switch (page)
+        {
+            case "Diagnostics" or "Tools": ShowManagement("Diagnostics"); break;
+            case "Mouse" or "PcMode" or "Device": ShowManagement(page); break;
+            case "Curves": ShowCurves(true); break;
+            case "Macros": ShowMacros(true); break;
+            case "Vibration": ShowVibration(true); break;
+            default: ShowButtons(); break;
+        }
+    }
 
     private Agent.AgentTour? agentTour;
     /// <summary>A stand-in for the controller's drift reading, set by review harnesses before the window opens.</summary>
@@ -213,7 +225,7 @@ public partial class StudioScene : UserControl
         var name = new Border { CornerRadius = new(17), Height = 34, Padding = new(14, 0, 16, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Color.FromArgb(80, 125, 182, 255)), Background = new SolidColorBrush(Color.FromArgb(60, 30, 60, 130)),
             Child = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { new TextBlock { Text = "", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 16, Foreground = DS.Brush("DS.AccentHi"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 10, 0) }, new TextBlock { Text = Model.Name.Replace("EasySMX ", ""), FontFamily = DS.Display, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = DS.Brush("DS.Text"), VerticalAlignment = VerticalAlignment.Center } } } };
         // Agent XCTL in the title bar, in the gap left of Support: opens (or puts away) the agent
-        var agentPill = new Button { Cursor = Cursors.Hand, ToolTip = "Agent XCTL", FocusVisualStyle = null, Margin = new(0, 0, 12, 0),
+        var agentPill = this.agentPill = new Button { Cursor = Cursors.Hand, ToolTip = "Agent XCTL", FocusVisualStyle = null, Margin = new(0, 0, 12, 0),
             Template = new ControlTemplate(typeof(Button)) { VisualTree = new FrameworkElementFactory(typeof(ContentPresenter)) },
             Content = new Border { CornerRadius = new(17), Height = 34, Padding = new(14, 0, 16, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Color.FromArgb(150, 125, 182, 255)),
                 Background = new LinearGradientBrush(Color.FromRgb(58, 110, 220), Color.FromRgb(34, 70, 170), 0),
@@ -222,7 +234,9 @@ public partial class StudioScene : UserControl
                     new TextBlock { Text = "Agent XCTL", FontFamily = DS.Display, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center } } } } };
         agentPill.Click += (_, _) => { if (AgentOpen) CloseAgent(); else OpenAgent(); };
         var agentBorder = (Border)agentPill.Content; agentPill.MouseEnter += (_, _) => agentBorder.BorderBrush = Brushes.White; agentPill.MouseLeave += (_, _) => agentBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(150, 125, 182, 255));
-        TitlePills.Children.Add(agentPill); TitlePills.Children.Add(support); TitlePills.Children.Add(name);
+        // the invitation, in the gap left of the pill, its tail pointing at it (owner request, 14 Oct 2026)
+        var invite = Agent.AgentInvite.Make(() => OpenAgent(), tailRight: true); invite.Margin = new(0, 0, 18, 0); invite.VerticalAlignment = VerticalAlignment.Center; agentInvite = invite;
+        TitlePills.Children.Add(invite); TitlePills.Children.Add(agentPill); TitlePills.Children.Add(support); TitlePills.Children.Add(name);
     }
     /// <summary>The console-design Buttons page replaces the older canvas/inspector/shelf while Buttons is active.</summary>
     private void UpdateButtonsPage()
@@ -560,7 +574,7 @@ public partial class StudioScene : UserControl
     public void ShowButtons() { ShowCurves(false);if(IsMacros)ShowMacros(false);if(IsVibration)ShowVibration(false);HideManagement();ButtonsNav.IsChecked=true;FrontChoice.IsEnabled=true;RearChoice.IsEnabled=Model.Id=="x20";UpdateButtonsPage(); }
     public DashboardConsolePage? Dashboard {get;private set;}
     private int savedSetupCount=0;
-    private DashboardConsolePage CreateDashboard(){var page=new DashboardConsolePage(Model,Player,Draft.UnsentChanges,savedSetupCount,!animate);page.ConfigureRequested+=ShowButtons;return page;}
+    private DashboardConsolePage CreateDashboard(){var page=new DashboardConsolePage(Model,Player,Draft.UnsentChanges,savedSetupCount,!animate);page.ConfigureRequested+=ShowButtons;page.AgentRequested+=()=>OpenAgent();return page;}
     private void DashboardTab(object sender,RoutedEventArgs e)=>ShowManagement("Dashboard");
     public void ShowMacros(bool value)
     {

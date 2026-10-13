@@ -52,6 +52,22 @@ public partial class DockView : UserControl
         InitializeComponent(); Index = index; Player = player;
         // the empty card's dashed controller is the X20's own traced outline, and its plus does what Choose Controller does
         SilhouettePath.Data = GamepadGlyph.Outline;
+        // the three dots blink one after another, like someone about to speak (owner request, 14 Oct 2026); only while the
+        // empty card shows, at a low frame rate, so an idle Zone stays cheap
+        var dots = ((StackPanel)((StackPanel)PlusBadge.Child).Children[0]).Children.OfType<System.Windows.Shapes.Ellipse>().ToList();
+        void Dots(bool on)
+        {
+            for (int i = 0; i < dots.Count; i++)
+            {
+                if (!on || !SystemParameters.ClientAreaAnimation) { dots[i].BeginAnimation(OpacityProperty, null); dots[i].Opacity = 1; continue; }
+                var pulse = new DoubleAnimationUsingKeyFrames { RepeatBehavior = RepeatBehavior.Forever, Duration = TimeSpan.FromMilliseconds(1500), BeginTime = TimeSpan.FromMilliseconds(220 * i) };
+                pulse.KeyFrames.Add(new LinearDoubleKeyFrame(.18, TimeSpan.Zero)); pulse.KeyFrames.Add(new EasingDoubleKeyFrame(1, TimeSpan.FromMilliseconds(330), new SineEase()));
+                pulse.KeyFrames.Add(new EasingDoubleKeyFrame(.18, TimeSpan.FromMilliseconds(760), new SineEase())); pulse.KeyFrames.Add(new LinearDoubleKeyFrame(.18, TimeSpan.FromMilliseconds(1500)));
+                Timeline.SetDesiredFrameRate(pulse, 24); dots[i].Opacity = .18; dots[i].BeginAnimation(OpacityProperty, pulse);
+            }
+        }
+        Silhouette.IsVisibleChanged += (_, _) => Dots(Silhouette.IsVisible);
+        Loaded += (_, _) => Dots(Silhouette.IsVisible); Unloaded += (_, _) => Dots(false);
         var plusScale = new ScaleTransform(1, 1); PlusBadge.RenderTransform = plusScale;
         void Grow(double to) { plusScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(140)) { EasingFunction = new CubicEase() }); plusScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(140)) { EasingFunction = new CubicEase() }); }
         PlusBadge.MouseEnter += (_, _) => Grow(1.12); PlusBadge.MouseLeave += (_, _) => Grow(1);

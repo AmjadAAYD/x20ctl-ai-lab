@@ -151,16 +151,8 @@ public sealed class CurveWorkbench
         }
     }
     // Drawing interpolation only, matching the reference's illustrative Hermite approach.
-    private static double Illustrate(CurveSetting setting,double x)
-    {
-        var knots=new[]{(X:0d,Y:0d),(X:(double)setting.Point1.X,Y:(double)setting.Point1.Y),(X:(double)setting.Point2.X,Y:(double)setting.Point2.Y),(X:255d,Y:255d)}.OrderBy(p=>p.X).GroupBy(p=>p.X).Select(g=>g.Last()).ToArray();
-        var deltas=Enumerable.Range(0,knots.Length-1).Select(i=>(knots[i+1].Y-knots[i].Y)/(knots[i+1].X-knots[i].X)).ToArray();
-        var slopes=Enumerable.Range(0,knots.Length).Select(i=>i==0?deltas[0]:i==knots.Length-1?deltas[^1]:deltas[i-1]*deltas[i]<=0?0:(deltas[i-1]+deltas[i])/2).ToArray();
-        for(int i=0;i<deltas.Length;i++){double d=deltas[i];if(d==0){slopes[i]=slopes[i+1]=0;continue;}double a=slopes[i]/d,b=slopes[i+1]/d;if(a*a+b*b>9){double scale=3/Math.Sqrt(a*a+b*b);slopes[i]=scale*a*d;slopes[i+1]=scale*b*d;}}
-        if(x<=knots[0].X)return knots[0].Y;if(x>=knots[^1].X)return knots[^1].Y;
-        int segment=Enumerable.Range(0,knots.Length-1).First(i=>x>=knots[i].X&&x<knots[i+1].X);double span=knots[segment+1].X-knots[segment].X,t=(x-knots[segment].X)/span,t2=t*t,t3=t2*t;
-        return (2*t3-3*t2+1)*knots[segment].Y+(t3-2*t2+t)*span*slopes[segment]+(-2*t3+3*t2)*knots[segment+1].Y+(t3-t2)*span*slopes[segment+1];
-    }
+    // the same line PC mode runs (PadProcessor.Through), so the graph is what games get
+    private static double Illustrate(CurveSetting setting,double x)=>X20Ctl.Zone.PcMode.PadProcessor.Through(x/255,setting.Point1.X/255d,setting.Point1.Y/255d,setting.Point2.X/255d,setting.Point2.Y/255d)*255;
     public static string Name(CurveChannel channel)=>channel switch {CurveChannel.LeftStick=>"Left stick",CurveChannel.RightStick=>"Right stick",CurveChannel.LeftTrigger=>"Left trigger · LT",_=>"Right trigger · RT"};
     private static string ShortName(CurveChannel channel)=>channel switch {CurveChannel.LeftStick=>"L Stick",CurveChannel.RightStick=>"R Stick",CurveChannel.LeftTrigger=>"LT",_=>"RT"};
 }

@@ -219,24 +219,31 @@ public sealed class PadProcessor
         if (tuning?.Raw == true) return Math.Clamp(pushed, 0, 1);
         double inner = (tuning?.Inner ?? curve?.Inner ?? 0) / 100.0, outer = (tuning?.Outer ?? curve?.Outer ?? 100) / 100.0;
         double scaled = Math.Clamp((pushed - inner) / (outer - inner), 0, 1);
-        double y = curve == null ? scaled : Bezier(scaled, curve.X1 / 255.0, curve.Y1 / 255.0, curve.X2 / 255.0, curve.Y2 / 255.0);
+        double y = curve == null ? scaled : Through(scaled, curve.X1 / 255.0, curve.Y1 / 255.0, curve.X2 / 255.0, curve.Y2 / 255.0);
         if (tuning == null || y <= 0) return y;
         // anti-deadzone and max output squeeze the curve between a floor and a ceiling; inside the dead zone stays 0
         double floor = tuning.AntiDeadzone / 100.0, ceiling = tuning.MaxOutput / 100.0;
         return floor + (ceiling - floor) * y;
     }
 
-    /// <summary>The cubic through (0,0), (x1,y1), (x2,y2), (1,1): y where the curve's x equals the input.</summary>
-    static double Bezier(double x, double x1, double y1, double x2, double y2)
+    /// <summary>The smooth line through (0,0), (x1,y1), (x2,y2), (1,1), all 0–1: a monotone cubic, so it never overshoots
+    /// between points. The Curves page draws this same line through the two points it lets you drag (owner, 14 Oct 2026:
+    /// the graph and what the agent said disagreed, because the page drew through the points and games used them as
+    /// Bezier handles).</summary>
+    public static double Through(double x, double x1, double y1, double x2, double y2)
     {
-        double lo = 0, hi = 1;
-        for (int i = 0; i < 28; i++)
+        var knots = new[] { (X: 0d, Y: 0d), (X: x1, Y: y1), (X: x2, Y: y2), (X: 1d, Y: 1d) }.OrderBy(p => p.X).GroupBy(p => p.X).Select(g => g.Last()).ToArray();
+        var deltas = Enumerable.Range(0, knots.Length - 1).Select(i => (knots[i + 1].Y - knots[i].Y) / (knots[i + 1].X - knots[i].X)).ToArray();
+        var slopes = Enumerable.Range(0, knots.Length).Select(i => i == 0 ? deltas[0] : i == knots.Length - 1 ? deltas[^1] : deltas[i - 1] * deltas[i] <= 0 ? 0 : (deltas[i - 1] + deltas[i]) / 2).ToArray();
+        for (int i = 0; i < deltas.Length; i++)
         {
-            double t = (lo + hi) / 2, u = 1 - t;
-            double cx = 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t;
-            if (cx < x) lo = t; else hi = t;
+            double d = deltas[i]; if (d == 0) { slopes[i] = slopes[i + 1] = 0; continue; }
+            double a = slopes[i] / d, b = slopes[i + 1] / d;
+            if (a * a + b * b > 9) { double scale = 3 / Math.Sqrt(a * a + b * b); slopes[i] = scale * a * d; slopes[i + 1] = scale * b * d; }
         }
-        double tt = (lo + hi) / 2, uu = 1 - tt;
-        return Math.Clamp(3 * uu * uu * tt * y1 + 3 * uu * tt * tt * y2 + tt * tt * tt, 0, 1);
+        if (x <= knots[0].X) return Math.Clamp(knots[0].Y, 0, 1); if (x >= knots[^1].X) return Math.Clamp(knots[^1].Y, 0, 1);
+        int s = Enumerable.Range(0, knots.Length - 1).First(i => x >= knots[i].X && x < knots[i + 1].X);
+        double span = knots[s + 1].X - knots[s].X, t = (x - knots[s].X) / span, t2 = t * t, t3 = t2 * t;
+        return Math.Clamp((2 * t3 - 3 * t2 + 1) * knots[s].Y + (t3 - 2 * t2 + t) * span * slopes[s] + (-2 * t3 + 3 * t2) * knots[s + 1].Y + (t3 - t2) * span * slopes[s + 1], 0, 1);
     }
 }

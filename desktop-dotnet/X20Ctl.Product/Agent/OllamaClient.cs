@@ -21,7 +21,8 @@ public sealed class OllamaClient : IAgentModel
     public string Name { get; }
     public double Temperature { get; set; } = 0.2;
     public int MaxTokens { get; set; } = 600;
-    public int Context { get; set; } = 4096;
+    // the prompt alone is about 3,500 tokens; a whole conversation is remembered (14 Oct 2026), so room for many turns
+    public int Context { get; set; } = 16384;
     /// <summary>Hold replies to the JSON schema (Ollama's "format"). Off only to measure what the schema is worth.</summary>
     public bool UseSchema { get; set; } = true;
     public OllamaClient(string model = DefaultModel) { Name = model; }

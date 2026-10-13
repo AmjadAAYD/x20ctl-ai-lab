@@ -28,6 +28,8 @@ public sealed class DashboardConsolePage : Grid
     private readonly bool animate;
     private GameEntry? current;
     public event Action? ConfigureRequested;
+    /// <summary>The invitation in the hero's empty corner was chosen: open the agent.</summary>
+    public event Action? AgentRequested;
     private Button? heroFocus;
     /// <summary>What A does on the highlighted item, for the live footer.</summary>
     public string FocusAction => heroFocus?.IsKeyboardFocused == true ? "Configure" : play.IsKeyboardFocused || cards.Any(c => c.Card.IsKeyboardFocusWithin) ? "Play" : "Select";
@@ -57,7 +59,9 @@ public sealed class DashboardConsolePage : Grid
         heroButton.GotKeyboardFocus += (_, _) => hint.BorderBrush = Brushes.White; heroButton.LostKeyboardFocus += (_, _) => hint.BorderBrush = new SolidColorBrush(Color.FromArgb(70, 140, 180, 255));
         heroFocus = heroButton;
         // the same framed panel the Buttons page puts its controller in (owner request, 13 Oct 2026)
-        var heroPanel = Kit.Panel(null, null, null, new Grid { Children = { heroButton } }, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
+        // the agent's invitation in the hero's empty top-right corner (owner request, 14 Oct 2026)
+        var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 15.5); invite.HorizontalAlignment = HorizontalAlignment.Right; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 22, 22, 0);
+        var heroPanel = Kit.Panel(null, null, null, new Grid { Children = { heroButton, invite } }, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
         top.Children.Add(heroPanel);
 
         var status = new StackPanel { Width = 560 };

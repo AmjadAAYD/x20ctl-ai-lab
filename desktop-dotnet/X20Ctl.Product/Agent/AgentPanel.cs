@@ -74,6 +74,10 @@ public sealed class AgentPanel
     public Func<PcModeProfile, PcModeProfile, DriftReport?, Task>? Walkthrough { get; set; }
     /// <summary>The agent started or stopped thinking.</summary>
     public event Action<bool>? Thinking;
+    /// <summary>The agent takes the owner to a page (Diagnostics, Mouse, Curves…); the host goes there.</summary>
+    public event Action<string>? PageRequested;
+    /// <summary>Switches mouse mode; returns why not, or null when it worked.</summary>
+    public Func<bool, string?>? MouseSwitch { get; set; }
     readonly string modelId, greeting;
     readonly PcModeLink? link;
     readonly AgentSession session;
@@ -124,7 +128,7 @@ public sealed class AgentPanel
         this.modelId = modelId; this.link = link; this.player = player; this.register = register; skin = AgentSkin.For(modelId);
         string name = controllerName.Replace("EasySMX ", ""); padName = name;
         // drift is read from the real controller; a review harness can hand in its own reading instead
-        session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
+        session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring), ControllerFacts = Facts(modelId) };
         greeting = AgentCharacter.Greeting(name);
 
         // ---- the screen, right: the conversation ----
@@ -157,7 +161,7 @@ public sealed class AgentPanel
         // ---- the chat bar, under the conversation ----
         Input = new TextBox { AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 42, MaxHeight = 84, MaxLength = 600, FontSize = 14, Padding = new(24, 9, 12, 8), VerticalContentAlignment = VerticalAlignment.Center, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ToolTip = "Talk to the agent: Enter or A to send" };
         Input.KeyDown += (_, e) => { if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; Send(); } };
-        Input.TextChanged += (_, _) => { if (!busy) Look(Input.Text.Length > 0 ? Gaze.Typing : Gaze.Idle); };
+        Input.TextChanged += (_, _) => { if (!busy) { Look(Input.Text.Length > 0 ? Gaze.Typing : Gaze.Idle); Typing(Input.Text.Length > 0); } };
         var bar = new Grid { Margin = new(0, 12, 0, 0), Children = { Input, Kit.Icon("\uE8BD", 14, "DS.TextMuted").Also(i => { i.Margin = new(14, 0, 0, 0); i.HorizontalAlignment = HorizontalAlignment.Left; i.IsHitTestVisible = false; }) } };
 
         var split = new Grid { ColumnDefinitions = { new() { Width = new GridLength(400) }, new() { Width = new GridLength(25) }, new() }, RowDefinitions = { new(), new() { Height = GridLength.Auto } } };
@@ -400,6 +404,71 @@ public sealed class AgentPanel
         foreach (var (pupil, squint) in squints) { squint.Visibility = Visibility.Collapsed; pupil.Visibility = Visibility.Visible; }
     }
 
+    // ---- the eyes' colour (owner request, 14 Oct 2026): blue while it thinks, green when it answered, purple while the
+    // owner types, red when it found nothing or the answer was bad; the usual ice otherwise ----
+    Color eyeColor = AgentMark.Ice;
+    void EyeColor(Color color)
+    {
+        if (color == eyeColor) return; eyeColor = color;
+        foreach (var (pupil, squint) in squints)
+        {
+            if (pupil is System.Windows.Shapes.Shape p) { p.Fill = new SolidColorBrush(color); if (p.Effect is DropShadowEffect g) g.Color = color; }
+            if (squint is System.Windows.Shapes.Shape s) { s.Stroke = new SolidColorBrush(color); if (s.Effect is DropShadowEffect g) g.Color = color; }
+        }
+    }
+    bool typingLit;
+    void Typing(bool on)
+    {
+        if (on == typingLit) return; typingLit = on;
+        if (on) { lightShow++; lightsOn = true; EyeColor(Violet); foreach (var led in leds) { led.BeginAnimation(UIElement.OpacityProperty, null); led.Opacity = 1; led.Background = new SolidColorBrush(Violet); } }
+        else { EyeColor(AgentMark.Ice); Steady(); }
+    }
+    /// <summary>Thinking: the sticks turn slowly round their edge.</summary>
+    void Circling(bool on)
+    {
+        foreach (var (look, _, _) in eyes)
+        {
+            if (!on || !DS.Motion) { look.BeginAnimation(TranslateTransform.XProperty, null); look.BeginAnimation(TranslateTransform.YProperty, null); continue; }
+            const double r = 9; var quarter = TimeSpan.FromSeconds(.7);
+            // x = sin, y = -cos: each quarter eases out to a peak or in to the middle, so the path is a circle
+            var outOf = new System.Windows.Media.Animation.KeySpline(.39, .575, .565, 1); var into = new System.Windows.Media.Animation.KeySpline(.47, 0, .745, .715);
+            System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames Round(double[] at, System.Windows.Media.Animation.KeySpline[] ease)
+            {
+                var a = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames { RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever };
+                a.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteDoubleKeyFrame(at[0], TimeSpan.Zero));
+                for (int i = 1; i < at.Length; i++) a.KeyFrames.Add(new System.Windows.Media.Animation.SplineDoubleKeyFrame(at[i], quarter * i, ease[i - 1]));
+                return a;
+            }
+            look.BeginAnimation(TranslateTransform.XProperty, Round([0, r, 0, -r, 0], [outOf, into, outOf, into]));
+            look.BeginAnimation(TranslateTransform.YProperty, Round([-r, 0, r, 0, -r], [into, outOf, into, outOf]));
+        }
+    }
+    /// <summary>"Wiggling my sticks": they really wiggle, side to side and a little up and down, then settle.</summary>
+    void Wiggle()
+    {
+        if (!DS.Motion) return;
+        foreach (var (look, _, inward) in eyes)
+        {
+            var x = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames(); var y = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames();
+            double t = 0;
+            foreach (var (dx, dy) in new[] { (-11.0, -4.0), (11, 3), (-10, 4), (10, -4), (-8, 3), (8, -3), (-5, 2), (5, -1), (0, 0) })
+            {
+                t += 85;
+                x.KeyFrames.Add(new System.Windows.Media.Animation.EasingDoubleKeyFrame(dx * inward, TimeSpan.FromMilliseconds(t), new System.Windows.Media.Animation.SineEase()));
+                y.KeyFrames.Add(new System.Windows.Media.Animation.EasingDoubleKeyFrame(dy, TimeSpan.FromMilliseconds(t), new System.Windows.Media.Animation.SineEase()));
+            }
+            look.BeginAnimation(TranslateTransform.XProperty, x); look.BeginAnimation(TranslateTransform.YProperty, y);
+        }
+    }
+    static bool Wiggles(string? speech) => speech != null && System.Text.RegularExpressions.Regex.IsMatch(speech, @"\b(w(r)?iggl\w*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    /// <summary>What this controller is, for the model to choose values that fit it.</summary>
+    static string Facts(string modelId)
+    {
+        var p = ModelProfiles.For(modelId);
+        return $"Sticks: {p.Sticks}. Triggers: {p.Triggers}. Rumble motors: {p.Motors}. Polling: {p.Polling}. Motion: {p.Motion}." + (p.Paddles.Length > 0 ? $" Back paddles: {string.Join(", ", p.Paddles)}." : "")
+            + (p.Sticks.Contains("Hall", StringComparison.OrdinalIgnoreCase) || p.Sticks.Contains("TMR", StringComparison.OrdinalIgnoreCase) ? " Magnetic sticks barely drift: dead zones can stay small (2-5)." : " Potentiometer sticks can drift: keep the dead zone at or above the measured drift.");
+    }
+
     void Look(Gaze gaze)
     {
         foreach (var (look, _, inward) in eyes)
@@ -448,6 +517,9 @@ public sealed class AgentPanel
                 Say(AgentCommands.Star(), null); _ = Lights(AgentMood.Good); Open(ExternalLinks.Repository); break;
             case AgentCommand.Donate:
                 Say(AgentCommands.Donate(), null); _ = Lights(AgentMood.Good); Open(ProductLinks.Support); break;
+            case AgentCommand.Diagnostics:
+                Say(AgentCommands.Diagnostics(), null); _ = Lights(AgentMood.Good);
+                await Task.Delay(900); PageRequested?.Invoke("Diagnostics"); break;
         }
     }
 
@@ -489,14 +561,17 @@ public sealed class AgentPanel
     void Searching(bool on)
     {
         lightShow++;
-        if (on) { lightsOn = true; Blink(Blue, 300, wave: true); } else Steady();
+        typingLit = false;
+        if (on) { lightsOn = true; Blink(Blue, 300, wave: true); EyeColor(Blue); } else { Steady(); EyeColor(AgentMark.Ice); }
     }
     async Task Lights(AgentMood mood)
     {
         int me = ++lightShow; lightsOn = true;
-        Blink(mood switch { AgentMood.Good => Green, AgentMood.Unsure => Violet, _ => AgentMark.Red }, mood == AgentMood.Failed ? 200 : 320, wave: false);
+        typingLit = false;
+        var color = mood == AgentMood.Good ? Green : AgentMark.Red;
+        Blink(color, mood == AgentMood.Good ? 320 : 200, wave: false); EyeColor(color);
         await Task.Delay(3000);
-        if (me == lightShow) Steady();
+        if (me == lightShow) { Steady(); EyeColor(AgentMark.Ice); }
     }
 
     /// <summary>Move the window by its title bar, kept inside its host.</summary>
@@ -580,7 +655,7 @@ public sealed class AgentPanel
             Look(Gaze.Ideas); Say(AgentIdeas.TopicReply(topic), null); _ = Lights(AgentMood.Good); return null;
         }
         if (!Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); _ = Lights(AgentMood.Failed); return null; }
-        busy = true; settle.Stop(); Searching(true); ShowState(); Thinking?.Invoke(true); Look(Gaze.Thinking);
+        busy = true; settle.Stop(); Searching(true); ShowState(); Thinking?.Invoke(true); Circling(true);
         Bubble(sentence, mine: true);
         var thinking = Bubble("…", mine: false);
         var before = Current;
@@ -592,17 +667,21 @@ public sealed class AgentPanel
             transcript.Children.Remove(thinking);
             // PC mode on or off, when asked: the switch itself, not a setting
             string? switched = turn.Outcome.PcMode is { } on ? (link == null ? "PC mode isn't reachable from this window." : PcModePage.SwitchFromAgent(link, on) ?? "") : null;
+            string? mouse = turn.Outcome.Mouse is { } mouseOn ? (MouseSwitch == null ? "Mouse mode isn't reachable from this window." : MouseSwitch(mouseOn) ?? "") : null;
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
                 try { Store(next); Applied(); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
                 if (Walkthrough != null) await Walkthrough(before, next, turn.Measured);
-                Say(turn, before, switched: switched); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
+                Say(turn, before, switched: switched, mouse: mouse); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
-            else { Say(turn, null, switched: switched); if (switched != null) ShowSettings(new HashSet<string>()); }
+            else { Say(turn, null, switched: switched, mouse: mouse); if (switched != null) ShowSettings(new HashSet<string>()); }
+            Circling(false);
             if (turn.Verdict.Proposal?.Speech is { } spoken && AgentCharacter.IsSilly(spoken)) Laugh();
             if (!turn.Verdict.Valid || turn.Outcome.Error != null) { Look(Gaze.Down); await Task.Delay(1400); }
+            else if (Wiggles(turn.Verdict.Proposal?.Speech)) { Wiggle(); await Task.Delay(800); }
+            if (turn.Verdict.Valid && turn.Outcome.Page is { } page) { await Task.Delay(700); PageRequested?.Invoke(page); }
             return turn;
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
@@ -611,7 +690,7 @@ public sealed class AgentPanel
             Say(error is TaskCanceledException ? AgentCharacter.Dozed : "My brain isn't answering: " + error.Message, null);
             mood = AgentMood.Failed; return null;
         }
-        finally { busy = false; if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
+        finally { busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
     }
 
     // ---- the drift reading: a countdown while the sticks are read ----
@@ -649,7 +728,7 @@ public sealed class AgentPanel
     void Say(string text, string? detail) { var b = Bubble(text, false); if (detail != null) ((TextBlock)b.Child).Text += "\n" + detail; }
 
     /// <summary>One answer: the model's words, then what the app did, then the details on request.</summary>
-    void Say(AgentTurn turn, PcModeProfile? undo, string? failure = null, string? switched = null)
+    void Say(AgentTurn turn, PcModeProfile? undo, string? failure = null, string? switched = null, string? mouse = null)
     {
         var stack = new StackPanel();
         var v = turn.Verdict;
@@ -669,12 +748,19 @@ public sealed class AgentPanel
         // the switch: "" when it worked, otherwise why not
         if (switched != null && turn.Outcome.PcMode is { } pc)
             stack.Children.Add(Wrap(switched.Length == 0 ? $"PC mode   {(pc ? "on" : "off")}" : "PC mode · " + switched, 14, switched.Length == 0 ? "DS.AccentHi" : "DS.Warn", 6));
+        if (mouse != null && turn.Outcome.Mouse is { } mo)
+            stack.Children.Add(Wrap(mouse.Length == 0 ? $"Mouse mode   {(mo ? "on" : "off")}" : "Mouse mode · " + mouse, 14, mouse.Length == 0 ? "DS.AccentHi" : "DS.Warn", 6));
+        // what it asks back: the missing detail, or whether the change feels right
+        if (v.Proposal?.Question is { Length: > 0 } question)
+            stack.Children.Add(new Border { CornerRadius = new(10), Background = new SolidColorBrush(Color.FromArgb(60, 70, 150, 255)), Padding = new(12, 8, 12, 8), Margin = new(0, 10, 0, 0), Child = Wrap(question, 14, "DS.Text").Also(t => t.FontWeight = FontWeights.SemiBold) });
         // where the answer came from: the doc passages it cites, each opening to its full text
         foreach (var hit in turn.Cited) stack.Children.Add(Source(hit));
         foreach (var skipped in v.Checks.Where(c => c.State == CheckState.Unavailable))
             stack.Children.Add(Wrap($"{skipped.Action.Target}: {skipped.Message}", 14, "DS.Warn", 6));
         // the app's own line: the truth about what happened, whatever the model said
         string verdict = failure ?? (turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && switched == "" ? "Applied · PC mode switched " + (turn.Outcome.PcMode == true ? "on" : "off")
+            : turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && mouse == "" ? "Applied · Mouse mode " + (turn.Outcome.Mouse == true ? "on" : "off")
+            : v.Valid && turn.Outcome.Changes.Count == 0 && turn.Outcome.Page is { } goTo ? "Opening " + goTo
             : turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(link == null ? " · preview only" : "")}"
             : !v.Valid ? "Rejected · nothing changed · " + AgentSession.Problems(v)
             : turn.Outcome.Error != null ? "Rejected · " + turn.Outcome.Error : "No changes");
