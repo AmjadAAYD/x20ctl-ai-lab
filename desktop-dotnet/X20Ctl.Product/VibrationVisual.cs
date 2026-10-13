@@ -30,7 +30,8 @@ public sealed class VibrationVisual : Grid
     {
         animations = animate; IsHitTestVisible = false; Width = 1536; Height = 1024;
         var tracks = Flow.Load(model);
-        behind = new Flow(tracks, false); over = new Flow(tracks, true);
+        var rim = Flow.LoadRim(model);
+        behind = new Flow(tracks, false) { Rim = rim }; over = new Flow(tracks, true) { Rim = rim };
         Children.Add(behind); Children.Add(new PhotoController(model)); Children.Add(over);
         RenderTransform = shake;
         Loaded += (_, _) => UpdateClock(); Unloaded += (_, _) => Stop(); IsVisibleChanged += (_, _) => UpdateClock();
@@ -60,8 +61,7 @@ public sealed class VibrationVisual : Grid
         // the meters breathe with the preview: the heavy motor rolls slowly, the light one flutters
         // a motor holds a level: the meters are fixed at the strength, and the picture shakes, harder as it rises
         Levels?.Invoke(s, s);
-        double amp = .5 + 2.6 * s;
-        shake.X = amp * Math.Sin(t * 211) * Math.Cos(t * 97); shake.Y = amp * .7 * Math.Sin(t * 173 + 1);
+
     }
 
     /// <summary>A contour resampled at an even step, with outward normals, so light can travel along it smoothly.</summary>
@@ -77,6 +77,24 @@ public sealed class VibrationVisual : Grid
         private readonly List<Track> tracks; private readonly bool front;
         private int strength; private double time; private bool moving;
         private static readonly Color Deep = Color.FromRgb(56, 132, 255), Ice = Color.FromRgb(170, 214, 255), White = Color.FromRgb(240, 247, 255);
+        public Track? Rim { get; init; }
+        /// <summary>The controller's whole outline (the lighting silhouette), resampled so light can run round it.</summary>
+        public static Track? LoadRim(string model)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "lighting.json")));
+                string d = doc.RootElement.GetProperty("models").GetProperty(model).GetProperty("front").GetString()!;
+                return Build(Geometry.Parse(d), 1, false);
+            }
+            catch (Exception e) when (e is System.IO.IOException or System.Text.Json.JsonException or KeyNotFoundException or FormatException or InvalidOperationException) { return null; }
+        }
+        private static Color Hue(double t)
+        {
+            t -= Math.Floor(t);
+            Color[] stops = { Color.FromRgb(70, 225, 255), Color.FromRgb(70, 120, 255), Color.FromRgb(255, 90, 215), Color.FromRgb(255, 160, 60), Color.FromRgb(70, 225, 255) };
+            double x = t * 4; int i = (int)x; return Mix(stops[i], stops[Math.Min(i + 1, 4)], x - i);
+        }
         public Flow(List<Track> tracks, bool front) { this.tracks = tracks; this.front = front; Width = 1536; Height = 1024; IsHitTestVisible = false; }
         public void Draw(int s, double t, bool animate) { strength = s; time = t; moving = animate; InvalidateVisual(); }
 
@@ -149,75 +167,44 @@ public sealed class VibrationVisual : Grid
             double s = strength / 100.0, beat = .5;
             if (!front)
             {
-                foreach (var track in tracks.Where(k => k.Grip))
+                if (Rim is { } outline)
                 {
-                    double r = 230 + 30 * beat; byte a = (byte)Math.Clamp((.08 + .26 * beat) * (.4 + .6 * s) * 255, 0, 255);
-                    dc.DrawEllipse(new RadialGradientBrush(Color.FromArgb(a, Deep.R, Deep.G, Deep.B), Color.FromArgb(0, Deep.R, Deep.G, Deep.B)), null, new Point(track.Center.X, track.Center.Y + 40), r, r * .82);
+                    var rb = outline.Shape.Bounds; double glow = (.18 + .42 * s) * 255;
+                    dc.DrawEllipse(new RadialGradientBrush(Color.FromArgb((byte)glow, 60, 130, 255), Color.FromArgb(0, 60, 130, 255)), null, new Point(rb.X + rb.Width * .2, rb.Y + rb.Height * .62), rb.Width * .34, rb.Height * .6);
+                    dc.DrawEllipse(new RadialGradientBrush(Color.FromArgb((byte)glow, 255, 150, 50), Color.FromArgb(0, 255, 150, 50)), null, new Point(rb.X + rb.Width * .8, rb.Y + rb.Height * .62), rb.Width * .34, rb.Height * .6);
                 }
                 return;
             }
-            // owner, 13 Oct 2026, with the maker's own motor-haptics picture as the reference: real cylindrical motors in the
-            // grips and triggers, a blue field of vibration arcs round each, and a stepped level bar. Everything holds at the
-            // draft strength: a weight spins at a steady speed and the motor itself trembles, nothing swells or beats.
-            double rate = 3 + 13 * s, angle = moving ? time * rate * Math.Tau : .6, level = .5 + .5 * s;
+            // owner, 13 Oct 2026, from his own recording: the controller edged in neon. Colour runs round its whole outline and
+            // both grip pads (cyan, blue, magenta, orange), a bright head chasing round it; blue and orange glow behind.
+            // The speed and brightness are the draft strength, held: nothing swells or beats.
+            double lap = moving ? time * .03 : .1;
             double ppd = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             var face = new Typeface("Segoe UI Semibold");
             FormattedText Label(string text, double size, Color color) => new(text, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, new SolidColorBrush(color), ppd);
-            var blue = Color.FromRgb(70, 160, 255); var ice = Color.FromRgb(190, 225, 255);
-            var steel = new LinearGradientBrush(new GradientStopCollection {
-                new(Color.FromRgb(22, 48, 104), 0), new(Color.FromRgb(160, 198, 248), .32), new(Color.FromRgb(74, 116, 200), .66), new(Color.FromRgb(16, 34, 78), 1) }, 0);
-            // owner, 13 Oct 2026, from his own marked-up screenshot: no motor object. The grip pads themselves vibrate: ripples
-            // radiate from the middle of each pad out to its edge at a steady pace (faster with strength), the pad glows from
-            // inside and a rim of light follows its edge. Nothing swells or beats.
-            double freq = .5 + 1.5 * s;
+            if (Rim is { } rimShape)
+            {
+                var pts = rimShape.Points; int n = pts.Length, chunk = 4;
+                for (int pass = 0; pass < 2; pass++)
+                    for (int k = 0; k + chunk < n; k += chunk)
+                    {
+                        double along = (double)k / n;
+                        var color = Hue(along + lap);
+                        double head = 0, a = .6 + .4 * s;
+                        var pen = pass == 0
+                            ? new Pen(new SolidColorBrush(Color.FromArgb((byte)(95 * a), color.R, color.G, color.B)), 20) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }
+                            : new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(255 * a, 0, 255), color.R, color.G, color.B)), 8) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+                        dc.DrawLine(pen, pts[k], pts[k + chunk]);
+                    }
+            }
             foreach (var track in tracks)
             {
-                var c = track.Center;
-                // a little larger than the traced contour: the pads reach further down and out than the outline does
-                var pad = track.Shape.Clone(); pad.Transform = new ScaleTransform(1.12, 1.12, c.X, c.Y);
+                var c = track.Center; var pad = track.Shape.Clone(); pad.Transform = new ScaleTransform(1.1, 1.1, c.X, c.Y);
                 var tb = pad.Bounds;
-                dc.PushClip(pad);
-                dc.DrawRectangle(new RadialGradientBrush(Color.FromArgb((byte)(120 * level), 120, 200, 255), Color.FromArgb((byte)(26 * level), 40, 110, 255)) { Center = new Point(.5, .5), RadiusX = .6, RadiusY = .6 },
-                    null, new Rect(tb.X - 4, tb.Y - 4, tb.Width + 8, tb.Height + 8));
-                for (int k = 0; k < 4; k++)
-                {
-                    double p = moving ? (time * freq + k / 4.0) % 1 : (.15 + k * .25), sc = .2 + .95 * p;
-                    var ring = Mix(Color.FromRgb(225, 244, 255), Color.FromRgb(70, 150, 255), p);
-                    dc.PushTransform(new ScaleTransform(sc * 1.12, sc * 1.12, c.X, c.Y));
-                    dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(235 * Math.Pow(1 - p, 1.1) * level, 0, 255), ring.R, ring.G, ring.B)), (5.5 - 3.6 * p) / sc), track.Shape);
-                    dc.Pop();
-                }
-                dc.Pop();
-                // the rim of light along the pad's edge
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(120 + 110 * s), 150, 215, 255)), 2.6) { LineJoin = PenLineJoin.Round }, pad);
-            }
-            // the level bar: five steps, 0 to 100 %, filled to the draft strength and held there
-            var motors = tracks.Where(t => t.Grip).DefaultIfEmpty(tracks[0]).ToList();
-            double midX = motors.Average(t => t.Center.X), baseY = tracks.Max(t => t.Shape.Bounds.Bottom) + 30;
-            const double seg = 124, bar = 22; double x0 = midX - seg * 2.5;
-            for (int n = 0; n < 5; n++)
-            {
-                double x = x0 + n * seg;
-                var cell = new StreamGeometry();
-                using (var ctx = cell.Open())
-                {
-                    ctx.BeginFigure(new Point(x + 12, baseY), true, true);
-                    ctx.LineTo(new Point(x + seg - 6, baseY), true, false); ctx.LineTo(new Point(x + seg - 18, baseY + bar), true, false); ctx.LineTo(new Point(x, baseY + bar), true, false);
-                }
-                cell.Freeze();
-                dc.DrawGeometry(new SolidColorBrush(Color.FromArgb(46, 190, 215, 255)), null, cell);
-                double f = Math.Clamp(s * 5 - n, 0, 1);
-                if (f > 0)
-                {
-                    dc.PushClip(new RectangleGeometry(new Rect(x, baseY - 2, seg * f, bar + 4)));
-                    dc.DrawGeometry(new LinearGradientBrush(Color.FromRgb(120, 215, 255), Color.FromRgb(58, 120, 255), 0), null, cell);
-                    dc.Pop();
-                }
-            }
-            for (int n = 0; n <= 5; n++)
-            {
-                var t = Label(n * 20 + "%", 28, Color.FromArgb(200, 200, 220, 250));
-                dc.DrawText(t, new Point(x0 + n * seg - t.Width / 2 - 6, baseY + bar + 8));
+                var brush = new LinearGradientBrush(Hue(lap), Hue(lap + .45), new Point(tb.X, tb.Y), new Point(tb.Right, tb.Bottom)) { MappingMode = BrushMappingMode.Absolute };
+                dc.DrawGeometry(new SolidColorBrush(Color.FromArgb((byte)(20 + 26 * s), 120, 190, 255)), null, pad);
+                var halo = brush.Clone(); halo.Opacity = .28; dc.DrawGeometry(null, new Pen(halo, 20) { LineJoin = PenLineJoin.Round }, pad);
+                dc.DrawGeometry(null, new Pen(brush, 8) { LineJoin = PenLineJoin.Round }, pad);
             }
         }        /// <summary>A polyline through <paramref name="count"/> points starting at <paramref name="start"/>, wrapping round the contour.</summary>
         private static StreamGeometry Poly(Point[] points, int start, int count, bool closed)
