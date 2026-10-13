@@ -16,6 +16,7 @@ public sealed class VibrationVisual : Grid
     private int strength;
     private TimeSpan started, last;
     private bool rendering;
+    private readonly TranslateTransform shake = new();
     public int Strength => strength;
     public bool IsRunning { get; private set; }
     public bool ReducedMotion => !animations;
@@ -31,6 +32,7 @@ public sealed class VibrationVisual : Grid
         var tracks = Flow.Load(model);
         behind = new Flow(tracks, false); over = new Flow(tracks, true);
         Children.Add(behind); Children.Add(new PhotoController(model)); Children.Add(over);
+        RenderTransform = shake;
         Loaded += (_, _) => UpdateClock(); Unloaded += (_, _) => Stop(); IsVisibleChanged += (_, _) => UpdateClock();
     }
     public void SetStrength(int percent) { if (percent == strength) return; strength = percent; UpdateClock(); }
@@ -38,7 +40,7 @@ public sealed class VibrationVisual : Grid
     private void Stop()
     {
         if (rendering) { CompositionTarget.Rendering -= Tick; rendering = false; }
-        IsRunning = false; Phase = 0;
+        IsRunning = false; Phase = 0; shake.X = shake.Y = 0;
         behind.Draw(strength, 0, false); over.Draw(strength, 0, false); Levels?.Invoke(0, 0);
     }
     private void UpdateClock()
@@ -56,7 +58,10 @@ public sealed class VibrationVisual : Grid
         Phase = t % 1;
         behind.Draw(strength, t, true); over.Draw(strength, t, true);
         // the meters breathe with the preview: the heavy motor rolls slowly, the light one flutters
-        double beat = Flow.Beat(t, s); Levels?.Invoke(s * (.55 + .45 * beat), s * (.55 + .45 * beat));
+        // a motor holds a level: the meters are fixed at the strength, and the picture shakes, harder as it rises
+        Levels?.Invoke(s, s);
+        double amp = .5 + 2.6 * s;
+        shake.X = amp * Math.Sin(t * 211) * Math.Cos(t * 97); shake.Y = amp * .7 * Math.Sin(t * 173 + 1);
     }
 
     /// <summary>A contour resampled at an even step, with outward normals, so light can travel along it smoothly.</summary>
@@ -141,7 +146,7 @@ public sealed class VibrationVisual : Grid
         {
             if (strength == 0 || tracks.Count == 0) return;
             // owner direction 10 Oct 2026: no comets or ripples, just a fast heartbeat on each motor's outline
-            double s = strength / 100.0, beat = moving ? Beat(time, s) : .35;
+            double s = strength / 100.0, beat = .5;
             if (!front)
             {
                 foreach (var track in tracks.Where(k => k.Grip))
@@ -151,38 +156,35 @@ public sealed class VibrationVisual : Grid
                 }
                 return;
             }
-            // owner, 13 Oct 2026, twice: no outline rings, no flat hologram. Each motor is an energy burst: a ring of spokes that
-            // dances like a sound spectrum, shockwaves leaving it on every thump, and a white-hot core.
-            double level = .45 + .55 * s, period = 60 / (72 + 108 * s);
+            // owner, 13 Oct 2026, third time: not music, not a heartbeat. A motor: a housing in each grip with a fixed gauge
+            // round it, and an off-centre weight spinning at a steady speed (faster with strength), which is what shakes the pad.
+            double rate = 3 + 13 * s, angle = moving ? time * rate * Math.Tau : .6;
             foreach (var track in tracks)
             {
                 var b = track.Shape.Bounds; var c = track.Center;
-                double baseR = Math.Min(b.Width, b.Height) * (track.Grip ? .5 : .62), core = baseR * .56 * (1 + .12 * beat * level);
-                // shockwaves: three rings leave the motor in turn, growing and thinning as they fade, colour turning cyan to magenta
-                for (int k = 0; k < 3; k++)
+                double r = Math.Min(b.Width, b.Height) * (track.Grip ? .30 : .36), gauge = r + 12;
+                // the gauge: a fixed ring that fills to the draft strength and stays there
+                dc.DrawEllipse(new SolidColorBrush(Color.FromArgb(120, 4, 10, 26)), new Pen(new SolidColorBrush(Color.FromArgb(70, 160, 200, 255)), 5), c, gauge, gauge);
+                double sweep = Math.Clamp(s, .001, .999) * Math.Tau;
+                var arc = new StreamGeometry();
+                using (var ctx = arc.Open())
                 {
-                    double age = moving ? (time / period * .5 + k / 3.0) % 1 : .25 + k * .25, fade = Math.Pow(1 - age, 1.7);
-                    double r = core + baseR * 1.35 * age;
-                    var color = Mix(Color.FromRgb(90, 235, 255), Color.FromRgb(255, 90, 215), age);
-                    dc.DrawEllipse(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(215 * fade * level, 0, 255), color.R, color.G, color.B)), 1 + 5.5 * fade), c, r, r * .92);
+                    ctx.BeginFigure(new Point(c.X, c.Y - gauge), false, false);
+                    ctx.ArcTo(new Point(c.X + gauge * Math.Sin(sweep), c.Y - gauge * Math.Cos(sweep)), new Size(gauge, gauge), 0, sweep > Math.PI, SweepDirection.Clockwise, true, false);
                 }
-                // the spectrum: spokes round the core whose lengths ride two slow waves, kicked outward by the beat
-                const int spokes = 72;
-                double spin = moving ? time * .5 * track.Direction : 0;
-                for (int n = 0; n < spokes; n++)
+                arc.Freeze();
+                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromRgb(90, 190, 255)), 5.5) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, arc);
+                // the housing: dark steel with a bright rim
+                dc.DrawEllipse(new RadialGradientBrush(Color.FromRgb(70, 82, 106), Color.FromRgb(16, 22, 38)) { GradientOrigin = new Point(.35, .3) },
+                    new Pen(new SolidColorBrush(Color.FromArgb(220, 190, 215, 245)), 2), c, r, r);
+                // the weight: off centre, with ghosts behind it so it reads as a blur at speed
+                for (int g = 5; g >= 0; g--)
                 {
-                    double angle = n * Math.Tau / spokes + spin, wave = .5 + .5 * Math.Sin(angle * 5 + time * 6.5) * Math.Sin(angle * 3 - time * 4.2);
-                    double length = 5 + (14 + 46 * beat * level) * (.25 + .75 * wave);
-                    var dir = new Vector(Math.Cos(angle), Math.Sin(angle) * .92);
-                    var color = Mix(Color.FromRgb(70, 225, 255), Color.FromRgb(255, 95, 215), .5 + .5 * Math.Sin(angle * 2 + time * 1.3));
-                    var pen = new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((120 + 135 * beat) * level, 0, 255), color.R, color.G, color.B)), 3.4) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-                    dc.DrawLine(pen, c + dir * (core + 4), c + dir * (core + 4 + length));
+                    double a = angle - g * (moving ? .34 : 0) * track.Direction; double fade = g == 0 ? 1 : .42 * (1 - g / 6.0);
+                    var at = new Point(c.X + Math.Cos(a) * r * .42, c.Y + Math.Sin(a) * r * .42);
+                    dc.DrawEllipse(new SolidColorBrush(Color.FromArgb((byte)(235 * fade), 235, 246, 255)), null, at, r * .36, r * .36);
                 }
-                // the core: white-hot, blooming on the thump, with a thin bright ring marking its edge
-                double bloom = core * (1.05 + .35 * beat);
-                dc.DrawEllipse(new RadialGradientBrush(new GradientStopCollection {
-                    new(Color.FromArgb((byte)Math.Clamp((140 + 115 * beat) * level, 0, 255), 255, 255, 255), 0), new(Color.FromArgb((byte)(110 * level), 110, 220, 255), .45), new(Color.FromArgb(0, 80, 140, 255), 1) }),
-                    new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((90 + 150 * beat) * level, 0, 255), 235, 248, 255)), 1.6), c, bloom, bloom * .92);
+                dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(20, 28, 46)), new Pen(new SolidColorBrush(Color.FromRgb(150, 190, 240)), 1.5), c, r * .13, r * .13);
             }
         }        /// <summary>A polyline through <paramref name="count"/> points starting at <paramref name="start"/>, wrapping round the contour.</summary>
         private static StreamGeometry Poly(Point[] points, int start, int count, bool closed)

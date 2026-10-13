@@ -50,8 +50,7 @@ public sealed class DashboardConsolePage : Grid
 
         // ---- top: controller hero (left) + status block (right) ----
         var top = new Grid(); top.ColumnDefinitions.Add(new() { Width = new(.95, GridUnitType.Star) }); top.ColumnDefinitions.Add(new() { Width = new(1.05, GridUnitType.Star) }); Children.Add(top);
-        Showcase.Show(model.Id, reducedMotion);
-        var heroButton = new Button { Content = new Grid { Children = { new Viewbox { Child = Showcase } } }, Template = Bare(), Cursor = Cursors.Hand, ToolTip = "Configure this controller (opens Buttons)", FocusVisualStyle = null };
+        var heroButton = new Button { Content = new Grid { Children = { new Viewbox { Child = new PhotoController(model.Id) } } }, Template = Bare(), Cursor = Cursors.Hand, ToolTip = "Configure this controller (opens Buttons)", FocusVisualStyle = null };
         heroButton.Click += (_, _) => ConfigureRequested?.Invoke();
         var hint = new Border { CornerRadius = new(14), Padding = new(14, 6, 14, 6), Background = new SolidColorBrush(Color.FromArgb(150, 8, 14, 32)), BorderBrush = new SolidColorBrush(Color.FromArgb(70, 140, 180, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(24, 0, 0, 6),
             Child = GlyphHint.Footer(("A", "Configure buttons")) };
@@ -130,6 +129,7 @@ public sealed class DashboardConsolePage : Grid
         if (cards.Count > 0) return;
         scan ??= GameLibrary.ScanAsync();
         IReadOnlyList<GameEntry> list; try { list = await scan; } catch { list = []; }
+        if (cards.Count > 0) return; // a second Populate that started while the scan ran has already filled the shelf
         gamesCount.Text = list.Count.ToString();
         if (list.Count == 0) { shelf.Children.Add(Kit.Info("No installed Steam or Epic games were found on this PC.")); return; }
         int i = 0;
