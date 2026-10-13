@@ -32,7 +32,7 @@ public sealed class VibrationVisual : Grid
         var tracks = Flow.Load(model);
         var rim = Flow.LoadRim(model);
         var islands = Flow.Islands(model);
-        behind = new Flow(tracks, false) { Rim = rim }; over = new Flow(tracks, true) { Rim = rim, Parts = islands, Palette = Flow.LedColors(model) };
+        behind = new Flow(tracks, false) { Rim = rim }; over = new Flow(tracks, true) { Rim = rim, Parts = islands, Palette = Flow.LedColors(model), Body = Flow.Silhouette(model) };
         Children.Add(behind); Children.Add(new PhotoController(model)); Children.Add(over);
         RenderTransform = shake;
         Loaded += (_, _) => UpdateClock(); Unloaded += (_, _) => Stop(); IsVisibleChanged += (_, _) => UpdateClock();
@@ -88,6 +88,22 @@ public sealed class VibrationVisual : Grid
         // owner, 13 Oct 2026: the line follows the controller's own outline, never a drawn shape. Each stroke is the stretch
         // of the photo's silhouette round a grip (and the bumper tops on the X20 Pro and X15), set just inside the edge and
         // smoothed. Fractions of the 1536 x 1024 photo, so they scale with it.
+        /// <summary>The controller's exact outline from its photo. The light is clipped to it, so it lives on the controller's
+        /// edge like an edge-lit bevel and never bleeds out into the background.</summary>
+        public Geometry? Body { get; init; }
+        public static Geometry? Silhouette(string model)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "vibration-outlines.json")));
+                if (!doc.RootElement.TryGetProperty("silhouettes", out var all) || !all.TryGetProperty(model, out var pts)) return null;
+                var a = pts.EnumerateArray().Select(q => new Point(q[0].GetDouble() * 1536, q[1].GetDouble() * 1024)).ToList();
+                var g = new StreamGeometry();
+                using (var ctx = g.Open()) { ctx.BeginFigure(a[0], true, true); ctx.PolyLineTo(a.Skip(1).ToList(), false, true); }
+                g.Freeze(); return g;
+            }
+            catch (Exception e) when (e is System.IO.IOException or System.Text.Json.JsonException or InvalidOperationException) { return null; }
+        }
         public static List<Island> Islands(string model)
         {
             var list = new List<Island>();
@@ -221,14 +237,14 @@ public sealed class VibrationVisual : Grid
             // The bumper outlines echo their grip about 80 ms later. Today one strength drives both sides; each side keeps its
             // own clock so separate motor values can drive them apart.
             double left = s, right = s;
+            if (Body != null) dc.PushClip(Body);
             foreach (var part in Parts)
             {
                 double m = part.Left ? left : right; if (m <= 0) continue;
-                double railCore = part.Grip ? 7 : 5, lit = .55 + .45 * m;
-                EdgeGlow(dc, part, 40 * lit, railCore * 3.2, false);
-                EdgeGlow(dc, part, 105 * lit, railCore * 1.8, false);
-                EdgeGlow(dc, part, 235 * lit, railCore, false);
-                EdgeGlow(dc, part, 200 * lit, railCore * .35, true);
+                double railCore = part.Grip ? 5 : 3.8, lit = .6 + .4 * m;
+                EdgeGlow(dc, part, 60 * lit, railCore * 4, false);
+                EdgeGlow(dc, part, 250 * lit, railCore, false);
+                EdgeGlow(dc, part, 230 * lit, railCore * .4, true);
                 double q = .4, period = 2.6 - 1.8 * m, travel = .7 + .25 * m;
                 if (moving)
                 {
@@ -239,6 +255,7 @@ public sealed class VibrationVisual : Grid
                 }
                 Pulse(dc, part, q, m, 1, moving ? time : 0);
             }
+            if (Body != null) dc.Pop();
         }
         public Color[] Palette { get; init; } = [Color.FromRgb(80, 225, 255)];
         /// <summary>The colours of each model's own LEDs, read off its photo: strips, stick rings, the D-pad ring. The X10 and
@@ -267,7 +284,7 @@ public sealed class VibrationVisual : Grid
             if (q is < 0 or > 1 || weight <= 0) return;
             double envelope = q < .12 ? Math.Sin(q / .12 * Math.PI / 2) : q > .88 ? Math.Sin((1 - q) / .12 * Math.PI / 2) : 1;
             double span = part.Length * (part.Grip ? .55 : .6), head = part.Closed ? part.Length * q : (part.Length + span) * q;
-            double core = part.Grip ? 14 : 10;
+            double core = part.Grip ? 7 : 5.5;
             for (int i = 0; i + 1 < part.Points.Length; i++)
             {
                 double behind = head - part.Along[i]; if (behind < 0) { if (!part.Closed) continue; behind += part.Length; } // a loop: the tail wraps past the start
@@ -276,8 +293,7 @@ public sealed class VibrationVisual : Grid
                 double a = envelope * feather * weight * (.6 + .4 * m);
                 var c = Rgb(Palette, part.Along[i] / part.Length * .9 + time * .05);
                 // neon tube: a wide haze, a bloom, the coloured core, and a near-white hot centre
-                Neon(dc, c, 40 * a, core * 3.6, part.Points[i], part.Points[i + 1]);
-                Neon(dc, c, 110 * a, core * 2, part.Points[i], part.Points[i + 1]);
+                Neon(dc, c, 75 * a, core * 3, part.Points[i], part.Points[i + 1]);
                 Neon(dc, c, 255 * a, core, part.Points[i], part.Points[i + 1]);
                 Neon(dc, Mix(c, Colors.White, .7), 255 * a, core * .38, part.Points[i], part.Points[i + 1]);
             }
