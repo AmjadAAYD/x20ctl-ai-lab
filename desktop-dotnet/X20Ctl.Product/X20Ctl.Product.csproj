@@ -41,6 +41,7 @@
     <Content Include="../../vendor/drivers/*.exe" Link="drivers/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="Exists('../../vendor/drivers')" />
     <Content Include="../../tools/linux_controller_check/x20ctl-check.py" Link="Tools/linux/x20ctl-check.py" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../src/assets/controllers/lighting.json" Link="Data/lighting.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/assets/controllers/vibration-outlines.json" Link="Data/vibration-outlines.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../src/assets/controllers/outlines.json" Link="Data/outlines.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../src/assets/controllers/**/haptics-geometry.json" Link="Data/haptics/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

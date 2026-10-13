@@ -31,7 +31,7 @@ public sealed class VibrationVisual : Grid
         animations = animate; IsHitTestVisible = false; Width = 1536; Height = 1024;
         var tracks = Flow.Load(model);
         var rim = Flow.LoadRim(model);
-        var islands = Flow.Islands(rim);
+        var islands = Flow.Islands(model);
         behind = new Flow(tracks, false) { Rim = rim }; over = new Flow(tracks, true) { Rim = rim, Parts = islands };
         Children.Add(behind); Children.Add(new PhotoController(model)); Children.Add(over);
         RenderTransform = shake;
@@ -85,26 +85,29 @@ public sealed class VibrationVisual : Grid
         /// travelling pulse, with its base line built once.</summary>
         public sealed record Island(Point[] Points, double[] Along, double Length, bool Left, bool Grip, Geometry Line);
 
-        // owner, 13 Oct 2026: four islands, never one outline. Traced from his blue lines on the X20 Pro, as fractions of the
-        // controller's own outline box, so they scale with it and carry over to the other models. The right side mirrors the left.
-        private static readonly Point[] GripLoop = { new(.0775, .4233), new(.1224, .464), new(.1769, .5148), new(.2381, .5718), new(.2286, .6003), new(.2109, .6572), new(.1837, .759), new(.1496, .8403), new(.1224, .9014), new(.0952, .9217), new(.0612, .9217), new(.0271, .881), new(.0108, .82), new(.0135, .7386), new(.0244, .6369), new(.0407, .5352), new(.0612, .464) };
-        private static readonly Point[] ShoulderCap = { new(.1633, .0631), new(.1973, .0265), new(.2449, .0062), new(.2858, .0021), new(.3062, .0224) };
-
-        public static List<Island> Islands(Track? rim)
+        // owner, 13 Oct 2026: the areas he marked on every model (each grip, and the bumpers on the X20 family), cleaned so
+        // the outer side follows the controller's real edge. Fractions of the 1536 x 1024 photo, so they scale with it.
+        public static List<Island> Islands(string model)
         {
-            var list = new List<Island>(); if (rim == null) return list;
-            var box = rim.Shape.Bounds;
-            foreach (bool left in new[] { true, false })
-                foreach (var (shape, closed) in new[] { (GripLoop, true), (ShoulderCap, false) })
+            var list = new List<Island>();
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "vibration-outlines.json")));
+                if (!doc.RootElement.GetProperty("models").TryGetProperty(model, out var shapes)) return list;
+                foreach (var shape in shapes.EnumerateArray())
                 {
-                    var pts = Smooth(shape.Select(q => new Point(box.X + (left ? q.X : 1 - q.X) * box.Width, box.Y + q.Y * box.Height)).ToArray(), closed);
-                    var along = new double[pts.Length];
-                    for (int i = 1; i < pts.Length; i++) along[i] = along[i - 1] + (pts[i] - pts[i - 1]).Length;
+                    var pts = shape.GetProperty("points").EnumerateArray().Select(q => new Point(q[0].GetDouble() * 1536, q[1].GetDouble() * 1024)).ToList();
+                    if (pts.Count < 8) continue;
+                    pts.Add(pts[0]); // every outline is a closed loop
+                    var a = pts.ToArray(); var along = new double[a.Length];
+                    for (int k = 1; k < a.Length; k++) along[k] = along[k - 1] + (a[k] - a[k - 1]).Length;
                     var line = new StreamGeometry();
-                    using (var ctx = line.Open()) { ctx.BeginFigure(pts[0], false, false); ctx.PolyLineTo(pts.Skip(1).ToList(), true, true); }
+                    using (var ctx = line.Open()) { ctx.BeginFigure(a[0], false, true); ctx.PolyLineTo(a.Skip(1).ToList(), true, true); }
                     line.Freeze();
-                    list.Add(new Island(pts, along, along[^1], left, shape == GripLoop, line));
+                    list.Add(new Island(a, along, along[^1], shape.GetProperty("side").GetString() == "left", shape.GetProperty("part").GetString() == "grip", line));
                 }
+            }
+            catch (Exception e) when (e is System.IO.IOException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException) { }
             return list;
         }
         /// <summary>Catmull-Rom through the traced points, so the contour reads as fitted, not hand drawn.</summary>
@@ -211,45 +214,53 @@ public sealed class VibrationVisual : Grid
             // owner direction 10 Oct 2026: no comets or ripples, just a fast heartbeat on each motor's outline
             double s = strength / 100.0, beat = .5;
             if (!front || Parts.Count == 0) return;
-            // A faint base line on each island, and a thin pulse of energy travelling along it. Strength sets how often the
-            // pulse comes, how fast it runs and how bright it is; above 60 % a second, weaker pulse follows, and near 100 %
-            // the lines (never the controller) tremble by under a pixel. The bumper caps echo their grip ~80 ms later.
-            // Today one strength drives both motors; each side keeps its own clock so a split strength can drive them apart.
+            // owner's reference, 13 Oct 2026: two coincident layers on each outline. A thin permanent cyan rail, and over it a
+            // short, thicker pulse that carries the controller's RGB colours (blue, cyan, magenta, orange), feathered at both
+            // ends, travelling round the loop. Strength sets how fast and how often the pulse runs and how bright it is.
+            // The bumper outlines echo their grip about 80 ms later. Today one strength drives both sides; each side keeps its
+            // own clock so separate motor values can drive them apart.
             double left = s, right = s;
+            var rail = Color.FromRgb(70, 200, 255);
             foreach (var part in Parts)
             {
                 double m = part.Left ? left : right; if (m <= 0) continue;
-                double weight = part.Grip ? 1 : .6;
-                Color deep = part.Left ? Color.FromRgb(40, 95, 210) : Color.FromRgb(175, 92, 24), mid = part.Left ? Color.FromRgb(80, 205, 255) : Color.FromRgb(255, 150, 52), hot = part.Left ? Color.FromRgb(215, 246, 255) : Color.FromRgb(255, 228, 186);
-                bool tremble = moving && m > .75;
-                if (tremble) { double k = (m - .75) / .25 * .6; dc.PushTransform(new TranslateTransform(k * Math.Sin(time * 91 + (part.Left ? 0 : 1.7)), k * .7 * Math.Sin(time * 77 + 0.6))); }
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)((.15 + .2 * m) * weight * 255), mid.R, mid.G, mid.B)), 1.3) { LineJoin = PenLineJoin.Round }, part.Line);
+                double railCore = part.Grip ? 4.5 : 3.5;
+                byte railAlpha = (byte)((.45 + .25 * m) * 255);
+                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(railAlpha * .22), rail.R, rail.G, rail.B)), railCore + 6) { LineJoin = PenLineJoin.Round }, part.Line);
+                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb(railAlpha, rail.R, rail.G, rail.B)), railCore) { LineJoin = PenLineJoin.Round }, part.Line);
+                double q = .4, period = 2.6 - 1.8 * m, travel = .7 + .25 * m;
                 if (moving)
                 {
-                    double period = 2.6 - 1.9 * m, travel = .6 + .3 * m;
                     double t = time - (part.Grip ? 0 : .08) + (part.Left ? 0 : .37);
                     double cycle = t / period + .04 * Math.Sin(t * .9 + (part.Left ? 0 : 2)), phase = cycle - Math.Floor(cycle);
-                    Pulse(dc, part, phase / travel, m, weight, deep, mid, hot);
-                    if (m > .6) Pulse(dc, part, (phase - .45 + 1) % 1 / travel, m, weight * .45 * (m - .6) / .4, deep, mid, hot);
+                    q = phase / travel;
+                    if (m > .6) Pulse(dc, part, ((phase - .5 + 1) % 1) / travel, m, .45 * (m - .6) / .4, time);
                 }
-                else Pulse(dc, part, .45, m, weight, deep, mid, hot);
-                if (tremble) dc.Pop();
+                Pulse(dc, part, q, m, 1, moving ? time : 0);
             }
         }
-        /// <summary>One travelling pulse at progress q (0..1 along the island; outside that range it is resting): a short bright
-        /// head with a fading tail, easing in at the start and out at the end.</summary>
-        private static void Pulse(DrawingContext dc, Island part, double q, double m, double weight, Color deep, Color mid, Color hot)
+        private static Color Rgb(double t)
+        {
+            t -= Math.Floor(t);
+            Color[] stops = { Color.FromRgb(60, 120, 255), Color.FromRgb(80, 225, 255), Color.FromRgb(255, 80, 210), Color.FromRgb(255, 155, 60), Color.FromRgb(60, 120, 255) };
+            double x = t * 4; int i = Math.Min((int)x, 3); return Mix(stops[i], stops[i + 1], x - i);
+        }
+        /// <summary>One pulse at progress q round the loop (outside 0..1 it is resting): a short bright strip of RGB light with
+        /// feathered ends, a soft bloom under it, easing in as it starts and out as it ends.</summary>
+        private static void Pulse(DrawingContext dc, Island part, double q, double m, double weight, double time)
         {
             if (q is < 0 or > 1 || weight <= 0) return;
-            double envelope = q < .15 ? Math.Sin(q / .15 * Math.PI / 2) : q > .85 ? Math.Sin((1 - q) / .15 * Math.PI / 2) : 1;
-            double head = part.Length * q, tail = part.Length * (part.Grip ? .14 + .08 * m : .35);
-            double core = 1.6 + 1.2 * m;
+            double envelope = q < .12 ? Math.Sin(q / .12 * Math.PI / 2) : q > .88 ? Math.Sin((1 - q) / .12 * Math.PI / 2) : 1;
+            double span = part.Length * (part.Grip ? .2 : .42), head = part.Length * q;
+            double core = part.Grip ? 9 : 7, bloom = part.Grip ? 18 : 13;
             for (int i = 0; i + 1 < part.Points.Length; i++)
             {
-                double d = part.Along[i]; if (d > head || d < head - tail) continue;
-                double w = Math.Pow((d - (head - tail)) / tail, 1.5), a = envelope * w * weight * (.55 + .45 * m);
-                var c = w > .7 ? Mix(mid, hot, (w - .7) / .3) : Mix(deep, mid, w / .7);
-                dc.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(60 * a, 0, 255), c.R, c.G, c.B)), core + 4 + 3 * m) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Points[i], part.Points[i + 1]);
+                double behind = head - part.Along[i]; if (behind < 0) behind += part.Length; // a loop: the tail wraps past the start
+                if (behind > span) continue;
+                double x = 1 - behind / span, feather = Math.Pow(Math.Sin(x * Math.PI), .8);
+                double a = envelope * feather * weight * (.6 + .4 * m);
+                var c = Rgb(part.Along[i] / part.Length * .9 + time * .05);
+                dc.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(80 * a, 0, 255), c.R, c.G, c.B)), bloom) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Points[i], part.Points[i + 1]);
                 dc.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(255 * a, 0, 255), c.R, c.G, c.B)), core) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Points[i], part.Points[i + 1]);
             }
         }        /// <summary>A polyline through <paramref name="count"/> points starting at <paramref name="start"/>, wrapping round the contour.</summary>
