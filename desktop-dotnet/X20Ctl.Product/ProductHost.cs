@@ -65,7 +65,7 @@ public sealed class ProductHost : Grid
         try { var ids = store.Load(); if (assignmentPath != null && ids.Any(id => id != null)) Zone.RestoreAssignments(ids, Catalog); }
         catch (Exception error) when (error is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
         { Zone.FeedbackText.Text = "Saved assignments could not be read. Original file preserved; new choices will be session-only."; }
-        Zone.ControllerActionRequested += (index, change) => { if (change || Zone.State.Players[index].Model == null) OpenSelector(index); else EnterStudio(index); };
+        Zone.ControllerActionRequested += (index, change) => { if (change || Zone.State.Players[index].Model == null) OpenSelector(index); else VerifyThenEnter(index); };
     }
     public void OpenSelector(int player)
     {
@@ -87,6 +87,34 @@ public sealed class ProductHost : Grid
     {
         if (Selector != null) { var leaving = Selector; Selector = null; Fx.Leave(leaving, () => Children.Remove(leaving), .97, 200); }
         Zone.IsEnabled = true; if (Studio != null) Studio.IsEnabled = true;
+    }
+    // owner, 14 Oct 2026: opening a controller scans first. A pad that names itself as another model is never opened as this
+    // one; a pad that can't be told apart, or none at all, is shown as such and the player decides.
+    private Grid? verifyLayer; private int verifyToken;
+    private async void VerifyThenEnter(int player)
+    {
+        var assigned = Zone.State.Players[player];
+        var model = assigned.ModelId != null ? Catalog.Find(assigned.ModelId) : Catalog.Models.FirstOrDefault(m => m.Name == assigned.Model);
+        if (model == null || ReviewSandbox.Active || verifyLayer != null) { EnterStudio(player); return; }
+        int token = ++verifyToken;
+        var view = new ControllerVerifyView(model.Id, model.Name, Zone.ReducedMotion == false);
+        var layer = new Grid { Children = { view } }; verifyLayer = layer;
+        void Close() { if (verifyLayer != layer) return; verifyLayer = null; verifyToken++; Zone.IsEnabled = Selector == null && Settings == null && Intro == null; Fx.Leave(layer, () => Children.Remove(layer), 1.03, 180); }
+        view.Cancelled += Close;
+        Zone.IsEnabled = false; Panel.SetZIndex(layer, 36); Children.Add(layer); Fx.Appear(layer, .96, 220);
+        async Task Scan()
+        {
+            var started = DateTime.UtcNow;
+            var result = await ControllerVerify.Run(model.Id);
+            var wait = TimeSpan.FromMilliseconds(1900) - (DateTime.UtcNow - started); if (wait > TimeSpan.Zero) await Task.Delay(wait); // long enough to read what it is doing
+            if (token != verifyToken || verifyLayer != layer) return;
+            void Enter() { Close(); EnterStudio(player); }
+            view.ShowResult(result, model.Name, result.DetectedName, Enter,
+                id => { var other = Catalog.Find(id); Close(); if (other != null) { AssignSelection(other); EnterStudio(player); } },
+                () => _ = Scan());
+            if (result.Outcome == VerifyOutcome.Match) { await Task.Delay(1000); if (token == verifyToken && verifyLayer == layer) Enter(); }
+        }
+        await Scan();
     }
     public void EnterStudio(int player)
     {
@@ -249,6 +277,8 @@ public sealed class ProductHost : Grid
     public void OnKeyDown(object sender, KeyEventArgs e)
     {
         var key=e.Key==Key.System?e.SystemKey:e.Key;
+        // the identity scan popup: Esc / B backs out, A / Enter presses the focused button, nothing behind it moves
+        if(verifyLayer!=null){if(e.Key is Key.Escape or Key.B){verifyLayer.Children.OfType<ControllerVerifyView>().FirstOrDefault()?.RaiseCancel();}else if(e.Key is Key.A or Key.Enter&&Keyboard.FocusedElement is Button pressed&&!e.IsRepeat)pressed.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));e.Handled=true;return;}
         // the Controller Check is testing the controller: its presses are never navigation; the keyboard's Esc leaves
         if(Check!=null){if(sender is ProductHost){e.Handled=true;return;}if(e.Key==Key.Escape){CloseCheck();e.Handled=true;}return;}
         // the Write scan is typed into and clicked; the keyboard's Esc leaves, nothing else navigates behind it
