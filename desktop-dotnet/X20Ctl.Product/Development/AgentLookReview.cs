@@ -7,7 +7,7 @@ namespace X20Ctl.Product.Development;
 
 /// <summary>
 /// --review-agent-look DIRECTORY: how the agent looks, without the model. Offline mode answers, so it is quick and the
-/// same every run: the window open, the HELP list, a change with its walk-through, and the window after. Captures are
+/// same every run: the window open, a search as it's typed and as it's sent, a change with its walk-through, and the window after. Captures are
 /// rendered, never the screen.
 /// </summary>
 internal static class AgentLookReview
@@ -27,7 +27,8 @@ internal static class AgentLookReview
             studio.AgentTourStarted += tour => tour.Held += step => _ = Shot($"3-tour-{++stop}-{step.Target}");
             studio.OpenAgent(); var talk = studio.AgentWindow!;
             await Shot("1-open");
-            await talk.Ask("HELP"); await Shot("2-help");
+            talk.Input.Text = "sti"; await Shot("2-typing-sti"); talk.Input.Text = "";
+            await talk.Ask("Sticks"); await Shot("2-searched-sticks");
             await talk.Ask("Turbo on X, 12 a second"); await Shot("4-after");
             await talk.Ask("Make my right stick good for sniping"); await Shot("5-after-curve");
         }

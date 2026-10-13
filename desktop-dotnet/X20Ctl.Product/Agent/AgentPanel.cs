@@ -21,7 +21,6 @@ namespace X20Ctl.Product.Agent;
 /// </summary>
 public sealed class AgentPanel
 {
-    static readonly string[] Suggestions = ["Make my sticks smooth", "Faster triggers for shooting", "My right stick drifts a little", "Turbo on X, 12 a second", "Put jump on M1", "Reset everything"];
     // one model server and one loaded model for the whole app, however many windows open
     static readonly OllamaClient model = new();
     static Task<ModelState>? preparing;
@@ -76,7 +75,9 @@ public sealed class AgentPanel
     readonly StackPanel transcript = new() { Margin = new(0, 0, 10, 0) };
     readonly ScrollViewer scroller;
     readonly Button send = null!;
-    readonly WrapPanel chips = new() { Margin = new(0, 10, 0, 0) };
+    readonly Action<Button> register;
+    readonly StackPanel ideasList = new();
+    readonly TextBlock ideasFor = Kit.Text("", 12.5, "DS.TextMuted").Also(t => { t.TextWrapping = TextWrapping.Wrap; t.TextTrimming = TextTrimming.None; t.Margin = new(0, 2, 0, 0); });
     readonly TextBlock status = Kit.Text("", 13, "DS.TextSoft");
     readonly Border statusDot = new() { Width = 8, Height = 8, CornerRadius = new(4), Margin = new(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center };
     readonly StackPanel settings = new();
@@ -94,48 +95,52 @@ public sealed class AgentPanel
     readonly List<(TranslateTransform Look, ScaleTransform Lid, int Inward)> eyes = [];
     readonly TranslateTransform shake = new();
     readonly System.Windows.Threading.DispatcherTimer blink = new() { Interval = TimeSpan.FromSeconds(4) };
-    int idea = -1;
 
-    /// <summary>The controller is drawn at this size and scaled as a whole to the room it's given.</summary>
-    public const double DesignWidth = 780, DesignHeight = 650;
-    static readonly Geometry ShellShape = Geometry.Parse("M 130,46 H 650 C 730,46 780,96 780,176 L 780,530 C 780,615 725,650 668,650 C 620,650 592,622 576,590 Q 556,552 514,552 H 266 Q 224,552 204,590 C 188,622 160,650 112,650 C 55,650 0,615 0,530 L 0,176 C 0,96 50,46 130,46 Z");
+    /// <summary>The controller is drawn at this size and scaled as a whole to the room it's given: wide, across the Studio
+    /// (owner's sketch, 13 Oct), with ideas on the left of its screen and the conversation on the right.</summary>
+    public const double DesignWidth = 1400, DesignHeight = 580;
+    static readonly Geometry ShellShape = Geometry.Parse("M 140,46 H 1260 C 1350,46 1400,100 1400,180 L 1400,470 C 1400,550 1345,580 1290,580 C 1240,580 1212,552 1196,522 Q 1180,500 1140,500 H 260 Q 220,500 204,522 C 188,552 160,580 110,580 C 55,580 0,550 0,470 L 0,180 C 0,100 50,46 140,46 Z");
     static readonly Color CapLight = Color.FromRgb(46, 58, 84), CapDark = Color.FromRgb(20, 27, 44), Edge = Color.FromArgb(150, 90, 112, 156);
+    const double LeftX = 100, RightX = 1300, EyeY = 165, PadY = 318;
 
     public AgentPanel(string modelId, string controllerName, PcModeLink? link, Action<Button> register, int player = 0, Func<Action<string, int>, IDriftMeter>? meter = null)
     {
-        this.modelId = modelId; this.link = link; this.player = player;
+        this.modelId = modelId; this.link = link; this.player = player; this.register = register;
         string name = controllerName.Replace("EasySMX ", "");
         // drift is read from the real controller; a review harness can hand in its own reading instead
         session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
-        greeting = "Agent XCTL, in your " + name + ". Tell me how you play, or what feels wrong, and I'll set myself up. Don't know what to say? Say HELP.";
+        greeting = "Agent XCTL, in your " + name + ". Tell me how you play, or what feels wrong, and I'll set myself up. Search the ideas on the left, or say HELP.";
 
-        // ---- the screen, between the grips: the conversation ----
+        // ---- the screen, right: the conversation ----
         var heading = new DockPanel { Margin = new(0, 0, 0, 8) };
         DockPanel.SetDock(settingsToggle, Dock.Right); heading.Children.Add(settingsToggle);
         statusDot.Margin = new(12, 0, 6, 0);
-        heading.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Text("Agent XCTL", 16, "DS.Text", FontWeights.SemiBold), statusDot, status } });
+        heading.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Text("Agent XCTL", 15, "DS.Text", FontWeights.SemiBold), statusDot, status } });
         settingsBox = new Border { Visibility = Visibility.Collapsed, Margin = new(0, 0, 0, 8), Padding = new(14, 10, 14, 6), CornerRadius = new(12), Background = new SolidColorBrush(Color.FromArgb(120, 20, 30, 56)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 120, 170, 255)), BorderThickness = new(1),
-            Child = new ScrollViewer { MaxHeight = 190, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 8)), settings } } } };
+            Child = new ScrollViewer { MaxHeight = 170, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 8)), settings } } } };
         var top = new StackPanel { Children = { heading, settingsBox } };
-
-        Input = new TextBox { AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 44, MaxHeight = 96, MaxLength = 600, FontSize = 14.5, Padding = new(12, 10, 12, 9), Margin = new(0, 8, 0, 0), VerticalContentAlignment = VerticalAlignment.Center, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ToolTip = "Type, then Enter or A" };
-        Input.KeyDown += (_, e) => { if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; Send(); } };
-        Input.TextChanged += (_, _) => { if (!busy) Look(Input.Text.Length > 0 ? Gaze.Typing : Gaze.Idle); };
-        foreach (var s in Suggestions)
-        {
-            var chip = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 28, MinHeight = 0, Padding = new(10, 0, 10, 0), Margin = new(0, 0, 6, 6), Content = Kit.Text(s, 12.5, "DS.TextSoft") };
-            chip.Click += (_, _) => { Input.Text = s; Send(); }; register(chip); chips.Children.Add(chip);
-        }
-        chips.Margin = new(0, 8, 0, 0);
-        var hint = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 28, MinHeight = 0, Padding = new(10, 0, 10, 0), HorizontalAlignment = HorizontalAlignment.Left, Content = Kit.Text(AgentHelp.Hint, 12.5, "DS.AccentHi") };
-        hint.Click += (_, _) => { Input.Text = "HELP"; Send(); }; register(hint);
-        var bottom = new StackPanel { Children = { chips, hint, Input } };
         scroller = new ScrollViewer { Content = transcript, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        var layout = new DockPanel();
-        DockPanel.SetDock(top, Dock.Top); layout.Children.Add(top); DockPanel.SetDock(bottom, Dock.Bottom); layout.Children.Add(bottom); layout.Children.Add(scroller);
+        var chat = new DockPanel(); DockPanel.SetDock(top, Dock.Top); chat.Children.Add(top); chat.Children.Add(scroller);
+
+        // ---- the screen, left: ideas, narrowed by what's typed ----
+        var ideasHead = new StackPanel { Margin = new(0, 0, 0, 10), Children = { Kit.Text("Ideas", 15, "DS.Text", FontWeights.SemiBold), ideasFor } };
+        var ideas = new DockPanel(); DockPanel.SetDock(ideasHead, Dock.Top); ideas.Children.Add(ideasHead);
+        ideas.Children.Add(new ScrollViewer { Content = ideasList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new(0, 0, 8, 0) });
+
+        // ---- one bar under both: it searches the ideas as you type, and sends to the agent on Enter ----
+        Input = new TextBox { AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 42, MaxHeight = 84, MaxLength = 600, FontSize = 14, Padding = new(24, 9, 12, 8), VerticalContentAlignment = VerticalAlignment.Center, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ToolTip = "Type to search the ideas; Enter or A to send" };
+        Input.KeyDown += (_, e) => { if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; Send(); } };
+        Input.TextChanged += (_, _) => { ShowIdeas(Input.Text); if (!busy) Look(Input.Text.Length > 0 ? Gaze.Typing : Gaze.Idle); };
+        var bar = new Grid { Margin = new(0, 12, 0, 0), Children = { Input, Kit.Icon("", 14, "DS.TextMuted").Also(i => { i.Margin = new(14, 0, 0, 0); i.HorizontalAlignment = HorizontalAlignment.Left; i.IsHitTestVisible = false; }) } };
+
+        var split = new Grid { ColumnDefinitions = { new() { Width = new GridLength(400) }, new() { Width = new GridLength(25) }, new() }, RowDefinitions = { new(), new() { Height = GridLength.Auto } } };
+        split.Children.Add(ideas);
+        var divider = new Border { Width = 1, Background = new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)) }; Grid.SetColumn(divider, 1); split.Children.Add(divider);
+        Grid.SetColumn(chat, 2); split.Children.Add(chat);
+        Grid.SetRow(bar, 1); Grid.SetColumnSpan(bar, 3); split.Children.Add(bar);
         var screen = new Border
         {
-            Width = 460, Height = 464, CornerRadius = new(18), Padding = new(16, 12, 14, 14), BorderThickness = new(1.5), Child = layout,
+            Width = 990, Height = 418, CornerRadius = new(18), Padding = new(18, 14, 16, 14), BorderThickness = new(1.5), Child = split,
             Background = new LinearGradientBrush(Color.FromRgb(8, 13, 28), Color.FromRgb(4, 7, 16), 90),
             BorderBrush = new SolidColorBrush(Color.FromArgb(200, 4, 6, 12)),
         };
@@ -143,9 +148,9 @@ public sealed class AgentPanel
         // ---- the controller around it ----
         var pad = new Canvas { Width = DesignWidth, Height = DesignHeight, RenderTransform = shake };
         // the bumpers, behind the shell's top edge: LB is Offline, RB the settings now
-        (offlineSwitch, offlineCap, offlineLabel) = Bumper("LB", "Offline", 54, new CornerRadius(26, 18, 6, 6));
+        (offlineSwitch, offlineCap, offlineLabel) = Bumper("LB", "Offline", 70, new CornerRadius(26, 18, 6, 6));
         offlineSwitch.Click += (_, _) => { offlineChosen = !offlineChosen; StateChanged?.Invoke(); };
-        var (settingsButton, _, _) = Bumper("RB", "Settings", 526, new CornerRadius(18, 26, 6, 6));
+        var (settingsButton, _, _) = Bumper("RB", "Settings", DesignWidth - 70 - 220, new CornerRadius(18, 26, 6, 6));
         settingsButton.Click += (_, _) => { settingsBox.Visibility = settingsBox.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; ShowSettings(new HashSet<string>()); };
         register(offlineSwitch); register(settingsButton);
         pad.Children.Add(offlineSwitch); pad.Children.Add(settingsButton);
@@ -157,21 +162,21 @@ public sealed class AgentPanel
         };
         pad.Children.Add(shell); Drag(shell);
         // grip texture, so the lower corners read as handles
-        foreach (var (x, dir) in new[] { (70.0, 1), (710.0, -1) })
+        foreach (var (x, dir) in new[] { (75.0, 1), (DesignWidth - 75, -1) })
             for (int i = 0; i < 4; i++)
-                pad.Children.Add(new System.Windows.Shapes.Line { X1 = x - 22 * dir + i * 12 * dir, Y1 = 540 + i * 10, X2 = x - 6 * dir + i * 12 * dir, Y2 = 590 + i * 10, Stroke = new SolidColorBrush(Color.FromArgb(28, 255, 255, 255)), StrokeThickness = 2, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, IsHitTestVisible = false });
+                pad.Children.Add(new System.Windows.Shapes.Line { X1 = x - 22 * dir + i * 12 * dir, Y1 = 498 + i * 8, X2 = x - 8 * dir + i * 12 * dir, Y2 = 534 + i * 8, Stroke = new SolidColorBrush(Color.FromArgb(28, 255, 255, 255)), StrokeThickness = 2, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, IsHitTestVisible = false });
         // the player lights: this player's is lit in the model's state; they chase while it thinks
         for (int i = 0; i < 4; i++)
         {
             leds[i] = new Border { Width = 16, Height = 5, CornerRadius = new(2.5), IsHitTestVisible = false };
-            Canvas.SetLeft(leds[i], 350 + i * 22); Canvas.SetTop(leds[i], 60); pad.Children.Add(leds[i]);
+            Canvas.SetLeft(leds[i], DesignWidth / 2 - 41 + i * 22); Canvas.SetTop(leds[i], 58); pad.Children.Add(leds[i]);
         }
-        Canvas.SetLeft(screen, 160); Canvas.SetTop(screen, 78); pad.Children.Add(screen);
+        Canvas.SetLeft(screen, (DesignWidth - 990) / 2); Canvas.SetTop(screen, 72); pad.Children.Add(screen);
 
         // the sticks are its eyes
-        Eye(pad, 80, 170); Eye(pad, 700, 170);
+        Eye(pad, LeftX, EyeY); Eye(pad, RightX, EyeY);
 
-        // left: the D-pad scrolls the conversation, and flips through sentences to try
+        // left: the D-pad scrolls the conversation, and steps through the ideas
         var dpad = new (string Glyph, double X, double Y, string Tip, Action Act)[]
         {
             ("▲", 0, -1, "Scroll up", () => scroller.ScrollToVerticalOffset(scroller.VerticalOffset - 140)),
@@ -180,7 +185,7 @@ public sealed class AgentPanel
             ("▶", 1, 0, "Next idea", () => Idea(1)),
         };
         var hub = new Border { Width = 34, Height = 34, Background = new LinearGradientBrush(CapLight, CapDark, 90), IsHitTestVisible = false };
-        Canvas.SetLeft(hub, 80 - 17); Canvas.SetTop(hub, 330 - 17); pad.Children.Add(hub);
+        Canvas.SetLeft(hub, LeftX - 17); Canvas.SetTop(hub, PadY - 17); pad.Children.Add(hub);
         foreach (var d in dpad)
         {
             var arm = PadKey(new Border
@@ -190,15 +195,15 @@ public sealed class AgentPanel
                 Child = Kit.Text(d.Glyph, 11, "DS.TextMuted").Also(t => t.HorizontalAlignment = HorizontalAlignment.Center),
             }, d.Tip, d.Act);
             if (d.X != 0) { ((Border)arm.Content).Width = 36; ((Border)arm.Content).Height = 34; }
-            Canvas.SetLeft(arm, 80 - 17 + d.X * 35 - (d.X < 0 ? 2 : 0)); Canvas.SetTop(arm, 330 - 17 + d.Y * 35 - (d.Y < 0 ? 2 : 0));
+            Canvas.SetLeft(arm, LeftX - 17 + d.X * 35 - (d.X < 0 ? 2 : 0)); Canvas.SetTop(arm, PadY - 17 + d.Y * 35 - (d.Y < 0 ? 2 : 0));
             register(arm); pad.Children.Add(arm);
         }
-        Legend(pad, 80, 392, "▲▼ scroll\n◀▶ ideas");
+        Legend(pad, LeftX, PadY + 74, "▲▼ scroll\n◀▶ ideas");
 
-        // right: the face buttons. A sends, B puts it away, X starts over, Y asks for HELP
+        // right: the face buttons. A sends, B puts it away, X starts over, Y shows every idea
         var face = new (string Letter, double X, double Y, string Tip, Action Act)[]
         {
-            ("Y", 0, -1, "HELP", () => { if (!busy) { Input.Text = "HELP"; Send(); } }),
+            ("Y", 0, -1, "All ideas", () => { Input.Text = ""; ShowIdeas(""); Look(Gaze.Ideas); }),
             ("X", -1, 0, "New conversation", Restart),
             ("B", 1, 0, "Put away", () => CloseRequested?.Invoke()),
             ("A", 0, 1, "Send", Send),
@@ -214,12 +219,13 @@ public sealed class AgentPanel
                 Effect = primary ? new DropShadowEffect { Color = Color.FromRgb(70, 150, 255), BlurRadius = 16, ShadowDepth = 0, Opacity = .7 } : null,
                 Child = Kit.Text(f.Letter, 17, primary ? "DS.Text" : "DS.TextSoft", FontWeights.SemiBold).Also(t => t.HorizontalAlignment = HorizontalAlignment.Center),
             }, f.Tip, f.Act);
-            Canvas.SetLeft(cap, 700 - 21 + f.X * 42); Canvas.SetTop(cap, 330 - 21 + f.Y * 42);
+            Canvas.SetLeft(cap, RightX - 21 + f.X * 42); Canvas.SetTop(cap, PadY - 21 + f.Y * 42);
             register(cap); pad.Children.Add(cap);
             if (primary) send = cap;
         }
-        Legend(pad, 700, 392, "A send · B away\nX new · Y help");
+        Legend(pad, RightX, PadY + 74, "A send · B away\nX new · Y ideas");
         send ??= new Button();
+        ShowIdeas("");
 
         Body = new Border
         {
@@ -238,7 +244,7 @@ public sealed class AgentPanel
         var text = Kit.Text(label, 13, "DS.TextSoft");
         var cap = new Border
         {
-            Width = 200, Height = 50, CornerRadius = corners, BorderThickness = new(1), BorderBrush = new SolidColorBrush(Edge), Background = new LinearGradientBrush(CapLight, CapDark, 90),
+            Width = 220, Height = 50, CornerRadius = corners, BorderThickness = new(1), BorderBrush = new SolidColorBrush(Edge), Background = new LinearGradientBrush(CapLight, CapDark, 90),
             Child = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new(0, 9, 0, 0), Children = { Kit.Text(key, 12, "DS.TextMuted", FontWeights.SemiBold).Also(t => t.Margin = new(0, 0, 8, 0)), text } },
         };
         var button = PadKey(cap, key + " · " + label, null);
@@ -268,12 +274,36 @@ public sealed class AgentPanel
 
     void Idea(int step)
     {
-        idea = ((idea + step) % Suggestions.Length + Suggestions.Length) % Suggestions.Length;
-        Input.Text = Suggestions[idea]; Input.Focus(); Input.CaretIndex = Input.Text.Length;
+        var listed = ideasList.Children.OfType<Button>().ToList();
+        if (listed.Count == 0) return;
+        int at = listed.FindIndex(b => b.IsKeyboardFocusWithin);
+        var next = listed[at < 0 ? (step > 0 ? 0 : listed.Count - 1) : Math.Clamp(at + step, 0, listed.Count - 1)];
+        next.Focus(); next.BringIntoView(); Look(Gaze.Ideas);
+    }
+
+    /// <summary>The ideas half: what matches the words typed so far, or everything (the HELP list first).</summary>
+    void ShowIdeas(string query)
+    {
+        query = query.Trim();
+        var found = AgentIdeas.Search(query, 10);
+        ideasFor.Text = query.Length == 0 ? "What you can ask. Type a word to search." : found.Count == 0 ? $"Nothing for “{query}”. Try sticks, triggers, turbo, buttons, paddles or PC mode." : $"For “{query}”";
+        ideasList.Children.Clear();
+        foreach (var idea in found)
+        {
+            var card = PadKey(new Border
+            {
+                CornerRadius = new(12), Padding = new(12, 8, 12, 9), Margin = new(0, 0, 0, 6), BorderThickness = new(1),
+                Background = new SolidColorBrush(Color.FromArgb(70, 30, 44, 76)), BorderBrush = new SolidColorBrush(Color.FromArgb(40, 120, 170, 255)),
+                Child = new StackPanel { Children = { Wrap(idea.Have, 12.5, "DS.TextMuted"), Wrap("“" + idea.Say + "”", 14, "DS.AccentHi", 3) } },
+            }, "Say it", null);
+            string say = idea.Say;
+            card.Click += (_, _) => { if (!busy) { Input.Text = say; Send(); } };
+            register(card); ideasList.Children.Add(card);
+        }
     }
 
     // ---- the eyes: where it looks says what it's doing ----
-    enum Gaze { Idle, Typing, Thinking, Down }
+    enum Gaze { Idle, Typing, Thinking, Down, Ideas }
     void Eye(Canvas pad, double cx, double cy)
     {
         var well = new System.Windows.Shapes.Ellipse { Width = 100, Height = 100, Fill = new RadialGradientBrush(Color.FromRgb(5, 8, 16), Color.FromRgb(12, 17, 30)), Stroke = new SolidColorBrush(Edge), StrokeThickness = 1.2, IsHitTestVisible = false };
@@ -299,7 +329,7 @@ public sealed class AgentPanel
     {
         foreach (var (look, _, inward) in eyes)
         {
-            var (x, y) = gaze switch { Gaze.Typing => (5.0 * inward, 9.0), Gaze.Thinking => (0.0, -10.0), Gaze.Down => (0.0, 10.0), _ => (6.0 * inward, 0.0) };
+            var (x, y) = gaze switch { Gaze.Typing => (5.0 * inward, 9.0), Gaze.Thinking => (0.0, -10.0), Gaze.Down => (0.0, 10.0), Gaze.Ideas => (-9.0, 3.0), _ => (6.0 * inward, 0.0) };
             if (!DS.Motion) { look.X = x; look.Y = y; continue; }
             look.BeginAnimation(TranslateTransform.XProperty, DS.To(x, 260)); look.BeginAnimation(TranslateTransform.YProperty, DS.To(y, 260));
         }
@@ -374,7 +404,7 @@ public sealed class AgentPanel
     void Restart()
     {
         if (busy) return;
-        session.Forget(); transcript.Children.Clear(); chips.Visibility = Visibility.Visible; Say(greeting, null); Input.Focus();
+        session.Forget(); transcript.Children.Clear(); Input.Text = ""; ShowIdeas(""); Say(greeting, null); Input.Focus();
     }
 
     PcModeProfile Current => link == null ? preview : link.Store.Get(PcModePage.StoreKey);
@@ -405,9 +435,11 @@ public sealed class AgentPanel
     {
         if (busy) return null;
         // the help list is the app's own answer: instant, the same online and offline
-        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); ShowHelp(); return null; }
+        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); ShowIdeas(""); Look(Gaze.Ideas); Say("Have a look at the ideas on the left: pick one, or type a word to search them.", null); return null; }
+        // a topic alone is a search: the ideas narrow to it, and the app answers itself
+        if (AgentIdeas.Topic(sentence) is { } topic) { Bubble(sentence, mine: true); ShowIdeas(sentence); Look(Gaze.Ideas); Say(AgentIdeas.TopicReply(topic), null); return null; }
         if (!Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); return null; }
-        busy = true; ShowState(); Thinking?.Invoke(true); chips.Visibility = Visibility.Collapsed; Look(Gaze.Thinking); Chase(true);
+        busy = true; ShowState(); Thinking?.Invoke(true); Look(Gaze.Thinking); Chase(true);
         Bubble(sentence, mine: true);
         var thinking = Bubble("…", mine: false);
         var before = Current;
@@ -438,23 +470,6 @@ public sealed class AgentPanel
         finally { busy = false; if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Chase(false); Look(Gaze.Idle); ShowState(); Thinking?.Invoke(false); Input.Focus(); }
     }
 
-    // ---- HELP: situations, each with the sentence to say; a click says it ----
-    void ShowHelp()
-    {
-        var stack = new StackPanel();
-        stack.Children.Add(Wrap("Have this? Say this!", 16, "DS.Text").Also(t => t.FontWeight = FontWeights.SemiBold));
-        stack.Children.Add(Wrap("Click a sentence to send it, or say it your own way.", 13.5, "DS.TextMuted", 2));
-        foreach (var h in AgentHelp.Situations)
-        {
-            var say = new Button { Style = DS.Style("DS.ActionSecondary"), MinHeight = 0, Padding = new(10, 5, 10, 5), Margin = new(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left,
-                Content = Wrap("“" + h.Say + "”", 14, "DS.AccentHi") };
-            string sentence = h.Say;
-            say.Click += (_, _) => { if (!busy) { Input.Text = sentence; Send(); } };
-            stack.Children.Add(new StackPanel { Margin = new(0, 10, 0, 0), Children = { Wrap(h.Have, 13.5, "DS.TextSoft"), say } });
-        }
-        var bubble = Bubble("", false); bubble.Child = stack; scroller.ScrollToEnd();
-    }
-
     // ---- the drift reading: a countdown while the sticks are read ----
     Border? measuring;
     void Measuring(string phase, int seconds)
@@ -482,7 +497,7 @@ public sealed class AgentPanel
             HorizontalAlignment = mine ? HorizontalAlignment.Right : HorizontalAlignment.Left, BorderThickness = new(1),
             Background = new SolidColorBrush(mine ? Color.FromArgb(150, 36, 82, 160) : Color.FromArgb(140, 14, 24, 48)),
             BorderBrush = new SolidColorBrush(mine ? Color.FromArgb(120, 125, 182, 255) : Color.FromArgb(60, 120, 170, 255)),
-            Child = Wrap(text, 15, "DS.Text"),
+            Child = Wrap(text, 14, "DS.Text"),
         };
         transcript.Children.Add(bubble); Fx.Appear(bubble, .97, 200); scroller.ScrollToEnd(); return bubble;
     }
@@ -494,7 +509,7 @@ public sealed class AgentPanel
     {
         var stack = new StackPanel();
         var v = turn.Verdict;
-        stack.Children.Add(Wrap(v.Proposal?.Speech is { Length: > 0 } speech ? speech : "I didn't give a usable answer.", 15, "DS.Text"));
+        stack.Children.Add(Wrap(v.Proposal?.Speech is { Length: > 0 } speech ? speech : "I didn't give a usable answer.", 14, "DS.Text"));
         // what the app itself measured, before what the model made of it
         if (turn.Measured is { } m)
         {
@@ -506,7 +521,7 @@ public sealed class AgentPanel
             stack.Children.Add(Wrap($"{c.What}   {c.Before} → {c.After}", 14, "DS.AccentHi", 6));
         // why it fits, or the answer to a question: the model's words, from the settings' meanings
         if (v.Valid && v.Proposal?.Recap is { Length: > 0 } recap)
-            stack.Children.Add(new Border { BorderBrush = DS.Brush("DS.AccentHi"), BorderThickness = new(2, 0, 0, 0), Padding = new(12, 2, 0, 2), Margin = new(0, 10, 0, 0), Child = Wrap(recap, 14.5, "DS.TextSoft") });
+            stack.Children.Add(new Border { BorderBrush = DS.Brush("DS.AccentHi"), BorderThickness = new(2, 0, 0, 0), Padding = new(12, 2, 0, 2), Margin = new(0, 10, 0, 0), Child = Wrap(recap, 13.5, "DS.TextSoft") });
         // the switch: "" when it worked, otherwise why not
         if (switched != null && turn.Outcome.PcMode is { } pc)
             stack.Children.Add(Wrap(switched.Length == 0 ? $"PC mode   {(pc ? "on" : "off")}" : "PC mode · " + switched, 14, switched.Length == 0 ? "DS.AccentHi" : "DS.Warn", 6));

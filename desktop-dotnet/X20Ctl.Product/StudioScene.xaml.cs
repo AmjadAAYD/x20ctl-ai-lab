@@ -133,15 +133,16 @@ public partial class StudioScene : UserControl
         if (agentPanel == null)
         {
             agentPanel = new(Model.Id, Model.Name, PcMode, RegisterFocus, Player, AgentMeter);
-            agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 150);
+            agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 170);
             agentPanel.CloseRequested += CloseAgent; agentPanel.Thinking += agentOrb.SetThinking; agentPanel.Walkthrough = PlayAgentTour;
             Grid.SetZIndex(agentPanel.Body, 41); StudioShell.Children.Add(agentPanel.Body);
         }
-        // the right side of the Studio, above the round button, as large as the room allows; drawn as a controller, so it
-        // keeps a controller's shape (owner, 13 Oct: "a bit bigger")
-        double room = Math.Max(380, StudioShell.ActualHeight - 130 - 150), wide = Math.Clamp(StudioShell.ActualWidth * .56, 640, 1100);
-        double high = Math.Min(room, wide * Agent.AgentPanel.DesignHeight / Agent.AgentPanel.DesignWidth);
-        agentPanel.Body.Height = high; agentPanel.Body.Width = high * Agent.AgentPanel.DesignWidth / Agent.AgentPanel.DesignHeight;
+        // across the Studio, from under the tabs to above the round button (owner's sketch, 13 Oct), keeping a controller's
+        // shape: as wide as the room allows, centred
+        double room = Math.Max(300, StudioShell.ActualHeight - 130 - 170), wide = Math.Max(700, StudioShell.ActualWidth - 60);
+        double high = Math.Min(room, wide * Agent.AgentPanel.DesignHeight / Agent.AgentPanel.DesignWidth), across = high * Agent.AgentPanel.DesignWidth / Agent.AgentPanel.DesignHeight;
+        agentPanel.Body.Height = high; agentPanel.Body.Width = across;
+        agentPanel.Body.Margin = new(0, 0, Math.Max(20, (StudioShell.ActualWidth - across) / 2), 170);
         agentPanel.Show(); agentOrb.ToolTip = "Put Agent XCTL away";
         Dispatcher.BeginInvoke(() => agentPanel?.Input.Focus(), System.Windows.Threading.DispatcherPriority.Input);
     }
