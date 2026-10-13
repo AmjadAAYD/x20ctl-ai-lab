@@ -151,14 +151,38 @@ public sealed class VibrationVisual : Grid
                 }
                 return;
             }
+            // owner, 13 Oct 2026: the outline rings looked horrible; each motor is now a hologram that flickers on the beat:
+            // an iridescent body that drifts, scanlines running through it, a bright rim and a faint colour split.
+            double shift = moving ? time * .55 % 1 : .2, level = .45 + .55 * s;
             foreach (var track in tracks)
             {
-                // each thump swells the outline a touch and brightens it, then it settles back
-                double grow = 1 + .022 * beat * (.5 + .5 * s);
+                var b = track.Shape.Bounds;
+                double grow = 1 + .012 * beat * level;
                 dc.PushTransform(new ScaleTransform(grow, grow, track.Center.X, track.Center.Y));
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((22 + 120 * beat) * (.45 + .55 * s), 0, 255), Deep.R, Deep.G, Deep.B)), 6 + 10 * beat) { LineJoin = PenLineJoin.Round }, track.Shape);
-                var edge = Mix(Ice, White, beat);
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(90 + 165 * beat, 0, 255), edge.R, edge.G, edge.B)), 1.6 + 1.6 * beat) { LineJoin = PenLineJoin.Round }, track.Shape);
+                if (moving && beat > .55)
+                {   // the beat glitches the projection: a magenta and a cyan copy slip apart for a moment
+                    double slip = 3.5 * (beat - .55) * level;
+                    dc.PushTransform(new TranslateTransform(slip, 0));
+                    dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(120 * beat * level), 255, 90, 220)), 2) { LineJoin = PenLineJoin.Round }, track.Shape);
+                    dc.Pop();
+                    dc.PushTransform(new TranslateTransform(-slip, 0));
+                    dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(120 * beat * level), 80, 230, 255)), 2) { LineJoin = PenLineJoin.Round }, track.Shape);
+                    dc.Pop();
+                }
+                byte body = (byte)Math.Clamp((34 + 70 * beat) * level, 0, 255);
+                double band = Math.Max(120, b.Height), y0 = b.Top - band + shift * band;
+                var fill = new LinearGradientBrush(new GradientStopCollection {
+                    new(Color.FromArgb(body, 70, 220, 255), 0), new(Color.FromArgb(body, 130, 110, 255), .35), new(Color.FromArgb(body, 255, 110, 220), .65), new(Color.FromArgb(body, 70, 220, 255), 1) },
+                    new Point(b.Left, y0), new Point(b.Right, y0 + band)) { MappingMode = BrushMappingMode.Absolute, SpreadMethod = GradientSpreadMethod.Repeat };
+                dc.DrawGeometry(fill, null, track.Shape);
+                // scanlines, crawling upward
+                dc.PushClip(track.Shape);
+                var line = new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((40 + 60 * beat) * level, 0, 255), 200, 240, 255));
+                double off = moving ? -time * 26 % 7 : 0;
+                for (double y = b.Top + off; y < b.Bottom; y += 7) dc.DrawRectangle(line, null, new Rect(b.Left, y, b.Width, 1.3));
+                dc.Pop();
+                var rim = Mix(Ice, White, beat);
+                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((110 + 145 * beat) * level, 0, 255), rim.R, rim.G, rim.B)), 1.4 + 1.4 * beat) { LineJoin = PenLineJoin.Round }, track.Shape);
                 dc.Pop();
             }
         }        /// <summary>A polyline through <paramref name="count"/> points starting at <paramref name="start"/>, wrapping round the contour.</summary>
