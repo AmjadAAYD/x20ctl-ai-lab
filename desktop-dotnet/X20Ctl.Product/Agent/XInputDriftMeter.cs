@@ -17,7 +17,7 @@ public sealed class XInputDriftMeter(int player, Action<string, int> progress) :
     {
         using var reader = Open();
         if (reader == null) return new([], "Windows' controller reader (XInput) isn't available on this PC.");
-        int slot = Find(reader);
+        int slot = Find(reader, player);
         if (slot < 0) return new([], "No controller found. Connect it and ask again.");
         for (int s = SettleSeconds; s > 0; s--) { progress("Let go of the sticks", s + ReadSeconds); await Task.Delay(1000, cancel); }
         var samplers = sticks.ToDictionary(s => s, s => new DriftSampler(s));
@@ -47,7 +47,10 @@ public sealed class XInputDriftMeter(int player, Action<string, int> progress) :
         return null;
     }
 
-    int Find(WindowsReader reader)
+    /// <summary>The real controller's XInput slot (the player's own first, never PC mode's virtual pad), or -1.</summary>
+    internal static int Slot(int player) { using var reader = Open(); return reader == null ? -1 : Find(reader, player); }
+
+    static int Find(WindowsReader reader, int player)
     {
         if (player is >= 0 and < 4 && !PcModeService.IsVirtual(player) && reader.Read(player, out _)) return player;
         for (int i = 0; i < 4; i++) if (!PcModeService.IsVirtual(i) && reader.Read(i, out _)) return i;

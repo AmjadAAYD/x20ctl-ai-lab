@@ -8,8 +8,9 @@ using System.Windows.Shapes;
 namespace X20Ctl.Product.Agent;
 
 /// <summary>
-/// The agent's mark (owner request, 12 Oct 2026): a round head with two lit eyes and an antenna tipped in the brand red,
-/// on the X20CTL blue. Drawn as vectors, so it is sharp at any size: the orb, the window's title and anywhere else.
+/// The agent's mark (owner, 13 Oct 2026: "we are talking to a controller, it must look like a controller"): a controller
+/// whose two sticks are lit eyes, with a player light in the brand red, on the X20CTL blue. Drawn as vectors, so it is
+/// sharp at any size: the orb, the walk-through and anywhere else.
 /// </summary>
 public static class AgentMark
 {
@@ -18,14 +19,15 @@ public static class AgentMark
     {
         var canvas = new Canvas { Width = 64, Height = 64 };
         var white = new SolidColorBrush(Color.FromArgb(245, 255, 255, 255));
-        canvas.Children.Add(new Line { X1 = 32, Y1 = 22, X2 = 32, Y2 = 12, Stroke = white, StrokeThickness = 3, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round });
-        canvas.Children.Add(Place(new Ellipse { Width = 9, Height = 9, Fill = new SolidColorBrush(Red), Effect = new DropShadowEffect { Color = Red, BlurRadius = 10, ShadowDepth = 0, Opacity = .9 } }, 27.5, 6));
-        canvas.Children.Add(Place(new Rectangle { Width = 38, Height = 28, RadiusX = 11, RadiusY = 11, Stroke = white, StrokeThickness = 3.2, Fill = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)) }, 13, 22));
-        foreach (double x in new[] { 22.5, 36.5 })
-            canvas.Children.Add(Place(new Rectangle { Width = 5, Height = 9, RadiusX = 2.5, RadiusY = 2.5, Fill = new SolidColorBrush(Ice), Effect = new DropShadowEffect { Color = Ice, BlurRadius = 8, ShadowDepth = 0, Opacity = 1 } }, x, 31.5));
-        // the "ears": two short grips, so the head reads as a controller as much as a robot
-        foreach (double x in new[] { 8, 52 })
-            canvas.Children.Add(Place(new Rectangle { Width = 4, Height = 12, RadiusX = 2, RadiusY = 2, Fill = white }, x, 30));
+        canvas.Children.Add(new Path { Data = Geometry.Parse("M 16,18 H 48 C 56,18 60,23 60,31 L 60,44 C 60,51 56,54 51,54 C 47,54 45,51 44,49 Q 42,46 39,46 H 25 Q 22,46 20,49 C 19,51 17,54 13,54 C 8,54 4,51 4,44 L 4,31 C 4,23 8,18 16,18 Z"),
+            Stroke = white, StrokeThickness = 3, StrokeLineJoin = PenLineJoin.Round, Fill = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)) });
+        // the sticks are the eyes
+        foreach (double x in new[] { 19, 45 })
+        {
+            canvas.Children.Add(Place(new Ellipse { Width = 13, Height = 13, Stroke = white, StrokeThickness = 1.6 }, x - 6.5, 25.5));
+            canvas.Children.Add(Place(new Rectangle { Width = 4.5, Height = 8, RadiusX = 2.25, RadiusY = 2.25, Fill = new SolidColorBrush(Ice), Effect = new DropShadowEffect { Color = Ice, BlurRadius = 8, ShadowDepth = 0, Opacity = 1 } }, x - 2.25, 28));
+        }
+        canvas.Children.Add(Place(new Ellipse { Width = 5, Height = 5, Fill = new SolidColorBrush(Red), Effect = new DropShadowEffect { Color = Red, BlurRadius = 8, ShadowDepth = 0, Opacity = .9 } }, 29.5, 23));
         return new Viewbox { Width = size, Height = size, Child = canvas };
     }
     static UIElement Place(UIElement e, double x, double y) { Canvas.SetLeft(e, x); Canvas.SetTop(e, y); return e; }

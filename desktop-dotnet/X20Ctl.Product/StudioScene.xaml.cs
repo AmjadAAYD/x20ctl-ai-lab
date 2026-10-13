@@ -133,13 +133,15 @@ public partial class StudioScene : UserControl
         if (agentPanel == null)
         {
             agentPanel = new(Model.Id, Model.Name, PcMode, RegisterFocus, Player, AgentMeter);
-            agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 172);
+            agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 150);
             agentPanel.CloseRequested += CloseAgent; agentPanel.Thinking += agentOrb.SetThinking; agentPanel.Walkthrough = PlayAgentTour;
             Grid.SetZIndex(agentPanel.Body, 41); StudioShell.Children.Add(agentPanel.Body);
         }
-        // the right side of the Studio, from just under the title bar to just above the round button (owner's sketch, 12 Oct)
-        agentPanel.Body.Width = Math.Clamp(StudioShell.ActualWidth * .46, 520, 860);
-        agentPanel.Body.Height = Math.Max(380, StudioShell.ActualHeight - 66 - 172);
+        // the right side of the Studio, above the round button, as large as the room allows; drawn as a controller, so it
+        // keeps a controller's shape (owner, 13 Oct: "a bit bigger")
+        double room = Math.Max(380, StudioShell.ActualHeight - 130 - 150), wide = Math.Clamp(StudioShell.ActualWidth * .56, 640, 1100);
+        double high = Math.Min(room, wide * Agent.AgentPanel.DesignHeight / Agent.AgentPanel.DesignWidth);
+        agentPanel.Body.Height = high; agentPanel.Body.Width = high * Agent.AgentPanel.DesignWidth / Agent.AgentPanel.DesignHeight;
         agentPanel.Show(); agentOrb.ToolTip = "Put Agent XCTL away";
         Dispatcher.BeginInvoke(() => agentPanel?.Input.Focus(), System.Windows.Threading.DispatcherPriority.Input);
     }
@@ -160,13 +162,13 @@ public partial class StudioScene : UserControl
         if (steps.Count == 0 || agentTour != null) return;
         CloseAgent();
         var tour = agentTour = new Agent.AgentTour();
-        Grid.SetZIndex(tour.Card, 45); StudioShell.Children.Add(tour.Card); Fx.Appear(tour.Card, .96, 320);
+        Grid.SetZIndex(tour.Layer, 45); StudioShell.Children.Add(tour.Layer); Fx.Appear(tour.Layer, .96, 320);
         AgentTourStarted?.Invoke(tour);
         try { await tour.Play(steps, before, after, measured, Visit); }
         finally
         {
             agentTour = null;
-            Fx.Leave(tour.Card, () => StudioShell.Children.Remove(tour.Card), .97, 220);
+            Fx.Leave(tour.Layer, () => StudioShell.Children.Remove(tour.Layer), .97, 220);
             MarkAgentChanges(steps.Select(s => s.Target));
             OpenAgent();
         }

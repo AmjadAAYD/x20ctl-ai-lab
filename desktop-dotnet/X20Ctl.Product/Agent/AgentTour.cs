@@ -13,12 +13,15 @@ namespace X20Ctl.Product.Agent;
 /// The walk-through after the agent changes something (owner request, 12 Oct 2026): the Studio goes to the page where each
 /// change lives, and this card shows it happening, slowly, with what the setting means. Sticks and triggers are drawn as
 /// their real response (<see cref="PadProcessor.Response"/>, what PC mode runs) bending from before to after; buttons as
-/// caps that change what they send, or pulse at their turbo rate. Skip ends it at once.
+/// caps that change what they send, or pulse at their turbo rate. Skip ends it at once. The page behind is dimmed and the
+/// card sits over it, large, so only one picture is in view (owner, 13 Oct: "I see two things at once").
 /// </summary>
 public sealed class AgentTour
 {
-    const double W = 400, H = 190;
+    const double W = 600, H = 270;
     public Border Card { get; }
+    /// <summary>The card over a dimmed Studio: what the host shows.</summary>
+    public Grid Layer { get; }
     /// <summary>A step finished animating and is being held: for review captures.</summary>
     public event Action<TourStep>? Held;
     readonly CancellationTokenSource skip = new();
@@ -34,17 +37,18 @@ public sealed class AgentTour
         var head = new DockPanel { Margin = new(0, 0, 0, 14) };
         DockPanel.SetDock(skipButton, Dock.Right); head.Children.Add(skipButton);
         DockPanel.SetDock(mark, Dock.Left); head.Children.Add(mark);
-        head.Children.Add(new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Text("Agent XCTL", 15, "DS.Text", FontWeights.SemiBold), counter } });
+        head.Children.Add(new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Text("Agent XCTL", 17, "DS.Text", FontWeights.SemiBold), counter } });
         var track = new Border { Height = 3, CornerRadius = new(1.5), Margin = new(0, 16, 0, 0), Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)), Child = progress };
         Card = new Border
         {
-            Width = 470, CornerRadius = new(22), BorderThickness = new(1), Padding = new(22, 18, 22, 18),
-            HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 40, 30, 0),
+            Width = 680, CornerRadius = new(24), BorderThickness = new(1), Padding = new(30, 24, 30, 24),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 40, 0, 0),
             Background = new LinearGradientBrush(Color.FromArgb(250, 14, 24, 52), Color.FromArgb(250, 7, 12, 30), 90),
             BorderBrush = new LinearGradientBrush(Color.FromArgb(150, 120, 170, 255), Color.FromArgb(40, 120, 170, 255), 90),
             Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 40, ShadowDepth = 10, Opacity = .55 },
             Child = new StackPanel { Children = { head, body, track } },
         };
+        Layer = new Grid { Background = new SolidColorBrush(Color.FromArgb(200, 3, 6, 16)), Children = { Card } };
     }
 
     public void Skip() => skip.Cancel();
@@ -64,7 +68,7 @@ public sealed class AgentTour
                 if (i > 0) Fx.Appear(show, .98, 260);
                 int morph = DS.Motion ? 2000 : 0, hold = 2600 + 700 * step.Rows.Count;
                 progress.BeginAnimation(FrameworkElement.WidthProperty, null); progress.Width = 0;
-                progress.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(0, 426, TimeSpan.FromMilliseconds(600 + morph + hold)));
+                progress.BeginAnimation(FrameworkElement.WidthProperty, new DoubleAnimation(0, 620, TimeSpan.FromMilliseconds(600 + morph + hold)));
                 await Task.Delay(600, skip.Token);
                 play(morph);
                 await Task.Delay(morph, skip.Token);
@@ -79,7 +83,7 @@ public sealed class AgentTour
     FrameworkElement Build(TourStep step, PcModeProfile before, PcModeProfile after, StickDrift? drift, out Action<int> play)
     {
         var stack = new StackPanel();
-        stack.Children.Add(Kit.Text(AgentApplier.Name(step.Target), 24, "DS.Text", FontWeights.SemiBold).Also(t => t.Margin = new(0, 0, 0, 12)));
+        stack.Children.Add(Kit.Text(AgentApplier.Name(step.Target), 30, "DS.Text", FontWeights.SemiBold).Also(t => t.Margin = new(0, 0, 0, 12)));
         // a drift fix is shown at the stick's centre, zoomed in, where it happens; everything else as the response graph
         var picture = step.Kind == TourKind.Button ? Caps(step, before, after, out play)
             : drift != null && step.Rows.All(r => r.Meaning.Action == AgentVocabulary.StickDeadzone) ? Centre(step, before, after, drift, out play)
@@ -88,15 +92,15 @@ public sealed class AgentTour
         foreach (var row in step.Rows)
         {
             var line = new DockPanel { Margin = new(0, 14, 0, 0) };
-            var change = Kit.Text($"{row.Change.Before}  →  {row.Change.After}", 15, "DS.AccentHi", FontWeights.SemiBold); DockPanel.SetDock(change, Dock.Right); line.Children.Add(change);
-            line.Children.Add(Kit.Text(row.Meaning.Name, 15, "DS.Text", FontWeights.SemiBold));
+            var change = Kit.Text($"{row.Change.Before}  →  {row.Change.After}", 19, "DS.AccentHi", FontWeights.SemiBold); DockPanel.SetDock(change, Dock.Right); line.Children.Add(change);
+            line.Children.Add(Kit.Text(row.Meaning.Name, 19, "DS.Text", FontWeights.SemiBold));
             stack.Children.Add(line);
-            stack.Children.Add(Wrap(char.ToUpper(row.Meaning.What[0]) + row.Meaning.What[1..] + ".", 13.5, "DS.TextSoft", 4));
-            if (Direction(row) is { Length: > 0 } direction) stack.Children.Add(Wrap(direction, 13.5, "DS.TextSoft", 2));
+            stack.Children.Add(Wrap(char.ToUpper(row.Meaning.What[0]) + row.Meaning.What[1..] + ".", 16, "DS.TextSoft", 4));
+            if (Direction(row) is { Length: > 0 } direction) stack.Children.Add(Wrap(direction, 16, "DS.TextSoft", 2));
             if (drift != null && row.Meaning.Action == AgentVocabulary.StickDeadzone)
-                stack.Children.Add(Wrap(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Measured with no hand on it: wandered up to {drift.Peak:0.0}%. The dead zone now covers it."), 13.5, "DS.Text", 4));
-            stack.Children.Add(Wrap("Good for " + row.Meaning.Good + ".", 13.5, "DS.Success", 4));
-            stack.Children.Add(Wrap("Watch out: " + row.Meaning.Careful + ".", 13.5, "DS.Warn", 2));
+                stack.Children.Add(Wrap(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Measured with no hand on it: wandered up to {drift.Peak:0.0}%. The dead zone now covers it."), 16, "DS.Text", 4));
+            stack.Children.Add(Wrap("Good for " + row.Meaning.Good + ".", 16, "DS.Success", 4));
+            stack.Children.Add(Wrap("Watch out: " + row.Meaning.Careful + ".", 16, "DS.Warn", 2));
         }
         return stack;
     }
@@ -143,13 +147,13 @@ public sealed class AgentTour
         // a marker at half a push, riding the curve, with what it gives
         double fromHalf = PadProcessor.Response(fromCurve, fromTuning, .5) * 100, toHalf = PadProcessor.Response(toCurve, toTuning, .5) * 100;
         var dot = new Ellipse { Width = 12, Height = 12, Fill = Brushes.White, Effect = new DropShadowEffect { Color = AgentMark.Ice, BlurRadius = 12, ShadowDepth = 0, Opacity = 1 } };
-        var tag = Kit.Text("", 13, "DS.Text", FontWeights.SemiBold);
+        var tag = Kit.Text("", 15, "DS.Text", FontWeights.SemiBold);
         void Mark(double half) { Canvas.SetLeft(dot, W / 2 - 6); Canvas.SetTop(dot, H - half / 100 * H - 6); Canvas.SetLeft(tag, W / 2 + 12); Canvas.SetTop(tag, H - half / 100 * H - 22); tag.Text = $"half a push → {half:0}%"; }
         Mark(fromHalf);
         canvas.Children.Add(new Line { X1 = W / 2, X2 = W / 2, Y1 = 0, Y2 = H, Stroke = new SolidColorBrush(Color.FromArgb(70, 169, 207, 255)), StrokeThickness = 1, StrokeDashArray = [2, 4] });
         canvas.Children.Add(dot); canvas.Children.Add(tag);
-        var axisX = Kit.Text(step.Kind == TourKind.Stick ? "PUSH →" : "PULL →", 11, "DS.TextMuted"); Canvas.SetLeft(axisX, W - 50); Canvas.SetTop(axisX, H + 4); canvas.Children.Add(axisX);
-        var axisY = Kit.Text("↑ OUTPUT", 11, "DS.TextMuted"); Canvas.SetLeft(axisY, 4); Canvas.SetTop(axisY, 2); canvas.Children.Add(axisY);
+        var axisX = Kit.Text(step.Kind == TourKind.Stick ? "PUSH →" : "PULL →", 12.5, "DS.TextMuted"); Canvas.SetLeft(axisX, W - 50); Canvas.SetTop(axisX, H + 4); canvas.Children.Add(axisX);
+        var axisY = Kit.Text("↑ OUTPUT", 12.5, "DS.TextMuted"); Canvas.SetLeft(axisY, 4); Canvas.SetTop(axisY, 2); canvas.Children.Add(axisY);
         play = ms =>
         {
             line.Points = now; dead.Width = toInner / 100 * W; full.Width = (100 - toOuter) / 100 * W; Canvas.SetLeft(full, toOuter / 100 * W);
@@ -167,7 +171,7 @@ public sealed class AgentTour
     // ---- a drift fix: the stick's centre, zoomed so the edge is 20% of travel ----
     UIElement Centre(TourStep step, PcModeProfile before, PcModeProfile after, StickDrift drift, out Action<int> play)
     {
-        const double S = 220, Edge = 20; double R = S / 2 - 4, scale = R / Edge;
+        const double S = 300, Edge = 20; double R = S / 2 - 4, scale = R / Edge;
         double Inner(PcModeProfile p) => p.Sticks.GetValueOrDefault(step.Target)?.Inner ?? p.Curves.GetValueOrDefault(step.Target)?.Inner ?? 0;
         double from = Math.Min(Inner(before), Edge), to = Math.Min(Inner(after), Edge);
         var canvas = new Canvas { Width = S, Height = S, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 0, 0, 8) };
@@ -220,7 +224,7 @@ public sealed class AgentTour
         var sentLabel = (TextBlock)((Border)sent.Children[0]).Child;
         var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 6, 0, 10) };
         row.Children.Add(Labelled(source, "YOU PRESS")); row.Children.Add(Kit.Icon("", 22, "DS.AccentHi").Also(t => t.Margin = new(26, 0, 26, 18))); row.Children.Add(Labelled(sent, "GAME GETS"));
-        var rate = Kit.Text(hz > 0 ? $"{hz} presses a second while held" : before.Turbo.ContainsKey(step.Target) ? "Turbo off" : "", 14, "DS.TextSoft").Also(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.Opacity = 0; });
+        var rate = Kit.Text(hz > 0 ? $"{hz} presses a second while held" : before.Turbo.ContainsKey(step.Target) ? "Turbo off" : "", 17, "DS.TextSoft").Also(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.Opacity = 0; });
         var panel = new StackPanel { Children = { row, rate } };
         var glow = (Border)source.Children[0];
         play = ms =>
@@ -244,16 +248,16 @@ public sealed class AgentTour
 
     static Grid Cap(string text, bool output) => new()
     {
-        Width = 92, Height = 92,
+        Width = 120, Height = 120,
         Children =
         {
             new Border
             {
-                CornerRadius = new(46), BorderThickness = new(2),
+                CornerRadius = new(60), BorderThickness = new(2),
                 Background = new RadialGradientBrush(Color.FromArgb(255, 40, 70, 130), Color.FromArgb(255, 14, 24, 52)),
                 BorderBrush = output ? DS.Brush("DS.AccentHi") : new SolidColorBrush(Color.FromArgb(160, 200, 215, 240)),
                 Effect = new DropShadowEffect { Color = output ? Color.FromRgb(70, 150, 255) : Colors.Black, BlurRadius = 18, ShadowDepth = 0, Opacity = .7 },
-                Child = Kit.Text(text, text.Length > 3 ? 15 : 24, "DS.Text", FontWeights.SemiBold).Also(t => t.HorizontalAlignment = HorizontalAlignment.Center),
+                Child = Kit.Text(text, text.Length > 3 ? 19 : 32, "DS.Text", FontWeights.SemiBold).Also(t => t.HorizontalAlignment = HorizontalAlignment.Center),
             },
         },
     };
