@@ -156,35 +156,68 @@ public sealed class VibrationVisual : Grid
                 }
                 return;
             }
-            // owner, 13 Oct 2026, third time: not music, not a heartbeat. A motor: a housing in each grip with a fixed gauge
-            // round it, and an off-centre weight spinning at a steady speed (faster with strength), which is what shakes the pad.
-            double rate = 3 + 13 * s, angle = moving ? time * rate * Math.Tau : .6;
+            // owner, 13 Oct 2026, with the maker's own motor-haptics picture as the reference: real cylindrical motors in the
+            // grips and triggers, a blue field of vibration arcs round each, and a stepped level bar. Everything holds at the
+            // draft strength: a weight spins at a steady speed and the motor itself trembles, nothing swells or beats.
+            double rate = 3 + 13 * s, angle = moving ? time * rate * Math.Tau : .6, level = .5 + .5 * s;
+            double ppd = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var face = new Typeface("Segoe UI Semibold");
+            FormattedText Label(string text, double size, Color color) => new(text, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, new SolidColorBrush(color), ppd);
+            var blue = Color.FromRgb(70, 160, 255); var ice = Color.FromRgb(190, 225, 255);
+            var steel = new LinearGradientBrush(new GradientStopCollection {
+                new(Color.FromRgb(22, 48, 104), 0), new(Color.FromRgb(160, 198, 248), .32), new(Color.FromRgb(74, 116, 200), .66), new(Color.FromRgb(16, 34, 78), 1) }, 0);
+            // owner, 13 Oct 2026, from his own marked-up screenshot: no motor object. The grip pads themselves vibrate: ripples
+            // radiate from the middle of each pad out to its edge at a steady pace (faster with strength), the pad glows from
+            // inside and a rim of light follows its edge. Nothing swells or beats.
+            double freq = .5 + 1.5 * s;
             foreach (var track in tracks)
             {
-                var b = track.Shape.Bounds; var c = track.Center;
-                double r = Math.Min(b.Width, b.Height) * (track.Grip ? .30 : .36), gauge = r + 12;
-                // the gauge: a fixed ring that fills to the draft strength and stays there
-                dc.DrawEllipse(new SolidColorBrush(Color.FromArgb(120, 4, 10, 26)), new Pen(new SolidColorBrush(Color.FromArgb(70, 160, 200, 255)), 5), c, gauge, gauge);
-                double sweep = Math.Clamp(s, .001, .999) * Math.Tau;
-                var arc = new StreamGeometry();
-                using (var ctx = arc.Open())
+                var c = track.Center;
+                // a little larger than the traced contour: the pads reach further down and out than the outline does
+                var pad = track.Shape.Clone(); pad.Transform = new ScaleTransform(1.12, 1.12, c.X, c.Y);
+                var tb = pad.Bounds;
+                dc.PushClip(pad);
+                dc.DrawRectangle(new RadialGradientBrush(Color.FromArgb((byte)(120 * level), 120, 200, 255), Color.FromArgb((byte)(26 * level), 40, 110, 255)) { Center = new Point(.5, .5), RadiusX = .6, RadiusY = .6 },
+                    null, new Rect(tb.X - 4, tb.Y - 4, tb.Width + 8, tb.Height + 8));
+                for (int k = 0; k < 4; k++)
                 {
-                    ctx.BeginFigure(new Point(c.X, c.Y - gauge), false, false);
-                    ctx.ArcTo(new Point(c.X + gauge * Math.Sin(sweep), c.Y - gauge * Math.Cos(sweep)), new Size(gauge, gauge), 0, sweep > Math.PI, SweepDirection.Clockwise, true, false);
+                    double p = moving ? (time * freq + k / 4.0) % 1 : (.15 + k * .25), sc = .2 + .95 * p;
+                    var ring = Mix(Color.FromRgb(225, 244, 255), Color.FromRgb(70, 150, 255), p);
+                    dc.PushTransform(new ScaleTransform(sc * 1.12, sc * 1.12, c.X, c.Y));
+                    dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(235 * Math.Pow(1 - p, 1.1) * level, 0, 255), ring.R, ring.G, ring.B)), (5.5 - 3.6 * p) / sc), track.Shape);
+                    dc.Pop();
                 }
-                arc.Freeze();
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromRgb(90, 190, 255)), 5.5) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, arc);
-                // the housing: dark steel with a bright rim
-                dc.DrawEllipse(new RadialGradientBrush(Color.FromRgb(70, 82, 106), Color.FromRgb(16, 22, 38)) { GradientOrigin = new Point(.35, .3) },
-                    new Pen(new SolidColorBrush(Color.FromArgb(220, 190, 215, 245)), 2), c, r, r);
-                // the weight: off centre, with ghosts behind it so it reads as a blur at speed
-                for (int g = 5; g >= 0; g--)
+                dc.Pop();
+                // the rim of light along the pad's edge
+                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(120 + 110 * s), 150, 215, 255)), 2.6) { LineJoin = PenLineJoin.Round }, pad);
+            }
+            // the level bar: five steps, 0 to 100 %, filled to the draft strength and held there
+            var motors = tracks.Where(t => t.Grip).DefaultIfEmpty(tracks[0]).ToList();
+            double midX = motors.Average(t => t.Center.X), baseY = tracks.Max(t => t.Shape.Bounds.Bottom) + 30;
+            const double seg = 124, bar = 22; double x0 = midX - seg * 2.5;
+            for (int n = 0; n < 5; n++)
+            {
+                double x = x0 + n * seg;
+                var cell = new StreamGeometry();
+                using (var ctx = cell.Open())
                 {
-                    double a = angle - g * (moving ? .34 : 0) * track.Direction; double fade = g == 0 ? 1 : .42 * (1 - g / 6.0);
-                    var at = new Point(c.X + Math.Cos(a) * r * .42, c.Y + Math.Sin(a) * r * .42);
-                    dc.DrawEllipse(new SolidColorBrush(Color.FromArgb((byte)(235 * fade), 235, 246, 255)), null, at, r * .36, r * .36);
+                    ctx.BeginFigure(new Point(x + 12, baseY), true, true);
+                    ctx.LineTo(new Point(x + seg - 6, baseY), true, false); ctx.LineTo(new Point(x + seg - 18, baseY + bar), true, false); ctx.LineTo(new Point(x, baseY + bar), true, false);
                 }
-                dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(20, 28, 46)), new Pen(new SolidColorBrush(Color.FromRgb(150, 190, 240)), 1.5), c, r * .13, r * .13);
+                cell.Freeze();
+                dc.DrawGeometry(new SolidColorBrush(Color.FromArgb(46, 190, 215, 255)), null, cell);
+                double f = Math.Clamp(s * 5 - n, 0, 1);
+                if (f > 0)
+                {
+                    dc.PushClip(new RectangleGeometry(new Rect(x, baseY - 2, seg * f, bar + 4)));
+                    dc.DrawGeometry(new LinearGradientBrush(Color.FromRgb(120, 215, 255), Color.FromRgb(58, 120, 255), 0), null, cell);
+                    dc.Pop();
+                }
+            }
+            for (int n = 0; n <= 5; n++)
+            {
+                var t = Label(n * 20 + "%", 28, Color.FromArgb(200, 200, 220, 250));
+                dc.DrawText(t, new Point(x0 + n * seg - t.Width / 2 - 6, baseY + bar + 8));
             }
         }        /// <summary>A polyline through <paramref name="count"/> points starting at <paramref name="start"/>, wrapping round the contour.</summary>
         private static StreamGeometry Poly(Point[] points, int start, int count, bool closed)
