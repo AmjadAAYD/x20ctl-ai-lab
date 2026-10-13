@@ -49,10 +49,10 @@ public sealed class ControllerVerifyView : Grid
     private readonly TextBlock status = Kit.Text("", 15, "DS.TextMuted");
     private readonly TextBlock title = Kit.Text("", 20, "DS.Text", FontWeights.SemiBold);
     private readonly StackPanel buttons = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 20, 0, 0) };
-    private readonly Path rim = new() { Data = GamepadGlyph.Outline, StrokeThickness = 6, StrokeLineJoin = PenLineJoin.Round, Stroke = new SolidColorBrush(Color.FromRgb(240, 245, 255)) };
-    private readonly Path runner = new() { Data = GamepadGlyph.Outline, StrokeThickness = 6, StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
+    private readonly Path rim = new() { Data = GamepadGlyph.Outline, StrokeThickness = 8.5, StrokeLineJoin = PenLineJoin.Round, Stroke = new SolidColorBrush(Color.FromRgb(240, 245, 255)) };
+    private readonly Path runner = new() { Data = GamepadGlyph.Outline, StrokeThickness = 8.5, StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
     private readonly SolidColorBrush runnerBrush = new(Color.FromRgb(120, 215, 255));
-    private readonly System.Windows.Media.Effects.DropShadowEffect rimGlow = new() { Color = Colors.White, BlurRadius = 18, ShadowDepth = 0, Opacity = .55 };
+    private readonly System.Windows.Media.Effects.DropShadowEffect rimGlow = new() { Color = Colors.White, BlurRadius = 20, ShadowDepth = 0, Opacity = .6 };
     private readonly Ellipse[] dots = new Ellipse[3];
     private readonly TextBlock verdict = new() { FontFamily = DS.Display, FontSize = 54, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Opacity = 0 };
     private readonly Border card = new();
@@ -70,7 +70,7 @@ public sealed class ControllerVerifyView : Grid
         var accent = Color.FromRgb(86, 190, 255);
         var size = GamepadGlyph.Size;
         // dark glass body, white tube rim with a soft glow, a light running round it
-        rim.Fill = new LinearGradientBrush(Color.FromRgb(40, 47, 66), Color.FromRgb(19, 24, 38), 90);
+        rim.Fill = new LinearGradientBrush(Color.FromRgb(46, 54, 76), Color.FromRgb(22, 27, 42), 90);
         rim.Effect = rimGlow;
         runner.Stroke = runnerBrush;
         double dash = GamepadGlyph.Length * .16 / runner.StrokeThickness, gap = GamepadGlyph.Length * .84 / runner.StrokeThickness;
@@ -78,7 +78,7 @@ public sealed class ControllerVerifyView : Grid
         runner.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = accent, BlurRadius = 22, ShadowDepth = 0, Opacity = 1 };
         var art = new Grid { Width = size.Width, Height = size.Height };
         art.Children.Add(rim); art.Children.Add(runner);
-        var dotRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, -34, 0, 0) };
+        var dotRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, -150, 0, 0) };
         for (int i = 0; i < 3; i++)
         {
             dots[i] = new Ellipse { Width = 9, Height = 9, Margin = new(5, 0, 5, 0), Fill = Brushes.White, Opacity = .35,
@@ -137,7 +137,7 @@ public sealed class ControllerVerifyView : Grid
         rimGlow.Color = tone; rimGlow.Opacity = .8;
         runner.Visibility = Visibility.Collapsed;
         verdict.Text = r.Outcome switch { VerifyOutcome.Match => "✓", VerifyOutcome.Mismatch => "✕", VerifyOutcome.Unconfirmed => "?", _ => "…" };
-        verdict.Foreground = new SolidColorBrush(tone); verdict.Margin = new(0, -34, 0, 0); verdict.Opacity = 1;
+        verdict.Foreground = new SolidColorBrush(tone); verdict.Margin = new(0, -150, 0, 0); verdict.Opacity = 1;
         card.BorderBrush = new SolidColorBrush(Color.FromArgb(190, tone.R, tone.G, tone.B));
         buttons.Children.Clear();
         switch (r.Outcome)
