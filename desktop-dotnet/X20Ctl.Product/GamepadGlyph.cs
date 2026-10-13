@@ -30,7 +30,7 @@ public static class GamepadGlyph
             length += (figure.StartPoint - from).Length;
         }
         var bounds = raw.Bounds;
-        var g = Geometry.Parse(Data); g.Transform = new TranslateTransform(-bounds.X, -bounds.Y); g.Freeze();
+        var g = raw.Clone(); g.Transform = new TranslateTransform(-bounds.X, -bounds.Y); g.Freeze();
         Outline = g; Length = length; Size = bounds.Size;
     }
 }
