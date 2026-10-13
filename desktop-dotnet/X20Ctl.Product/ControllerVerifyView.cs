@@ -42,16 +42,19 @@ public static class ControllerVerify
     }
 }
 
-/// <summary>The popup shown when a controller is opened: a radar sweep over the model's photo while Windows is asked who is
-/// connected, then the verdict. Decisions are the host's; this only shows and reports which button was pressed.</summary>
+/// <summary>The popup shown when a controller is opened: a glowing gamepad outline that a light runs round while Windows is
+/// asked who is connected, then the verdict. Decisions are the host's; this only shows and reports which button was pressed.</summary>
 public sealed class ControllerVerifyView : Grid
 {
-    private readonly TextBlock status = Kit.Text("Listening for the controller…", 15, "DS.Text");
+    private readonly TextBlock status = Kit.Text("", 15, "DS.TextMuted");
     private readonly TextBlock title = Kit.Text("", 20, "DS.Text", FontWeights.SemiBold);
     private readonly StackPanel buttons = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 20, 0, 0) };
-    private readonly List<Shape> pulse = new();
-    private readonly Ellipse sweepRing = new() { Width = 300, Height = 300, StrokeThickness = 3, RenderTransformOrigin = new(.5, .5), RenderTransform = new RotateTransform() };
-    private readonly Rectangle beam = new() { Height = 70, RenderTransform = new TranslateTransform(), IsHitTestVisible = false };
+    private readonly Path rim = new() { Data = GamepadGlyph.Outline, StrokeThickness = 6, StrokeLineJoin = PenLineJoin.Round, Stroke = new SolidColorBrush(Color.FromRgb(240, 245, 255)) };
+    private readonly Path runner = new() { Data = GamepadGlyph.Outline, StrokeThickness = 6, StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
+    private readonly SolidColorBrush runnerBrush = new(Color.FromRgb(120, 215, 255));
+    private readonly System.Windows.Media.Effects.DropShadowEffect rimGlow = new() { Color = Colors.White, BlurRadius = 18, ShadowDepth = 0, Opacity = .55 };
+    private readonly Ellipse[] dots = new Ellipse[3];
+    private readonly TextBlock verdict = new() { FontFamily = DS.Display, FontSize = 54, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Opacity = 0 };
     private readonly Border card = new();
     private readonly DispatcherTimer steps = new() { Interval = TimeSpan.FromMilliseconds(750) };
     private readonly string[] lines;
@@ -65,35 +68,35 @@ public sealed class ControllerVerifyView : Grid
         lines = ["Listening for the controller…", "Reading its identity…", $"Comparing with the {modelName}…"];
         Background = new SolidColorBrush(Color.FromArgb(170, 2, 6, 18));
         var accent = Color.FromRgb(86, 190, 255);
-        var photo = new Viewbox { Width = 360, Height = 240, Child = new PhotoController(modelId), Opacity = .92, IsHitTestVisible = false };
-        // expanding rings and a turning dashed ring behind the photo
-        var stage = new Grid { Width = 420, Height = 300, ClipToBounds = false };
+        var size = GamepadGlyph.Size;
+        // dark glass body, white tube rim with a soft glow, a light running round it
+        rim.Fill = new LinearGradientBrush(Color.FromRgb(40, 47, 66), Color.FromRgb(19, 24, 38), 90);
+        rim.Effect = rimGlow;
+        runner.Stroke = runnerBrush;
+        double dash = GamepadGlyph.Length * .16 / runner.StrokeThickness, gap = GamepadGlyph.Length * .84 / runner.StrokeThickness;
+        runner.StrokeDashArray = [dash, gap];
+        runner.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = accent, BlurRadius = 22, ShadowDepth = 0, Opacity = 1 };
+        var art = new Grid { Width = size.Width, Height = size.Height };
+        art.Children.Add(rim); art.Children.Add(runner);
+        var dotRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, -34, 0, 0) };
         for (int i = 0; i < 3; i++)
         {
-            var ring = new Ellipse { Width = 300, Height = 300, Stroke = new SolidColorBrush(accent), StrokeThickness = 2, Opacity = 0, RenderTransformOrigin = new(.5, .5), RenderTransform = new ScaleTransform(.6, .6) };
-            pulse.Add(ring); stage.Children.Add(ring);
+            dots[i] = new Ellipse { Width = 9, Height = 9, Margin = new(5, 0, 5, 0), Fill = Brushes.White, Opacity = .35,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = Colors.White, BlurRadius = 10, ShadowDepth = 0, Opacity = 1 } };
+            dotRow.Children.Add(dots[i]);
         }
-        sweepRing.Stroke = new LinearGradientBrush(Color.FromArgb(230, accent.R, accent.G, accent.B), Color.FromArgb(0, accent.R, accent.G, accent.B), 0);
-        sweepRing.StrokeDashArray = [14, 7];
-        stage.Children.Add(sweepRing);
-        stage.Children.Add(photo);
-        beam.Fill = new LinearGradientBrush(new GradientStopCollection
-        {
-            new(Color.FromArgb(0, accent.R, accent.G, accent.B), 0), new(Color.FromArgb(150, accent.R, accent.G, accent.B), .85), new(Color.FromArgb(255, 220, 245, 255), 1),
-        }, 90);
-        beam.Width = 360; beam.VerticalAlignment = VerticalAlignment.Top; beam.Margin = new(0, 30, 0, 0);
-        var beamHost = new Grid { Width = 360, Height = 240, ClipToBounds = true, IsHitTestVisible = false, Children = { beam } };
-        stage.Children.Add(beamHost);
+        art.Children.Add(dotRow); art.Children.Add(verdict);
+        var stage = new Viewbox { Width = 400, Height = 300, Child = art, Margin = new(0, 6, 0, 6) };
         title.Text = $"Checking this is a {modelName}";
-        status.Foreground = DS.Brush("DS.TextMuted");
+        title.HorizontalAlignment = status.HorizontalAlignment = HorizontalAlignment.Center;
         card.CornerRadius = new(18); card.Padding = new(34, 28, 34, 26); card.MinWidth = 500;
         card.Background = new SolidColorBrush(Color.FromRgb(12, 21, 46));
         card.BorderBrush = new SolidColorBrush(Color.FromArgb(130, accent.R, accent.G, accent.B)); card.BorderThickness = new(1);
         card.HorizontalAlignment = HorizontalAlignment.Center; card.VerticalAlignment = VerticalAlignment.Center;
-        title.HorizontalAlignment = status.HorizontalAlignment = HorizontalAlignment.Center;
-        card.Child = new StackPanel { Children = { title, new Border { Height = 4 }, stage, status, buttons } };
+        card.Child = new StackPanel { Children = { title, stage, status, buttons } };
         Children.Add(card);
-        if (animate) Start(); else status.Text = lines[0];
+        status.Text = lines[0];
+        if (animate) Start();
         steps.Tick += (_, _) => { if (step < lines.Length - 1) status.Text = lines[++step]; };
         steps.Start();
         Unloaded += (_, _) => steps.Stop();
@@ -102,21 +105,17 @@ public sealed class ControllerVerifyView : Grid
     private void Start()
     {
         var forever = RepeatBehavior.Forever;
-        sweepRing.RenderTransform.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(0, 360, TimeSpan.FromSeconds(3.2)) { RepeatBehavior = forever });
-        ((TranslateTransform)beam.RenderTransform).BeginAnimation(TranslateTransform.YProperty,
-            new DoubleAnimation(-10, 190, TimeSpan.FromSeconds(1.5)) { RepeatBehavior = forever, AutoReverse = true, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
-        for (int i = 0; i < pulse.Count; i++)
-        {
-            var begin = TimeSpan.FromMilliseconds(i * 700);
-            var scale = (ScaleTransform)pulse[i].RenderTransform;
-            var grow = new DoubleAnimation(.55, 1.35, TimeSpan.FromSeconds(2.1)) { RepeatBehavior = forever, BeginTime = begin };
-            scale.BeginAnimation(ScaleTransform.ScaleXProperty, grow); scale.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
-            pulse[i].BeginAnimation(OpacityProperty, new DoubleAnimationUsingKeyFrames
+        // the light runs the whole way round: the dash and its gap add up to one lap
+        double lap = GamepadGlyph.Length / runner.StrokeThickness;
+        runner.BeginAnimation(Shape.StrokeDashOffsetProperty, new DoubleAnimation(0, -lap, TimeSpan.FromSeconds(2.4)) { RepeatBehavior = forever });
+        runnerBrush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(Color.FromRgb(120, 215, 255), Color.FromRgb(190, 130, 255), TimeSpan.FromSeconds(2.4)) { RepeatBehavior = forever, AutoReverse = true });
+        rimGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, new DoubleAnimation(.3, .75, TimeSpan.FromSeconds(1.2)) { RepeatBehavior = forever, AutoReverse = true, EasingFunction = new SineEase() });
+        for (int i = 0; i < 3; i++)
+            dots[i].BeginAnimation(OpacityProperty, new DoubleAnimationUsingKeyFrames
             {
-                RepeatBehavior = forever, BeginTime = begin, Duration = TimeSpan.FromSeconds(2.1),
-                KeyFrames = { new LinearDoubleKeyFrame(.55, KeyTime.FromPercent(.15)), new LinearDoubleKeyFrame(0, KeyTime.FromPercent(1)) },
+                RepeatBehavior = forever, BeginTime = TimeSpan.FromMilliseconds(i * 220), Duration = TimeSpan.FromSeconds(1.1),
+                KeyFrames = { new LinearDoubleKeyFrame(1, KeyTime.FromPercent(.3)), new LinearDoubleKeyFrame(.3, KeyTime.FromPercent(.7)) },
             });
-        }
     }
 
     private Button Action(string text, bool primary, Action click)
@@ -129,12 +128,16 @@ public sealed class ControllerVerifyView : Grid
     public void ShowResult(VerifyResult r, string modelName, string? detectedName, Action enter, Action<string> switchTo, Action rescan)
     {
         steps.Stop();
-        foreach (var p in pulse) { p.BeginAnimation(OpacityProperty, null); p.Opacity = 0; }
-        sweepRing.RenderTransform.BeginAnimation(RotateTransform.AngleProperty, null);
-        ((TranslateTransform)beam.RenderTransform).BeginAnimation(TranslateTransform.YProperty, null);
-        beam.Visibility = Visibility.Collapsed;
-        Color tone = r.Outcome switch { VerifyOutcome.Match => Color.FromRgb(90, 220, 150), VerifyOutcome.Mismatch => Color.FromRgb(255, 105, 95), VerifyOutcome.Unconfirmed => Color.FromRgb(255, 190, 80), _ => Color.FromRgb(140, 160, 200) };
-        sweepRing.Stroke = new SolidColorBrush(tone); sweepRing.StrokeDashArray = null;
+        runner.BeginAnimation(Shape.StrokeDashOffsetProperty, null); runnerBrush.BeginAnimation(SolidColorBrush.ColorProperty, null);
+        rimGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
+        foreach (var d in dots) { d.BeginAnimation(OpacityProperty, null); d.Visibility = Visibility.Collapsed; }
+        Color tone = r.Outcome switch { VerifyOutcome.Match => Color.FromRgb(90, 220, 150), VerifyOutcome.Mismatch => Color.FromRgb(255, 105, 95), VerifyOutcome.Unconfirmed => Color.FromRgb(255, 190, 80), _ => Color.FromRgb(160, 175, 210) };
+        // the whole outline takes the verdict's colour, and the running light is put away
+        rim.Stroke = new SolidColorBrush(tone);
+        rimGlow.Color = tone; rimGlow.Opacity = .8;
+        runner.Visibility = Visibility.Collapsed;
+        verdict.Text = r.Outcome switch { VerifyOutcome.Match => "✓", VerifyOutcome.Mismatch => "✕", VerifyOutcome.Unconfirmed => "?", _ => "…" };
+        verdict.Foreground = new SolidColorBrush(tone); verdict.Margin = new(0, -34, 0, 0); verdict.Opacity = 1;
         card.BorderBrush = new SolidColorBrush(Color.FromArgb(190, tone.R, tone.G, tone.B));
         buttons.Children.Clear();
         switch (r.Outcome)

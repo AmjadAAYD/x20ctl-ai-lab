@@ -51,7 +51,7 @@ public partial class DockView : UserControl
     {
         InitializeComponent(); Index = index; Player = player;
         // the empty card's dashed controller is the X20's own traced outline, and its plus does what Choose Controller does
-        if (ControllerOutline.For("x20", false) is { } traced) SilhouettePath.Data = traced;
+        SilhouettePath.Data = GamepadGlyph.Outline;
         var plusScale = new ScaleTransform(1, 1); PlusBadge.RenderTransform = plusScale;
         void Grow(double to) { plusScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(140)) { EasingFunction = new CubicEase() }); plusScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(140)) { EasingFunction = new CubicEase() }); }
         PlusBadge.MouseEnter += (_, _) => Grow(1.12); PlusBadge.MouseLeave += (_, _) => Grow(1);
