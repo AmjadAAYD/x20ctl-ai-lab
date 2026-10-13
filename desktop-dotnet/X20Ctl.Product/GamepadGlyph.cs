@@ -14,26 +14,8 @@ public static class GamepadGlyph
     /// <summary>Distance round the outline, for dash animations.</summary>
     public static readonly double Length;
     public static readonly Size Size;
-    /// <summary>Line-art for the inside of the outline (sticks, D-pad, face buttons, centre buttons, grip lines) in the same
-    /// coordinates, so it can sit over the outline unscaled or inside the same Viewbox.</summary>
-    public static readonly Geometry Details = MakeDetails();
     /// <summary>Space to leave round the outline inside a Viewbox so its rim and glow are not clipped.</summary>
     public const double Pad = 26;
-
-    private static Geometry MakeDetails()
-    {
-        var g = new GeometryGroup();
-        void Ring(double x, double y, double r) => g.Children.Add(new EllipseGeometry(new Point(x, y), r, r));
-        Ring(128, 94, 36); Ring(128, 94, 21);          // left stick
-        Ring(306, 164, 36); Ring(306, 164, 21);        // right stick
-        Ring(362, 62, 12); Ring(362, 114, 12); Ring(336, 88, 12); Ring(388, 88, 12); // face buttons
-        Ring(214, 90, 8); Ring(270, 90, 8);            // view and menu
-        Ring(242, 54, 12); Ring(242, 54, 5);           // guide
-        g.Children.Add(Geometry.Parse("M183,138 h14 v23 h23 v14 h-23 v23 h-14 v-23 h-23 v-14 h23 z")); // D-pad
-        g.Children.Add(Geometry.Parse("M70,70 Q120,28 196,24 M289,24 Q365,28 415,70")); // shoulder lines
-        g.Children.Add(Geometry.Parse("M66,222 Q62,262 84,288 M419,222 Q423,262 401,288")); // grip lines
-        g.Freeze(); return g;
-    }
 
     static GamepadGlyph()
     {

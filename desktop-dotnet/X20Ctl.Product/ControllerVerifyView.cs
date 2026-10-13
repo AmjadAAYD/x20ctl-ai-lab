@@ -78,9 +78,8 @@ public sealed class ControllerVerifyView : Grid
         runner.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = accent, BlurRadius = 22, ShadowDepth = 0, Opacity = 1 };
         double pad = GamepadGlyph.Pad;
         var art = new Grid { Width = size.Width + pad * 2, Height = size.Height + pad * 2 };
-        var details = new Path { Data = GamepadGlyph.Details, StrokeThickness = 2.4, Stroke = new SolidColorBrush(Color.FromArgb(105, 200, 218, 250)), StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
-        foreach (var layer in new Path[] { rim, details, runner }) { layer.Margin = new(pad); layer.HorizontalAlignment = HorizontalAlignment.Left; layer.VerticalAlignment = VerticalAlignment.Top; art.Children.Add(layer); }
-        var dotRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, -56, 0, 0) };
+        foreach (var layer in new Path[] { rim, runner }) { layer.Margin = new(pad); layer.HorizontalAlignment = HorizontalAlignment.Left; layer.VerticalAlignment = VerticalAlignment.Top; art.Children.Add(layer); }
+        var dotRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, -150, 0, 0) };
         for (int i = 0; i < 3; i++)
         {
             dots[i] = new Ellipse { Width = 9, Height = 9, Margin = new(5, 0, 5, 0), Fill = Brushes.White, Opacity = .35,
@@ -139,7 +138,7 @@ public sealed class ControllerVerifyView : Grid
         rimGlow.Color = tone; rimGlow.Opacity = .8;
         runner.Visibility = Visibility.Collapsed;
         verdict.Text = r.Outcome switch { VerifyOutcome.Match => "✓", VerifyOutcome.Mismatch => "✕", VerifyOutcome.Unconfirmed => "?", _ => "…" };
-        verdict.Foreground = new SolidColorBrush(tone); verdict.Margin = new(0, -56, 0, 0); verdict.Opacity = 1;
+        verdict.Foreground = new SolidColorBrush(tone); verdict.Margin = new(0, -150, 0, 0); verdict.Opacity = 1;
         card.BorderBrush = new SolidColorBrush(Color.FromArgb(190, tone.R, tone.G, tone.B));
         buttons.Children.Clear();
         switch (r.Outcome)
