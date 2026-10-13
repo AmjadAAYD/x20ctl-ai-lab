@@ -216,20 +216,19 @@ public sealed class VibrationVisual : Grid
             // owner direction 10 Oct 2026: no comets or ripples, just a fast heartbeat on each motor's outline
             double s = strength / 100.0, beat = .5;
             if (!front || Parts.Count == 0) return;
-            // owner's reference, 13 Oct 2026: two coincident layers on each outline. A thin permanent cyan rail, and over it a
-            // short, thicker pulse that carries the controller's RGB colours (blue, cyan, magenta, orange), feathered at both
-            // ends, travelling round the loop. Strength sets how fast and how often the pulse runs and how bright it is.
+            // owner's references, 13 Oct 2026: the controller's edge round each grip glows like a lit edge, a smooth gradient
+            // of the model's own LED colours that fades out at both ends, and over it a brighter neon pulse travels down. Strength sets how fast and how often the pulse runs and how bright it is.
             // The bumper outlines echo their grip about 80 ms later. Today one strength drives both sides; each side keeps its
             // own clock so separate motor values can drive them apart.
             double left = s, right = s;
-            var rail = Color.FromRgb(70, 200, 255);
             foreach (var part in Parts)
             {
                 double m = part.Left ? left : right; if (m <= 0) continue;
-                double railCore = part.Grip ? 4.5 : 3.5;
-                byte railAlpha = (byte)((.45 + .25 * m) * 255);
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(railAlpha * .22), rail.R, rail.G, rail.B)), railCore + 6) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Line);
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb(railAlpha, rail.R, rail.G, rail.B)), railCore) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Line);
+                double railCore = part.Grip ? 7 : 5, lit = .55 + .45 * m;
+                EdgeGlow(dc, part, 40 * lit, railCore * 3.2, false);
+                EdgeGlow(dc, part, 105 * lit, railCore * 1.8, false);
+                EdgeGlow(dc, part, 235 * lit, railCore, false);
+                EdgeGlow(dc, part, 200 * lit, railCore * .35, true);
                 double q = .4, period = 2.6 - 1.8 * m, travel = .7 + .25 * m;
                 if (moving)
                 {
@@ -294,6 +293,20 @@ public sealed class VibrationVisual : Grid
                 ctx.PolyLineTo(rest, true, true);
             }
             g.Freeze(); return g;
+        }
+        /// <summary>The whole stroke as one lit edge: the palette spread along it from its top end, fading to nothing at both
+        /// ends. One geometry per layer, so the glow has no seams or beads.</summary>
+        private void EdgeGlow(DrawingContext dc, Island part, double alpha, double width, bool hot)
+        {
+            var brush = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = part.Points[0], EndPoint = part.Points[^1] };
+            if (part.Closed) brush.EndPoint = new Point(part.Points[0].X, part.Points.Max(q => q.Y));
+            for (int k = 0; k <= 10; k++)
+            {
+                double t = k / 10.0, fade = part.Closed ? 1 : Math.Min(1, Math.Min(t, 1 - t) / .14);
+                var c = Rgb(Palette, t * .9); if (hot) c = Mix(c, Colors.White, .75);
+                brush.GradientStops.Add(new GradientStop(Color.FromArgb((byte)Math.Clamp(alpha * fade * fade * (3 - 2 * fade), 0, 255), c.R, c.G, c.B), t));
+            }
+            dc.DrawGeometry(null, new Pen(brush, width) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Line);
         }
         private static void Neon(DrawingContext dc, Color c, double alpha, double width, Point a, Point b) =>
             dc.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(alpha, 0, 255), c.R, c.G, c.B)), width) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, a, b);
