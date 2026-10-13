@@ -84,7 +84,7 @@ public static class AgentKnowledge
         ["default"] = "straight: output matches the push",
         ["quick"] = "more output early: fast turns, less precise",
         ["slow"] = "less output until the edge: precise aim, slower turns",
-        ["smooth"] = "straight at first, then gentle: steady tracking",
+        ["smooth"] = "a gentle S: soft around the centre, full speed toward the edge: steady tracking",
         ["fine"] = "slightly quick",
     };
 

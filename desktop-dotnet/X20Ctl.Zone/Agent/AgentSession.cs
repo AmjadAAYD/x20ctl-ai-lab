@@ -67,6 +67,31 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             verdict = await Answer(messages, attempts, measured, offered.Count, cancel);
         }
         var outcome = AgentApplier.Apply(current, verdict);
+        // owner, 14 Oct 2026: it said "I'll set smooth" and nothing changed. A reply that promises a change but makes none
+        // (no action, or values I already have) gets one more go, told exactly that
+        if (verdict.Valid && outcome.Changes.Count == 0 && outcome.Mouse == null && outcome.Page == null && outcome.PcMode == null && measured == null
+            && verdict.Proposal!.Question.Length == 0 && verdict.Proposal.Sources.Count == 0 && (verdict.Proposal.Actions.Count > 0 || Promises(verdict.Proposal.Speech)))
+        {
+            messages.Add(new("assistant", attempts[^1].Content));
+            messages.Add(new("user", (verdict.Proposal.Actions.Count > 0 ? "That changed nothing: those values are already my settings right now. " : "You said you'd change something but sent no actions, so nothing changed. ")
+                + "Send the actions that really do what I asked, with values different from my current settings, and make your speech match them exactly."));
+            var again = await Answer(messages, attempts, null, offered.Count, cancel);
+            var retried = AgentApplier.Apply(current, again);
+            // kept only when it really does something; otherwise the first answer stands, and the app line says nothing changed
+            if (again.Valid && (retried.Changes.Count > 0 || retried.Mouse != null || retried.Page != null || retried.PcMode != null)) { verdict = again; outcome = retried; }
+        }
+        // owner, 14 Oct 2026: custom curves shaped for the request, not presets. A preset the owner didn't name is sent back
+        // once to be shaped as points; kept only when the new answer is valid and changes something
+        var unnamed = verdict.Valid ? verdict.Proposal!.Actions.Where(x => x.Action is AgentVocabulary.StickCurve or AgentVocabulary.TriggerCurve
+            && !System.Text.RegularExpressions.Regex.IsMatch(sentence, $@"\b{System.Text.RegularExpressions.Regex.Escape(x.ValueText)}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)).ToList() : [];
+        if (unnamed.Count > 0)
+        {
+            messages.Add(new("assistant", attempts[^1].Content));
+            messages.Add(new("user", $"I didn't ask for the preset \"{unnamed[0].ValueText}\". Shape it yourself with {(unnamed[0].Action == AgentVocabulary.StickCurve ? "stick_curve_points" : "trigger_curve_points")}: two points chosen for exactly what I asked, starting from my current curve, and make your speech describe those points."));
+            var shaped = await Answer(messages, attempts, null, offered.Count, cancel);
+            var reshaped = AgentApplier.Apply(current, shaped);
+            if (shaped.Valid && reshaped.Changes.Count > 0) { verdict = shaped; outcome = reshaped; }
+        }
         history.Add(new("user", sentence));
         // what was said, what the app really did, and what was asked back, so the next sentence is read in context
         string done = outcome.Changes.Count > 0 ? " [applied: " + string.Join("; ", outcome.Changes.Select(c => $"{c.What} {c.Before} -> {c.After}")) + "]"
@@ -92,6 +117,11 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
 
     public void Forget() => history.Clear();
 
+    /// <summary>The speech says it is changing a setting ("I'll set…", "I've made…", "Let me tweak…").</summary>
+    public static bool Promises(string speech) => System.Text.RegularExpressions.Regex.IsMatch(speech,
+        @"\b(i'll|i will|i've|i have|i'm|i am|let me|let's)\s+(\w+\s+){0,2}(set|setting|change|changing|changed|make|making|made|shape|shaping|switch|turn|tune|dial|lower|raise|adjust|tweak|bump|drop|apply|move|remap|smooth|slow|speed|boost|give)\b|\bis now (set|on|off)\b",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
     /// <summary>The validator's objections in one line, for the model's second attempt and for the app's own message.</summary>
     public static string Problems(AgentVerdict verdict) => verdict.StructureError ?? string.Join(" ", verdict.Checks.Where(c => c.State == CheckState.Rejected).Select(c => $"{c.Action.Action} on {c.Action.Target}: {c.Message}"));
 
@@ -112,10 +142,9 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - "recap": why these changes fit what the owner asked, from the meanings below: what each change does, what it is good for, and what to watch out for. Two to four short sentences, with the real numbers. When the owner asks a question instead (what is good or bad, what something does), answer it here, with no actions.
             - "assumptions": anything you guessed, such as which button a game uses to jump.
             - "sources": the numbers of the doc passages your recap used, or empty.
-            - "question": one short question back to the owner. Always ask one:
-              * When something you need is missing (which button, which game, how strong, which paddle, what a macro should press and when), ask for it and make NO actions until they answer.
-              * When you did change something, ask whether it feels right or should go further (for example "Is that steady enough, or a bit slower still?").
-              * When nothing is missing (such as "turn mouse mode on"), just do it, then ask a short follow-up.
+            - "question": "" almost always. Ask one short question ONLY when you cannot act without the answer (which button to remap and to what, what a macro should press). Then make no actions.
+              Otherwise ACT: send the actions now, choosing sensible values yourself. When the owner answers your earlier question, do what they answered at once, with actions; never ask again.
+              Never say you set or changed something unless the same reply carries the action that does it, with a value different from my settings right now. Your speech must describe exactly the values in your actions.
               The conversation is remembered: read the earlier turns, including what was applied in [brackets], and build on them. "A bit more" means more than what you set last time.
 
             Docs: when passages from the X20CTL docs are given, and the owner asks how the app works, where something is, or what to do when something fails, answer in the recap from those passages only and put their numbers in "sources". If they don't answer it, say you can't confirm that from the docs. When no passages are given and the owner asks about the app or the controller beyond the settings above (prices, other consoles, battery life, hardware facts), say you can't confirm that from the docs. Never cite a number you weren't given; never make up app features or facts.

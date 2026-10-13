@@ -126,8 +126,13 @@ public sealed class AgentTour
             canvas.Children.Add(new Line { X1 = 0, X2 = W, Y1 = i * H / 4, Y2 = i * H / 4, Stroke = grid, StrokeThickness = 1 });
         }
         var (fromCurve, fromTuning) = Shape(before, step); var (toCurve, toTuning) = Shape(after, step);
-        double fromInner = fromTuning?.Inner ?? fromCurve?.Inner ?? 0, toInner = toTuning?.Inner ?? toCurve?.Inner ?? 0;
-        double fromOuter = fromTuning?.Outer ?? fromCurve?.Outer ?? 100, toOuter = toTuning?.Outer ?? toCurve?.Outer ?? 100;
+        // only the curve changed: the same line the Curves page shows, through the same two points (owner, 14 Oct 2026:
+        // "it must be the same results")
+        bool page = step.Rows.All(r => r.Meaning.Action is AgentVocabulary.StickCurve or AgentVocabulary.TriggerCurve or AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints);
+        double At(SetupCurve? c, StickTuning? t, double x) => !page ? PadProcessor.Response(c, t, x) : c == null ? x : PadProcessor.Through(x, c.X1 / 255.0, c.Y1 / 255.0, c.X2 / 255.0, c.Y2 / 255.0);
+        PointCollection Line(SetupCurve? c, StickTuning? t) => new(Enumerable.Range(0, 101).Select(i => new Point(i / 100.0 * W, H - At(c, t, i / 100.0) * H)));
+        double fromInner = page ? 0 : fromTuning?.Inner ?? fromCurve?.Inner ?? 0, toInner = page ? 0 : toTuning?.Inner ?? toCurve?.Inner ?? 0;
+        double fromOuter = page ? 100 : fromTuning?.Outer ?? fromCurve?.Outer ?? 100, toOuter = page ? 100 : toTuning?.Outer ?? toCurve?.Outer ?? 100;
         var dead = new Rectangle { Height = H, Width = fromInner / 100 * W, Fill = new SolidColorBrush(Color.FromArgb(46, 232, 54, 79)) };
         var full = new Rectangle { Height = H, Width = (100 - fromOuter) / 100 * W, Fill = new SolidColorBrush(Color.FromArgb(40, 61, 214, 140)) };
         Canvas.SetLeft(full, fromOuter / 100 * W);
@@ -140,12 +145,30 @@ public sealed class AgentTour
             var said = Kit.Text(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"drift {drift.Peak:0.0}%"), 12, "DS.Text", FontWeights.SemiBold);
             Canvas.SetLeft(said, x + 6); Canvas.SetTop(said, H - 40); canvas.Children.Add(said);
         }
-        var was = Points(fromCurve, fromTuning); var now = Points(toCurve, toTuning);
+        var was = Line(fromCurve, fromTuning); var now = Line(toCurve, toTuning);
         canvas.Children.Add(new Polyline { Points = was, Stroke = new SolidColorBrush(Color.FromArgb(120, 200, 215, 240)), StrokeThickness = 2, StrokeDashArray = [3, 3] });
         var line = new Polyline { Points = was, Stroke = DS.Brush("DS.AccentHi"), StrokeThickness = 3.5, StrokeLineJoin = PenLineJoin.Round, Effect = new DropShadowEffect { Color = Color.FromRgb(70, 150, 255), BlurRadius = 14, ShadowDepth = 0, Opacity = .8 } };
         canvas.Children.Add(line);
         // a marker at half a push, riding the curve, with what it gives
-        double fromHalf = PadProcessor.Response(fromCurve, fromTuning, .5) * 100, toHalf = PadProcessor.Response(toCurve, toTuning, .5) * 100;
+        double fromHalf = At(fromCurve, fromTuning, .5) * 100, toHalf = At(toCurve, toTuning, .5) * 100;
+        // the two points, as on the Curves page, with their numbers
+        var knobs = new List<(Ellipse Dot, TextBlock Says)>();
+        void Knobs(SetupCurve? c)
+        {
+            foreach (var (d, s) in knobs) { canvas.Children.Remove(d); canvas.Children.Remove(s); }
+            knobs.Clear();
+            if (!page) return;
+            var pts = c == null ? new[] { (85, 85), (170, 170) } : new[] { (c.X1, c.Y1), (c.X2, c.Y2) };
+            foreach (var (px, py) in pts)
+            {
+                double x = px / 255.0 * W, y = H - py / 255.0 * H;
+                var d = new Ellipse { Width = 16, Height = 16, Fill = Brushes.White, Stroke = DS.Brush("DS.AccentHi"), StrokeThickness = 2 };
+                var s = Kit.Text($"{Math.Round(px / 2.55)}% → {Math.Round(py / 2.55)}%", 12.5, "DS.TextSoft", FontWeights.SemiBold);
+                Canvas.SetLeft(d, x - 8); Canvas.SetTop(d, y - 8); Canvas.SetLeft(s, x + 11); Canvas.SetTop(s, y + 4);
+                canvas.Children.Add(d); canvas.Children.Add(s); knobs.Add((d, s));
+            }
+        }
+        Knobs(fromCurve);
         var dot = new Ellipse { Width = 12, Height = 12, Fill = Brushes.White, Effect = new DropShadowEffect { Color = AgentMark.Ice, BlurRadius = 12, ShadowDepth = 0, Opacity = 1 } };
         var tag = Kit.Text("", 15, "DS.Text", FontWeights.SemiBold);
         void Mark(double half) { Canvas.SetLeft(dot, W / 2 - 6); Canvas.SetTop(dot, H - half / 100 * H - 6); Canvas.SetLeft(tag, W / 2 + 12); Canvas.SetTop(tag, H - half / 100 * H - 22); tag.Text = $"half a push → {half:0}%"; }
@@ -156,6 +179,7 @@ public sealed class AgentTour
         var axisY = Kit.Text("↑ OUTPUT", 12.5, "DS.TextMuted"); Canvas.SetLeft(axisY, 4); Canvas.SetTop(axisY, 2); canvas.Children.Add(axisY);
         play = ms =>
         {
+            Knobs(toCurve);
             line.Points = now; dead.Width = toInner / 100 * W; full.Width = (100 - toOuter) / 100 * W; Canvas.SetLeft(full, toOuter / 100 * W);
             if (ms == 0) { Mark(toHalf); return; }
             var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };

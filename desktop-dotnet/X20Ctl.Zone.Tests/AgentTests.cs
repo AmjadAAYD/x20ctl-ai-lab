@@ -113,7 +113,7 @@ public sealed class AgentTests
         var verdict = ProposalValidator.Check(Reply(Act("stick_curve", "LeftStick", "\"smooth\""), Act("remap", "A", "\"B\""), Act("turbo", "X", "12")), "x20");
         var next = AgentApplier.Apply(new PcModeProfile(), verdict).Next!;
         Assert.Equal("smooth", next.Curves["LeftStick"].Preset);
-        Assert.Equal((142, 142), (next.Curves["LeftStick"].X1, next.Curves["LeftStick"].Y1));
+        Assert.Equal((77, 59), (next.Curves["LeftStick"].X1, next.Curves["LeftStick"].Y1));
         Assert.Equal("B", next.Remap["A"]);
         Assert.Equal(12, next.Turbo["X"]);
         var reset = AgentApplier.Apply(next, ProposalValidator.Check(Reply(Act("reset", "All", "0")), "x20")).Next!;
