@@ -112,12 +112,16 @@ public sealed class AgentPanel
     /// (owner's sketch, 13 Oct), with ideas on the left of its screen and the conversation on the right.</summary>
     public const double DesignWidth = 1400, DesignHeight = 580;
     static readonly Geometry ShellShape = Geometry.Parse("M 140,46 H 1260 C 1350,46 1400,100 1400,180 L 1400,470 C 1400,550 1345,580 1290,580 C 1240,580 1212,552 1196,522 Q 1180,500 1140,500 H 260 Q 220,500 204,522 C 188,552 160,580 110,580 C 55,580 0,550 0,470 L 0,180 C 0,100 50,46 140,46 Z");
-    static readonly Color CapLight = Color.FromRgb(46, 58, 84), CapDark = Color.FromRgb(20, 27, 44), Edge = Color.FromArgb(150, 90, 112, 156);
+    // the controller's own colours (AgentSkin): its caps, edges and the ink printed on its shell
+    readonly AgentSkin skin;
+    Color CapLight => skin.CapLight;
+    Color CapDark => skin.CapDark;
+    Color Edge => skin.Edge;
     const double LeftX = 100, RightX = 1300, EyeY = 165, PadY = 318;
 
     public AgentPanel(string modelId, string controllerName, PcModeLink? link, Action<Button> register, int player = 0, Func<Action<string, int>, IDriftMeter>? meter = null)
     {
-        this.modelId = modelId; this.link = link; this.player = player; this.register = register;
+        this.modelId = modelId; this.link = link; this.player = player; this.register = register; skin = AgentSkin.For(modelId);
         string name = controllerName.Replace("EasySMX ", ""); padName = name;
         // drift is read from the real controller; a review harness can hand in its own reading instead
         session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
@@ -179,15 +183,30 @@ public sealed class AgentPanel
         pad.Children.Add(offlineSwitch); pad.Children.Add(settingsButton);
         var shell = new System.Windows.Shapes.Path
         {
-            Data = ShellShape, StrokeThickness = 1.5, Stroke = new LinearGradientBrush(Color.FromArgb(170, 120, 150, 210), Color.FromArgb(50, 120, 150, 210), 90),
-            Fill = new LinearGradientBrush(new GradientStopCollection { new(Color.FromRgb(30, 39, 60), 0), new(Color.FromRgb(19, 25, 41), .5), new(Color.FromRgb(12, 16, 28), 1) }, 90),
+            Data = ShellShape, StrokeThickness = 1.5, Stroke = new LinearGradientBrush(skin.Stroke, Color.FromArgb(40, skin.Stroke.R, skin.Stroke.G, skin.Stroke.B), 90),
+            Fill = skin.Shell,
             Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 44, ShadowDepth = 12, Opacity = .6 },
         };
         pad.Children.Add(shell); Drag(shell);
+        // the grips in their own colour, and the light strips the real pad has
+        pad.Children.Add(new System.Windows.Shapes.Path
+        {
+            // the shell where the grips are, as one shape (a clip here stopped the whole page drawing)
+            Data = new CombinedGeometry(GeometryCombineMode.Intersect, ShellShape, new GeometryGroup { Children = { new RectangleGeometry(new Rect(0, 430, 214, 160), 60, 60), new RectangleGeometry(new Rect(DesignWidth - 214, 430, 214, 160), 60, 60) } }),
+            Fill = skin.Grip, IsHitTestVisible = false,
+        });
+        if (skin.Strips is { Length: 2 } strips)
+            // they hug the screen (owner, 13 Oct): down each side, round the bottom corner, and along the bottom
+            foreach (var (data, from, to) in new[] { ("M 199,175 L 199,470 Q 199,496 225,496 L 470,496", strips[0], strips[1]), ($"M {DesignWidth - 199},175 L {DesignWidth - 199},470 Q {DesignWidth - 199},496 {DesignWidth - 225},496 L {DesignWidth - 470},496", strips[1], strips[0]) })
+                pad.Children.Add(new System.Windows.Shapes.Path
+                {
+                    Data = Geometry.Parse(data), StrokeThickness = 4, StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, IsHitTestVisible = false,
+                    Stroke = new LinearGradientBrush(from, to, 45), Effect = new DropShadowEffect { Color = from, BlurRadius = 22, ShadowDepth = 0, Opacity = .9 },
+                });
         // grip texture, so the lower corners read as handles
         foreach (var (x, dir) in new[] { (75.0, 1), (DesignWidth - 75, -1) })
             for (int i = 0; i < 4; i++)
-                pad.Children.Add(new System.Windows.Shapes.Line { X1 = x - 22 * dir + i * 12 * dir, Y1 = 498 + i * 8, X2 = x - 8 * dir + i * 12 * dir, Y2 = 534 + i * 8, Stroke = new SolidColorBrush(Color.FromArgb(28, 255, 255, 255)), StrokeThickness = 2, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, IsHitTestVisible = false });
+                pad.Children.Add(new System.Windows.Shapes.Line { X1 = x - 22 * dir + i * 12 * dir, Y1 = 498 + i * 8, X2 = x - 8 * dir + i * 12 * dir, Y2 = 534 + i * 8, Stroke = new SolidColorBrush(skin.GripTop.R + skin.GripTop.G + skin.GripTop.B > 450 ? Color.FromArgb(40, 0, 0, 0) : Color.FromArgb(28, 255, 255, 255)), StrokeThickness = 2, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, IsHitTestVisible = false });
         // the player lights: this player's is lit in the model's state; they chase while it thinks
         for (int i = 0; i < 4; i++)
         {
@@ -289,9 +308,9 @@ public sealed class AgentPanel
         return button;
     }
 
-    static void Legend(Canvas pad, double x, double y, string text)
+    void Legend(Canvas pad, double x, double y, string text)
     {
-        var t = Kit.Text(text, 11.5, "DS.TextMuted").Also(t => { t.TextAlignment = TextAlignment.Center; t.Width = 150; t.TextTrimming = TextTrimming.None; t.IsHitTestVisible = false; });
+        var t = Kit.Text(text, 11.5, "DS.TextMuted").Also(t => { t.Foreground = new SolidColorBrush(skin.Ink); t.TextAlignment = TextAlignment.Center; t.Width = 150; t.TextTrimming = TextTrimming.None; t.IsHitTestVisible = false; });
         Canvas.SetLeft(t, x - 75); Canvas.SetTop(t, y); pad.Children.Add(t);
     }
 
@@ -331,6 +350,12 @@ public sealed class AgentPanel
     {
         var well = new System.Windows.Shapes.Ellipse { Width = 100, Height = 100, Fill = new RadialGradientBrush(Color.FromRgb(5, 8, 16), Color.FromRgb(12, 17, 30)), Stroke = new SolidColorBrush(Edge), StrokeThickness = 1.2, IsHitTestVisible = false };
         Canvas.SetLeft(well, cx - 50); Canvas.SetTop(well, cy - 50); pad.Children.Add(well);
+        if (skin.Rings is { Length: 2 } rings)
+        {
+            var ring = new System.Windows.Shapes.Ellipse { Width = 108, Height = 108, StrokeThickness = 4, IsHitTestVisible = false, Stroke = new LinearGradientBrush(rings[0], rings[1], 45),
+                Effect = new DropShadowEffect { Color = rings[0], BlurRadius = 18, ShadowDepth = 0, Opacity = .85 } };
+            Canvas.SetLeft(ring, cx - 54); Canvas.SetTop(ring, cy - 54); pad.Children.Add(ring);
+        }
         var look = new TranslateTransform(); var lid = new ScaleTransform(1, 1);
         var pupil = new System.Windows.Shapes.Rectangle { Width = 13, Height = 24, RadiusX = 6.5, RadiusY = 6.5, Fill = new SolidColorBrush(AgentMark.Ice), RenderTransformOrigin = new(.5, .5), RenderTransform = lid,
             Effect = new DropShadowEffect { Color = AgentMark.Ice, BlurRadius = 18, ShadowDepth = 0, Opacity = 1 } };
