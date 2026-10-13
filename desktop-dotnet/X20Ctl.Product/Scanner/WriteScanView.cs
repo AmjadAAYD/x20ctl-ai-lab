@@ -56,9 +56,11 @@ public sealed class WriteScanView : Grid
     private readonly TextBox summary = new() { IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 13.5, TextWrapping = TextWrapping.Wrap, VerticalContentAlignment = VerticalAlignment.Top, Padding = new(16), VerticalScrollBarVisibility = ScrollBarVisibility.Auto, BorderThickness = new(0), Background = new SolidColorBrush(Color.FromArgb(70, 0, 0, 0)), Foreground = DS.Brush("DS.Text") };
     private readonly UniformGrid headline = new() { Rows = 1, Margin = new(-8, 0, -8, 14) };
 
-    public WriteScanView(Action close)
+    private readonly ReadReport? read; // the Read scan that came just before, when the player went on from it
+
+    public WriteScanView(Action close, ReadReport? read = null)
     {
-        this.close = close;
+        this.close = close; this.read = read;
         Background = new SolidColorBrush(Color.FromRgb(5, 9, 20)); ClipToBounds = true; AllowDrop = true;
         Children.Add(new FacetBackdrop());
         var page = new Grid { Margin = new(40, 0, 40, 28) }; Children.Add(page);
@@ -96,7 +98,9 @@ public sealed class WriteScanView : Grid
             ("This can take a long time", "Plan on 20 to 40 minutes the first time: turning on a hidden phone setting, one small test, then getting a file from the phone to this PC. A bug report alone can take a few minutes to make."),
             ("You need a phone", "Android or iPhone, with KeyLinker and the controller connected to it by Bluetooth. Both can record Bluetooth: Android takes about five minutes to set up, an iPhone about fifteen."),
             ("X20CTL sends nothing", "X20CTL never talks to the controller here. You change one setting in KeyLinker yourself; the phone's own Bluetooth log records it, and X20CTL only reads that log."),
-            ("Read scan or Write scan?", "The Read scan (Controller not working?) watches what the controller reports to this PC. The Write scan learns what an app writes to the controller, so X20CTL can learn to change it too."),
+            read is null
+                ? ("Read scan or Write scan?", "The Read scan (Controller not working?) watches what the controller reports to this PC. The Write scan learns what an app writes to the controller, so X20CTL can learn to change it too.")
+                : ("Your Read scan comes along", "The Read scan you just finished (" + read.Describe() + ") is added to this report automatically. At the end you review both and press Send online, once."),
         })
             cards.Children.Add(Card(title, text));
         var go = Action("", "I have the time, start", "DS.ActionPrimary"); go.Click += (_, _) => Fx.Leave(warning, () => warning.Visibility = Visibility.Collapsed, 1.02, 200);
@@ -105,7 +109,7 @@ public sealed class WriteScanView : Grid
             Kit.Text("Before you start the " + WriteScanReport.Name, 40, "DS.Text", FontWeights.Bold),
             Wrap("You'll change one setting in KeyLinker while your phone records its Bluetooth traffic. X20CTL then shows which bytes the app sent for that change. One recording teaches one setting.", 17, "DS.TextSoft").Also(t => t.Margin = new(0, 8, 0, 0)),
             cards,
-            Note("Everything stays on this PC. Nothing is uploaded. The findings are saved to Documents\\X20CTLWriteScans only when you press Save, and you choose who to share them with."),
+            Note("Nothing leaves this PC until you press Send online at the end, and you see what goes first. The findings are saved to Documents\\X20CTLWriteScans only when you press Save."),
             new WrapPanel { Margin = new(0, 22, 0, 0), Children = { go, leave.Also(b => b.Margin = new(12, 0, 0, 0)) } } } };
         warning.Child = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
@@ -321,8 +325,8 @@ public sealed class WriteScanView : Grid
         var compare = Action("", "Compare with a second recording", "DS.ActionSecondary"); compare.Click += async (_, _) => await Choose(true);
         compare.ToolTip = "The same test recorded twice, or the same change on a second controller: lists the messages only one recording holds";
         var again = Action("", "Test another setting", "DS.ActionSecondary"); again.Click += (_, _) => { if (unsaved && !closeArmed) { closeArmed = true; resultStatus.Text = "These findings aren't saved. Press again to start over without them."; return; } report = null; log = null; secondText = null; closeArmed = false; unsaved = false; resultStatus.Text = ""; Show(0); };
-        var send = Action("\uE724", "Send to X20CTL", "DS.ActionSecondary"); send.Click += (_, _) => { sendPanel.Visibility = sendPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; };
-        send.ToolTip = "Send these findings to the X20CTL team, so your controller can be supported";
+        var send = Action("\uE724", "Send online", "DS.ActionSecondary"); send.Click += (_, _) => { sendPanel.Visibility = sendPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; };
+        send.ToolTip = read is null ? "Send these findings to the X20CTL team, so your controller can be supported" : "Send these findings and the Read scan report to the X20CTL team in one go";
         BuildSendPanel();
         var actions = new WrapPanel { Children = { save, send.Also(b => b.Margin = new(12, 0, 0, 0)), open.Also(b => b.Margin = new(12, 0, 0, 0)), compare.Also(b => b.Margin = new(12, 0, 0, 0)), again.Also(b => b.Margin = new(12, 0, 0, 0)) } };
         var keep = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 14, 0, 0), Children = { Detach(keepRaw), Kit.Text("Also save a copy of the Bluetooth log (it can hold other devices' names and addresses)", 13.5, "DS.TextSoft").Also(t => t.Margin = new(12, 0, 0, 0)) } };
@@ -344,7 +348,7 @@ public sealed class WriteScanView : Grid
         sendPanel.CornerRadius = new(14); sendPanel.Margin = new(0, 14, 0, 0); sendPanel.Padding = new(18, 14, 18, 14); sendPanel.BorderThickness = new(1);
         sendPanel.BorderBrush = new SolidColorBrush(Color.FromArgb(110, 61, 139, 255)); sendPanel.Background = new SolidColorBrush(Color.FromArgb(40, 61, 139, 255));
         sendPanel.Child = new StackPanel { Children = {
-            Kit.Text("Send these findings to X20CTL", 16.5, "DS.Text", FontWeights.SemiBold),
+            Kit.Text(read is null ? "Send these findings online" : "Send the Write scan and the Read scan online", 16.5, "DS.Text", FontWeights.SemiBold),
             Wrap("What goes to X20CTLADMIN, the X20CTL team's private report site: the summary above, the findings, the timeline and every decoded message (these can include the controller's name and an id). Nothing else from the phone.", 14, "DS.TextSoft").Also(t => t.Margin = new(0, 6, 0, 0)),
             new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 12, 0, 0), Children = { sendTrace, Kit.Text("Also send the Bluetooth data packets: the controller's connection only, around the test, without Bluetooth's own messages (where device names and addresses travel)", 13.5, "DS.Text").Also(t => t.Margin = new(12, 0, 0, 0)) } },
             new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 10, 0, 0), Children = { agree, Kit.Text("I've read the summary above and I'm happy to send it", 13.5, "DS.Text").Also(t => t.Margin = new(12, 0, 0, 0)) } },
@@ -359,7 +363,9 @@ public sealed class WriteScanView : Grid
         sending = true; sendGo!.IsEnabled = false; sendStatus.Text = "Sending to X20CTLADMIN…";
         try
         {
-            var zip = report.ResearchZip(sendTrace.IsChecked == true, ScanFlow.AppVersion, secondText);
+            var attached = read?.Files(X20Ctl.Zone.Capture.WriteScanReport.MaxResearchFileBytes) ?? [];
+            var zip = report.ResearchZip(sendTrace.IsChecked == true, ScanFlow.AppVersion,
+                (secondText ?? "") + (attached.Count > 0 ? $"\nRead scan included: {read!.Describe()} ({attached.Count} files under input/read-scan/)\n" : ""), attached);
             receipt = await WriteScanUpload.Send(zip, report.Plan.Model);
             sendStatus.Text = $"Sent to X20CTLADMIN · receipt {receipt}. Keep the receipt if you want to ask about it.";
         }

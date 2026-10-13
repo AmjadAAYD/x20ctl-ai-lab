@@ -41,6 +41,9 @@ public sealed class ControllerCheckView : Grid
     private readonly DispatcherTimer timer = new(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(20) };
     private WindowsReader? reader; private Evidence evidence = new(); private string? active; private int index;
     private string? lastSaved; private bool dirty, closeArmed, autoPicked;
+    /// <summary>Set by the host: after a finished scan, "Continue to the Write scan" hands this report on.</summary>
+    public Action<ReadReport>? ContinueToWrite { get; set; }
+    private ReadReport? lastRead;
     private int slot; private string library = WindowsReader.Libraries[0];
     private Inventory inventory = new(); private bool inventoryRead;
     private readonly Dictionary<string, string> results = new();
@@ -503,6 +506,9 @@ public sealed class ControllerCheckView : Grid
         evidence.Extra["scan-summary.json"] = JsonSerializer.Serialize(new { findings, battery = new { battery.Item1, battery.Item2 }, bluetoothBattery = bluetooth.Select(b => new { b.Name, b.Percent }), detectedName = detected?.Name, detectedModel = detected?.Model, appVersion = ScanFlow.AppVersion, reportRatesPerSecond = reportRates,
             excludedByDesign = new[] { "RGB lighting (firmware)", "gyro", "turbo (firmware script)" } }, new JsonSerializerOptions(Evidence.Json) { WriteIndented = true });
         bool saved = Save();
+        // the compact report, kept for the Write scan to carry along if the player goes on to it
+        try { lastRead = new ReadReport(ScanFlow.CompactReport(ScanModel, (string)transport.SelectedItem, evidence, inventory, findings), detected?.Name ?? ScanModel, (string)transport.SelectedItem, lastSaved, DateTime.UtcNow); }
+        catch (Exception error) when (error is IOException or InvalidDataException or InvalidOperationException) { lastRead = null; }
         string? receipt = null, failure = null;
         if (sendReport)
         {
@@ -537,6 +543,16 @@ public sealed class ControllerCheckView : Grid
                 Child = new StackPanel { Children = { Kit.Text("Send it on Discord", 18, "DS.Text", FontWeights.SemiBold), Wrap($"Send the report ZIP to @{ScanFlow.Discord} on Discord. It helps add full support for your controller.", 14.5, "DS.TextSoft").Also(t => t.Margin = new(0, 6, 0, 12)), copy } } },
             redo.Also(r => { r.Margin = new(0, 20, 0, 0); r.HorizontalAlignment = HorizontalAlignment.Left; }),
             new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 20, 0, 0), Children = { open, done.Also(d => d.Margin = new(10, 0, 0, 0)) } } } };
+        if (ContinueToWrite != null && lastRead != null)
+        {
+            var report = lastRead;
+            var go = Action("", "Continue to the Write scan", "DS.ActionPrimary"); go.HorizontalAlignment = HorizontalAlignment.Left; go.Margin = new(0, 14, 0, 0);
+            go.Click += (_, _) => ContinueToWrite(report);
+            side.Children.Insert(3, new Border { CornerRadius = new(14), Margin = new(0, 20, 0, 0), Padding = new(18, 16, 18, 16), BorderThickness = new(1),
+                Background = new SolidColorBrush(Color.FromArgb(46, 61, 139, 255)), BorderBrush = new SolidColorBrush(Color.FromArgb(150, 61, 139, 255)),
+                Child = new StackPanel { Children = { Kit.Text("Next: the Write scan", 18, "DS.Text", FontWeights.SemiBold),
+                    Wrap("Learn what KeyLinker writes to this controller. This Read scan report goes along automatically, and you send both online together at the end.", 14.5, "DS.TextSoft").Also(t => t.Margin = new(0, 6, 0, 0)), go } } });
+        }
         var body = new DockPanel { Margin = new(40, 32, 40, 30) };
         DockPanel.SetDock(side, Dock.Right); body.Children.Add(side);
         body.Children.Add(new DockPanel { Children = { new StackPanel { Margin = new(0, 0, 0, 16), Children = { Kit.Text("Scan complete", 40, "DS.Text", FontWeights.Bold), Wrap("Everything X20CTL could read from this controller, and how sure each reading is.", 16, "DS.TextSoft") } }.Also(s => DockPanel.SetDock(s, Dock.Top)),

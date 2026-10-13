@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.1.0-preview.6] - Unreleased
+
+### Added
+
+- **Read scan, Write scan, send online, in one go.** When a Read scan finishes, *Continue to the Write scan* takes you straight on. The Write scan's warning says the Read scan comes along, and at the end *Send online* sends both together as one report. The Read scan's part is the same compact summary it already offered to send (controller names, IDs and results, no personal files). Starting the Write scan from Tools on its own works as before.
+- **The Controller not working? card shows a computer scanning**, with the three steps (Read scan, Write scan, Send online), instead of a controller.
+
+### Changed
+
+- **New controller art for X20 Pro, X10, X15, D10 and Dune (D05)**, from the balanced product photographs. Each stick cap is its own layer with a dark socket left behind, so it really moves and tilts with the stick, and each trigger is lifted off the rear photo. Every button, D-pad arm, trigger and paddle outline was measured again on the new pictures. X20, X05 and X05 Pro keep their art.
+
 ## [4.1.0-preview.5] - 2026-10-12
 
 A pre-release. Everything in [Preview 4](#410-preview4---2026-10-10) is included.
