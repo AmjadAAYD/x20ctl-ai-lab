@@ -83,10 +83,11 @@ public sealed class VibrationVisual : Grid
 
         /// <summary>One of the four separate pieces that light up: a grip pad's loop or a bumper cap, resampled for the
         /// travelling pulse, with its base line built once.</summary>
-        public sealed record Island(Point[] Points, double[] Along, double Length, bool Left, bool Grip, Geometry Line);
+        public sealed record Island(Point[] Points, double[] Along, double Length, bool Left, bool Grip, bool Closed, Geometry Line);
 
-        // owner, 13 Oct 2026: the areas he marked on every model (each grip, and the bumpers on the X20 family), cleaned so
-        // the outer side follows the controller's real edge. Fractions of the 1536 x 1024 photo, so they scale with it.
+        // owner, 13 Oct 2026: the line follows the controller's own outline, never a drawn shape. Each stroke is the stretch
+        // of the photo's silhouette round a grip (and the bumper tops on the X20 Pro and X15), set just inside the edge and
+        // smoothed. Fractions of the 1536 x 1024 photo, so they scale with it.
         public static List<Island> Islands(string model)
         {
             var list = new List<Island>();
@@ -98,13 +99,14 @@ public sealed class VibrationVisual : Grid
                 {
                     var pts = shape.GetProperty("points").EnumerateArray().Select(q => new Point(q[0].GetDouble() * 1536, q[1].GetDouble() * 1024)).ToList();
                     if (pts.Count < 8) continue;
-                    pts.Add(pts[0]); // every outline is a closed loop
+                    bool closed = shape.TryGetProperty("closed", out var cl) && cl.GetBoolean();
+                    if (closed) pts.Add(pts[0]);
                     var a = pts.ToArray(); var along = new double[a.Length];
                     for (int k = 1; k < a.Length; k++) along[k] = along[k - 1] + (a[k] - a[k - 1]).Length;
                     var line = new StreamGeometry();
-                    using (var ctx = line.Open()) { ctx.BeginFigure(a[0], false, true); ctx.PolyLineTo(a.Skip(1).ToList(), true, true); }
+                    using (var ctx = line.Open()) { ctx.BeginFigure(a[0], false, closed); ctx.PolyLineTo(a.Skip(1).ToList(), true, true); }
                     line.Freeze();
-                    list.Add(new Island(a, along, along[^1], shape.GetProperty("side").GetString() == "left", shape.GetProperty("part").GetString() == "grip", line));
+                    list.Add(new Island(a, along, along[^1], shape.GetProperty("side").GetString() == "left", shape.GetProperty("part").GetString() == "grip", closed, line));
                 }
             }
             catch (Exception e) when (e is System.IO.IOException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException) { }
@@ -226,8 +228,8 @@ public sealed class VibrationVisual : Grid
                 double m = part.Left ? left : right; if (m <= 0) continue;
                 double railCore = part.Grip ? 4.5 : 3.5;
                 byte railAlpha = (byte)((.45 + .25 * m) * 255);
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(railAlpha * .22), rail.R, rail.G, rail.B)), railCore + 6) { LineJoin = PenLineJoin.Round }, part.Line);
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb(railAlpha, rail.R, rail.G, rail.B)), railCore) { LineJoin = PenLineJoin.Round }, part.Line);
+                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(railAlpha * .22), rail.R, rail.G, rail.B)), railCore + 6) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Line);
+                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb(railAlpha, rail.R, rail.G, rail.B)), railCore) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, part.Line);
                 double q = .4, period = 2.6 - 1.8 * m, travel = .7 + .25 * m;
                 if (moving)
                 {
@@ -251,11 +253,11 @@ public sealed class VibrationVisual : Grid
         {
             if (q is < 0 or > 1 || weight <= 0) return;
             double envelope = q < .12 ? Math.Sin(q / .12 * Math.PI / 2) : q > .88 ? Math.Sin((1 - q) / .12 * Math.PI / 2) : 1;
-            double span = part.Length * (part.Grip ? .2 : .42), head = part.Length * q;
+            double span = part.Length * (part.Grip ? .2 : .42), head = part.Closed ? part.Length * q : (part.Length + span) * q;
             double core = part.Grip ? 9 : 7, bloom = part.Grip ? 18 : 13;
             for (int i = 0; i + 1 < part.Points.Length; i++)
             {
-                double behind = head - part.Along[i]; if (behind < 0) behind += part.Length; // a loop: the tail wraps past the start
+                double behind = head - part.Along[i]; if (behind < 0) { if (!part.Closed) continue; behind += part.Length; } // a loop: the tail wraps past the start
                 if (behind > span) continue;
                 double x = 1 - behind / span, feather = Math.Pow(Math.Sin(x * Math.PI), .8);
                 double a = envelope * feather * weight * (.6 + .4 * m);
