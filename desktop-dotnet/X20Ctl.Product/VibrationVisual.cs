@@ -282,20 +282,20 @@ public sealed class VibrationVisual : Grid
         private void Pulse(DrawingContext dc, Island part, double q, double m, double weight, double time)
         {
             if (q is < 0 or > 1 || weight <= 0) return;
-            double envelope = q < .12 ? Math.Sin(q / .12 * Math.PI / 2) : q > .88 ? Math.Sin((1 - q) / .12 * Math.PI / 2) : 1;
+            // owner, 14 Oct 2026: the moving light is solid, so the line underneath never shows through it. Its tips taper in
+            // width (never in opacity) down to the line's own width, so it stays covered end to end.
             double span = part.Length * (part.Grip ? .55 : .6), head = part.Closed ? part.Length * q : (part.Length + span) * q;
-            double core = part.Grip ? 7 : 5.5;
+            double core = part.Grip ? 8.5 : 6, rail = part.Grip ? 6.5 : 4.5;
             for (int i = 0; i + 1 < part.Points.Length; i++)
             {
                 double behind = head - part.Along[i]; if (behind < 0) { if (!part.Closed) continue; behind += part.Length; } // a loop: the tail wraps past the start
                 if (behind > span) continue;
-                double x = 1 - behind / span, feather = Math.Pow(Math.Sin(x * Math.PI), .8);
-                double a = envelope * feather * weight * (.6 + .4 * m);
+                double x = 1 - behind / span, taper = Math.Clamp(Math.Min(x, 1 - x) / .12, 0, 1); taper = taper * taper * (3 - 2 * taper);
+                double width = rail + (core - rail) * taper;
                 var c = Rgb(Palette, part.Along[i] / part.Length * .9 + time * .05);
-                // neon tube: a wide haze, a bloom, the coloured core, and a near-white hot centre
-                Neon(dc, c, 75 * a, core * 3, part.Points[i], part.Points[i + 1]);
-                Neon(dc, c, 255 * a, core, part.Points[i], part.Points[i + 1]);
-                Neon(dc, Mix(c, Colors.White, .7), 255 * a, core * .38, part.Points[i], part.Points[i + 1]);
+                Neon(dc, c, 70 * taper * weight * (.6 + .4 * m), width * 2.6, part.Points[i], part.Points[i + 1]);
+                Neon(dc, c, 255, width, part.Points[i], part.Points[i + 1]);
+                Neon(dc, Mix(c, Colors.White, .7), 255, width * .38, part.Points[i], part.Points[i + 1]);
             }
         }        /// <summary>A polyline through <paramref name="count"/> points starting at <paramref name="start"/>, wrapping round the contour.</summary>
         private static StreamGeometry Poly(Point[] points, int start, int count, bool closed)
