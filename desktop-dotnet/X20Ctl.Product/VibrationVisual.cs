@@ -266,7 +266,7 @@ public sealed class VibrationVisual : Grid
         {
             if (q is < 0 or > 1 || weight <= 0) return;
             double envelope = q < .12 ? Math.Sin(q / .12 * Math.PI / 2) : q > .88 ? Math.Sin((1 - q) / .12 * Math.PI / 2) : 1;
-            double span = part.Length * (part.Grip ? .2 : .42), head = part.Closed ? part.Length * q : (part.Length + span) * q;
+            double span = part.Length * (part.Grip ? .55 : .6), head = part.Closed ? part.Length * q : (part.Length + span) * q;
             double core = part.Grip ? 14 : 10;
             for (int i = 0; i + 1 < part.Points.Length; i++)
             {
@@ -298,11 +298,12 @@ public sealed class VibrationVisual : Grid
         /// ends. One geometry per layer, so the glow has no seams or beads.</summary>
         private void EdgeGlow(DrawingContext dc, Island part, double alpha, double width, bool hot)
         {
-            var brush = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = part.Points[0], EndPoint = part.Points[^1] };
-            if (part.Closed) brush.EndPoint = new Point(part.Points[0].X, part.Points.Max(q => q.Y));
+            // the grips run down the outer edge, round the bottom and up the inner edge, so the colours run top to bottom
+            var low = part.Points.MaxBy(q => q.Y);
+            var brush = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = part.Points[0], EndPoint = part.Grip ? low : part.Points[^1] };
             for (int k = 0; k <= 10; k++)
             {
-                double t = k / 10.0, fade = part.Closed ? 1 : Math.Min(1, Math.Min(t, 1 - t) / .14);
+                double t = k / 10.0, fade = part.Closed ? 1 : Math.Min(1, (part.Grip ? t : Math.Min(t, 1 - t)) / .14);
                 var c = Rgb(Palette, t * .9); if (hot) c = Mix(c, Colors.White, .75);
                 brush.GradientStops.Add(new GradientStop(Color.FromArgb((byte)Math.Clamp(alpha * fade * fade * (3 - 2 * fade), 0, 255), c.R, c.G, c.B), t));
             }
