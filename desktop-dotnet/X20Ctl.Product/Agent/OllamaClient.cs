@@ -16,7 +16,7 @@ public enum ModelState { Starting, Loading, Ready, NotInstalled, Missing, Failed
 public sealed class OllamaClient : IAgentModel
 {
     public const string DefaultModel = "qwen3.5:9b";
-    static readonly Uri Server = new("http://127.0.0.1:11434/");
+    internal static readonly Uri Server = new("http://127.0.0.1:11434/");
     static readonly HttpClient http = new() { BaseAddress = Server, Timeout = TimeSpan.FromMinutes(4) };
     public string Name { get; }
     public double Temperature { get; set; } = 0.2;
@@ -93,4 +93,29 @@ public sealed class OllamaClient : IAgentModel
 
     static StringContent Json(JsonNode body) => new(body.ToJsonString(), Encoding.UTF8, "application/json");
     static string? Error(string text) { try { return JsonNode.Parse(text)?["error"]?.GetValue<string>(); } catch (JsonException) { return null; } }
+}
+
+/// <summary>
+/// The docs' embedding model (M5): nomic-embed-text through Ollama's /api/embed, on this PC. It wants its task named at
+/// the start of each text, so passages and questions land in the same space the right way round.
+/// </summary>
+public sealed class OllamaEmbedder : X20Ctl.Zone.Agent.IEmbedder
+{
+    public const string Model = "nomic-embed-text";
+    static readonly HttpClient http = new() { BaseAddress = OllamaClient.Server, Timeout = TimeSpan.FromMinutes(2) };
+
+    public async Task<IReadOnlyList<float[]>> Embed(IReadOnlyList<string> texts, bool questions, CancellationToken cancel)
+    {
+        var all = new List<float[]>();
+        foreach (var batch in texts.Chunk(32))
+        {
+            var body = new JsonObject { ["model"] = Model, ["keep_alive"] = "30m", ["input"] = new JsonArray(batch.Select(t => (JsonNode)((questions ? "search_query: " : "search_document: ") + t)).ToArray()) };
+            using var response = await http.PostAsync("api/embed", new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"), cancel);
+            string text = await response.Content.ReadAsStringAsync(cancel);
+            if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Embedding failed: {text}");
+            using var reply = JsonDocument.Parse(text);
+            all.AddRange(reply.RootElement.GetProperty("embeddings").EnumerateArray().Select(e => e.EnumerateArray().Select(x => x.GetSingle()).ToArray()));
+        }
+        return all;
+    }
 }

@@ -15,7 +15,23 @@ namespace X20Ctl.Product.Development;
 /// </summary>
 internal static class AgentPhrasebook
 {
-    const int Rounds = 2, PerRound = 30;
+    const int Rounds = 3, PerRound = 25;
+    // what a sentence for an intent has to contain, so the slots the agent lifts out are there
+    static string Needs(string id) => id switch
+    {
+        "paddle_set" => "Every sentence names a rear paddle, M1 to M6.",
+        "remap_swap" or "remap_to" => "Every sentence names two buttons (A, B, X, Y, LB, RB, the D-pad, Start, View).",
+        "turbo_on" or "turbo_off" => "Every sentence names one button.",
+        "reset_target" => "Every sentence names one stick, trigger or button.",
+        "reset_all" => "No sentence names a single stick, trigger or button.",
+        "stick_deadzone_set" or "stick_full_at_set" or "trigger_deadzone_set" or "trigger_full_at_set" => "Every sentence has a number.",
+        _ when id.StartsWith("stick_") => "Talk about sticks, aim or the camera; never triggers, buttons or paddles.",
+        _ when id.StartsWith("trigger_") => "Talk about triggers, shooting, throttle or brakes; never sticks, buttons or paddles.",
+        _ => "",
+    };
+    // the requests closest to this one, which its sentences must not drift into
+    static IEnumerable<OfflineIntent> Neighbours(OfflineIntent intent) =>
+        OfflineAgent.Intents.Where(i => i != intent && i.Id.Split('_')[0] == intent.Id.Split('_')[0]);
     const string Schema = """{"type":"object","properties":{"sentences":{"type":"array","items":{"type":"string"}}},"required":["sentences"],"additionalProperties":false}""";
 
     public static async Task Run(string file, IReadOnlySet<string> heldOut)
@@ -40,6 +56,8 @@ internal static class AgentPhrasebook
                         What the owner wants: {intent.Meaning}.
                         Examples: {string.Join(" | ", intent.Seeds)}
                         Write {PerRound} different things a gamer might type to the assistant that mean exactly this and nothing else.
+                        {Needs(intent.Id)} Requests only, never questions.
+                        These are different requests, so no sentence may mean any of them: {string.Join(" | ", Neighbours(intent).Select(i => i.Meaning))}
                         Vary them: short and long, casual and polite, slang, the odd typo, games named, with and without numbers.
                         Where the examples name a stick, trigger, button, paddle or number, use other ones. Don't repeat the examples.
                         {(round > 1 ? "Different wording from these: " + string.Join(" | ", kept.Take(20)) : "")}
@@ -57,7 +75,35 @@ internal static class AgentPhrasebook
             }
             book[intent.Id] = kept.ToArray();
         }
-        File.WriteAllText(file, JsonSerializer.Serialize(book, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }) + "\n", new UTF8Encoding(false));
+        // as Qwen wrote it, then cleaned: the agent embeds the cleaned one; both, and what was dropped, are kept
+        var options = new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        File.WriteAllText(file + ".raw.json", JsonSerializer.Serialize(book, options) + "\n", new UTF8Encoding(false));
+        var (cleaned, dropped) = PhrasebookCleaner.Clean(book);
+        File.WriteAllText(file + ".dropped.json", JsonSerializer.Serialize(dropped, options) + "\n", new UTF8Encoding(false));
+        Note($"cleaned: {cleaned.Values.Sum(v => v.Length)} kept, {dropped.Count} dropped");
+        File.WriteAllText(file, JsonSerializer.Serialize(new SortedDictionary<string, string[]>(cleaned), options) + "\n", new UTF8Encoding(false));
         Note($"done · {book.Values.Sum(v => v.Length)} sentences");
+    }
+}
+
+/// <summary>--agent-phrasebook-clean REPO: both phrasebooks Qwen wrote (docs/agent/phrasebook-raw.json and
+/// phrasebook-v2-raw.json), each cleaned, merged into the one the agent embeds; what was dropped and why goes beside them.</summary>
+internal static class AgentPhrasebookClean
+{
+    public static void Run(string repo)
+    {
+        string docs = Path.Combine(repo, "docs", "agent");
+        var options = new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        var merged = new SortedDictionary<string, List<string>>(); var dropped = new List<object>();
+        foreach (var version in new[] { "phrasebook-raw.json", "phrasebook-v2-raw.json" })
+        {
+            var raw = JsonSerializer.Deserialize<Dictionary<string, string[]>>(File.ReadAllText(Path.Combine(docs, version)))!;
+            var (kept, gone) = PhrasebookCleaner.Clean(raw);
+            foreach (var (intent, sentences) in kept) (merged.TryGetValue(intent, out var list) ? list : merged[intent] = new()).AddRange(sentences);
+            dropped.AddRange(gone.Select(d => new { from = version, d.Intent, d.Sentence, d.Why }));
+        }
+        var book = merged.ToDictionary(e => e.Key, e => e.Value.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+        File.WriteAllText(Path.Combine(repo, "desktop-dotnet", "X20Ctl.Zone", "Agent", "phrasebook.json"), JsonSerializer.Serialize(new SortedDictionary<string, string[]>(book), options) + "\n", new UTF8Encoding(false));
+        File.WriteAllText(Path.Combine(docs, "phrasebook-dropped.json"), JsonSerializer.Serialize(dropped, options) + "\n", new UTF8Encoding(false));
     }
 }

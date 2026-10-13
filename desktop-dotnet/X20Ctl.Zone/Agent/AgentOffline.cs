@@ -24,6 +24,7 @@ public sealed class OfflineSlots
 /// <summary>An intent's answer: actions (action, target, value) and the words around them.</summary>
 public sealed record OfflinePlan(IReadOnlyList<(string Action, string Target, object Value)> Actions, string Speech, string Recap, IReadOnlyList<string> Assumptions)
 {
+    public IReadOnlyList<int> Sources { get; init; } = [];
     public static OfflinePlan Say(string speech, string recap = "") => new([], speech, recap, []);
 }
 
@@ -40,24 +41,34 @@ public sealed class OfflineAgent : IAgentModel
     public string Name => "Offline phrasebook";
     public const double Threshold = 0.3;
     public static readonly OfflineIntent[] Intents = BuildIntents();
-    static readonly Lazy<Index> index = new(() => new Index(Examples()));
+    static readonly Lazy<Index> shared = new(() => new Index(Examples(Phrasebook())));
+    readonly Index index;
+    /// <summary>The agent with the embedded phrasebook.</summary>
+    public OfflineAgent() { index = shared.Value; }
+    /// <summary>The agent with another phrasebook (none: the hand-written examples only), for comparing them.</summary>
+    public OfflineAgent(IReadOnlyDictionary<string, string[]>? phrasebook) { index = new Index(Examples(phrasebook ?? new Dictionary<string, string[]>())); }
 
     public Task<ModelReply> Chat(IReadOnlyList<ChatMessage> messages, string schema, CancellationToken cancel)
     {
         var clock = Stopwatch.StartNew();
         string sentence = messages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
         var plan = Answer(sentence);
+        // nothing matched, or a question about something that isn't a setting: the closest doc passage, if one was given
+        string? docs = messages.LastOrDefault(m => m.Role == "system" && m.Content.StartsWith("From the X20CTL docs", StringComparison.Ordinal))?.Content;
+        if (docs != null && plan.Actions.Count == 0 && (plan.Speech.StartsWith("I didn't catch", StringComparison.Ordinal) || plan.Speech.StartsWith("Ask me about", StringComparison.Ordinal))
+            && Regex.Match(docs, @"^\[1\] (.+?): (.+)$", RegexOptions.Multiline) is { Success: true } top)
+            plan = OfflinePlan.Say($"Here's what the docs say, from {top.Groups[1].Value}.", Sentences(top.Groups[2].Value, 3)) with { Sources = [1] };
         return Task.FromResult(new ModelReply(Json(plan), 0, 0, 0, clock.Elapsed.TotalMilliseconds));
     }
 
     /// <summary>The intent closest to a sentence, and how close (cosine, 0 to 1).</summary>
-    public static (OfflineIntent? Intent, double Score) Classify(string sentence)
+    public (OfflineIntent? Intent, double Score) Classify(string sentence)
     {
-        var (id, score) = index.Value.Nearest(Tokens(sentence));
+        var (id, score) = index.Nearest(Tokens(sentence), Allowed(sentence));
         return (score >= Threshold ? Intents.First(i => i.Id == id) : null, score);
     }
 
-    public static OfflinePlan Answer(string sentence)
+    public OfflinePlan Answer(string sentence)
     {
         // what the app sends back mid-turn: a drift reading, or why the last reply was refused
         if (sentence.StartsWith("The app measured", StringComparison.Ordinal) || sentence.StartsWith("The app couldn't measure", StringComparison.Ordinal)) return Measured(sentence);
@@ -69,9 +80,8 @@ public sealed class OfflineAgent : IAgentModel
         string lower = sentence.ToLowerInvariant();
         if (Regex.IsMatch(lower, @"\b(rgb|leds?|lights?|lighting|colou?rs?|vibration|vibrate|rumble|haptics?|battery|firmware|gyro|motion|volume|sound|mic|microphone|bluetooth)\b"))
             return OfflinePlan.Say("I can't change that yet. I can set sticks, triggers, buttons, turbo, paddles, PC mode, and measure drift.");
-        if (Regex.IsMatch(lower, @"^\s*(hi|hello|hey|help|what can you do|who are you)")) return Intents.First(i => i.Id == "greeting").Build(new OfflineSlots());
-        if (Regex.IsMatch(lower, @"^\s*(what|why|explain|tell me about|is it|does|do i need|should i|which)\b|^\s*how (does|do|is|would)\b(?!.*\b(make|set|change|get|fix|turn)\b)"))
-            return Question(lower);
+        if (Regex.IsMatch(lower, @"^\s*(hi|hello|hey|help|what can you do|who are you)\W*$")) return Intents.First(i => i.Id == "greeting").Build(new OfflineSlots());
+        if (IsQuestion(lower)) return Question(lower);
 
         // several requests in one sentence: each part on its own, when each part is clearly a different request
         var parts = Regex.Split(sentence, @"\s*(?:,|;|\band then\b|\bthen\b|\balso\b|\band\b|\bplus\b)\s*", RegexOptions.IgnoreCase).Where(p => p.Trim().Length > 0).ToList();
@@ -86,6 +96,27 @@ public sealed class OfflineAgent : IAgentModel
         var (intent, _) = Classify(sentence);
         return intent == null ? NotUnderstood() : intent.Build(Slots(sentence));
     }
+
+    static string Sentences(string text, int count) => string.Join(" ", Regex.Split(text.Trim(), @"(?<=[.!?])\s+").Take(count));
+
+    /// <summary>
+    /// What the sentence's own words rule out, before any matching: a sentence that names a stick and no trigger isn't a
+    /// trigger request (and the other way round), and switching something off needs a word that says off.
+    /// </summary>
+    public static Func<string, bool> Allowed(string sentence)
+    {
+        string lower = " " + sentence.ToLowerInvariant() + " ";
+        bool stick = Regex.IsMatch(lower, @"\b(sticks?|analogs?|thumb ?sticks?|joysticks?|ls|rs|aim|aiming|camera|crosshair)\b");
+        bool trigger = Regex.IsMatch(lower, @"\b(triggers?|lt|rt|l2|r2|throttle|brakes?|gas|pedals?)\b");
+        bool off = Regex.IsMatch(lower, @"\b(off|stop|disable|kill|remove|no more|get rid|turn it off|without)\b");
+        return id =>
+            !(id.StartsWith("trigger_") && stick && !trigger) && !(id.StartsWith("stick_") && trigger && !stick)
+            && !(id.EndsWith("_off") && !off) && !(id.EndsWith("_on") && off);
+    }
+
+    /// <summary>A question about a setting, answered with its meaning rather than a change.</summary>
+    public static bool IsQuestion(string lower) =>
+        Regex.IsMatch(lower, @"^\s*(what|why|explain|tell me about|is it|does|do i need|should i|which)\b|^\s*how (does|do|is|would)\b(?!.*\b(make|set|change|get|fix|turn)\b)");
 
     static OfflinePlan NotUnderstood() => OfflinePlan.Say("I didn't catch that. Offline I understand things like \"make my sticks smooth\", \"hair triggers\", \"turbo on X at 12\", \"swap A and B\", \"my right stick drifts\" or \"turn PC mode on\".");
 
@@ -150,6 +181,8 @@ public sealed class OfflineAgent : IAgentModel
         t = Regex.Replace(t, @"\b(m[1-6]|p[1-6]|paddle\s*[1-6])\b", " PADDLE ");
         t = Regex.Replace(t, @"\b(lb|rb|l1|r1|l3|r3)\b|(?<![\w'])[bxy](?![\w'])|(?<![\w'])a(?= button\b)|(?<=\b(?:swap|on|to|as|onto|with|and)\s)a(?=\s*(?:$|[,.?!]|\band\b|\bbutton\b|\bat\b|\d))", " BTN ");
         t = Regex.Replace(t, @"(?<![a-z\d.])\d+(?:\.\d+)?\s*(%|percent)?", " NUM ");
+        t = Regex.Replace(t, @"\b(sticks?|analogs?|thumb ?sticks?|joysticks?)\b", " STICK ");
+        t = Regex.Replace(t, @"\btriggers?\b", " TRIGGER ");
         t = t.Replace("dead zone", "deadzone").Replace("dead-zone", "deadzone").Replace("anti deadzone", "antideadzone").Replace("anti-deadzone", "antideadzone").Replace("pc mode", "pcmode").Replace("full speed", "fullspeed");
         var words = Regex.Matches(t, @"[A-Za-z']+").Select(m => m.Value).Where(w => !Stop.Contains(w)).Select(Stem).ToList();
         var tokens = new List<string>(words);
@@ -166,7 +199,7 @@ public sealed class OfflineAgent : IAgentModel
         return w;
     }
 
-    sealed class Index
+    internal sealed class Index
     {
         readonly List<(string Intent, double Weight, Dictionary<string, double> Vector)> rows = new();
         const int Neighbours = 7;
@@ -185,17 +218,22 @@ public sealed class OfflineAgent : IAgentModel
             if (norm > 0) foreach (var k in v.Keys.ToList()) v[k] /= norm;
             return v;
         }
-        public (string Intent, double Score) Nearest(List<string> tokens)
+        public (string Intent, double Score) Nearest(List<string> tokens, Func<string, bool>? allowed = null)
         {
             var q = Vector(tokens);
             if (q.Count == 0) return ("", 0);
             // the closest examples vote, weighted by how close they are (hand-written ones count more): one stray
             // paraphrase can't decide alone. The score is the winner's closest example.
-            var near = rows.Select(r => (r.Intent, r.Weight, Sim: Dot(q, r.Vector))).Where(r => r.Sim > 0).OrderByDescending(r => r.Sim).Take(Neighbours).ToList();
+            var near = rows.Where(r => allowed == null || allowed(r.Intent)).Select(r => (r.Intent, r.Weight, Sim: Dot(q, r.Vector))).Where(r => r.Sim > 0).OrderByDescending(r => r.Sim).Take(Neighbours).ToList();
             if (near.Count == 0) return ("", 0);
             var winner = near.GroupBy(r => r.Intent).OrderByDescending(g => g.Sum(r => r.Sim * r.Weight)).First();
             return (winner.Key, winner.Max(r => r.Sim));
         }
+        public int Count => rows.Count;
+        /// <summary>How the nearest examples vote for one row's sentence with that row left out (for cleaning).</summary>
+        public Dictionary<string, double> VotesWithout(int row) =>
+            rows.Select((r, i) => (r.Intent, r.Weight, Sim: i == row ? 0 : Dot(rows[row].Vector, r.Vector))).Where(r => r.Sim > 0).OrderByDescending(r => r.Sim).Take(Neighbours)
+                .GroupBy(r => r.Intent).ToDictionary(g => g.Key, g => g.Sum(r => r.Sim * r.Weight));
         static double Dot(Dictionary<string, double> q, Dictionary<string, double> v)
         {
             double dot = 0; foreach (var (k, x) in q) if (v.TryGetValue(k, out var y)) dot += x * y;
@@ -205,10 +243,10 @@ public sealed class OfflineAgent : IAgentModel
 
     /// <summary>The hand-written examples plus the phrasebook Qwen wrote from them (an embedded file).</summary>
     public const double SeedWeight = 2;
-    public static IReadOnlyList<(string Intent, string Sentence, double Weight)> Examples()
+    public static IReadOnlyList<(string Intent, string Sentence, double Weight)> Examples(IReadOnlyDictionary<string, string[]> phrasebook)
     {
         var all = Intents.SelectMany(i => i.Seeds.Select(s => (i.Id, s, SeedWeight))).ToList();
-        foreach (var (intent, sentences) in Phrasebook()) if (Intents.Any(i => i.Id == intent)) all.AddRange(sentences.Select(s => (intent, s, 1.0)));
+        foreach (var (intent, sentences) in phrasebook) if (Intents.Any(i => i.Id == intent)) all.AddRange(sentences.Select(s => (intent, s, 1.0)));
         return all;
     }
     public static IReadOnlyDictionary<string, string[]> Phrasebook()
@@ -318,6 +356,7 @@ public sealed class OfflineAgent : IAgentModel
             w.WriteEndArray();
             w.WriteString("recap", plan.Recap);
             w.WriteStartArray("assumptions"); foreach (var a in plan.Assumptions) w.WriteStringValue(a); w.WriteEndArray();
+            w.WriteStartArray("sources"); foreach (var n in plan.Sources) w.WriteNumberValue(n); w.WriteEndArray();
             w.WriteEndObject();
         }
         return Encoding.UTF8.GetString(buffer.ToArray());

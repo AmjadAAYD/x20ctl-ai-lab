@@ -34,7 +34,7 @@ public sealed record BenchRun(BenchVariant Variant, BenchCase Case, int Run, boo
     public static BenchRun Of(BenchVariant variant, BenchCase c, int run, AgentTurn turn)
     {
         var first = turn.Attempts[0];
-        var firstVerdict = ProposalValidator.Check(first.Content, c.ModelId);
+        var firstVerdict = ProposalValidator.Check(first.Content, c.ModelId, offered: turn.Docs.Count);
         return new(variant, c, run, AgentBench.IsJson(first.Content), firstVerdict.StructureError == null, firstVerdict.Valid, turn.Verdict.Valid, AgentBench.Matches(c, turn.Verdict) && (!AgentBench.DriftCases.Contains(c) || turn.Measured is { Problem: null }),
             turn.Attempts.Count, turn.Attempts.Sum(a => a.TotalMs), turn.Attempts.Sum(a => a.OutputTokens), turn.Attempts.Sum(a => a.PromptTokens), first.Content);
     }
@@ -95,6 +95,73 @@ public static class AgentBench
         new("change the lights to blue", "x20_pro"),
         new("set the right stick dead zone to 75", "x20_pro"),
         new("What does the anti dead zone do?", "x20_pro"),
+        // added 13 Oct, before the phrasebook was cleaned or regenerated
+        new("i keep missing my shots at range in warzone", "x20_pro", ["stick_curve:RightStick=slow"]),
+        new("aim is way too jumpy", "x20_pro", ["stick_curve:RightStick=slow"]),
+        new("i want butter smooth analogs", "x20_pro", ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),
+        new("turning feels slow, speed it up", "x20_pro", ["stick_curve:RightStick=quick", "stick_curve:LeftStick=quick"]),
+        new("put my right stick on the fine curve", "x20_pro", ["stick_curve:RightStick=fine"]),
+        new("my guy keeps walking forward on his own", "x20_pro", ["stick_deadzone:LeftStick"]),
+        new("is my controller drifting? check it", "x20_pro", ["stick_deadzone:LeftStick", "stick_deadzone:RightStick"]),
+        new("ghost inputs on my right analog", "x20_pro", ["stick_deadzone:RightStick"]),
+        new("right stick deadzone 4 percent", "x20_pro", ["stick_deadzone:RightStick=4"]),
+        new("get rid of the deadzone on my left stick", "x20_pro", ["stick_deadzone:LeftStick=0"]),
+        new("left stick max speed at 90", "x20_pro", ["stick_full_at:LeftStick=90"]),
+        new("tiny aim adjustments don't register in apex", "x20_pro", ["stick_anti_deadzone:RightStick", "stick_anti_deadzone:LeftStick"]),
+        new("shorter trigger pull for halo", "x20_pro", ["trigger_full_at:RightTrigger", "trigger_deadzone:RightTrigger"]),
+        new("make my right trigger super sensitive", "x20_pro", ["trigger_full_at:RightTrigger", "trigger_deadzone:RightTrigger"]),
+        new("gas pedal feels on off, make it gradual", "x20_pro", ["trigger_curve:RightTrigger=slow", "trigger_curve:LeftTrigger=slow"]),
+        new("left trigger dead zone 6", "x20_pro", ["trigger_deadzone:LeftTrigger=6"]),
+        new("no deadzone on the triggers at all", "x20_pro", ["trigger_deadzone:LeftTrigger=0"], ["trigger_deadzone:RightTrigger=0"]),
+        new("right trigger full press at 35", "x20_pro", ["trigger_full_at:RightTrigger=35"]),
+        new("quick curve on my right trigger", "x20_pro", ["trigger_curve:RightTrigger=quick"]),
+        new("spam A for me", "x20_pro", ["turbo:A"]),
+        new("turbo on LB 20 per second", "x20_pro", ["turbo:LB=20"]),
+        new("kill the turbo on A", "x20_pro", ["turbo:A=0", "reset:A"]),
+        new("switch around A and X", "x20_pro", ["remap:A=X"], ["remap:X=A"]),
+        new("can you swap the bumpers", "x20_pro", ["remap:LB=RB"], ["remap:RB=LB"]),
+        new("make Y work as X", "x20_pro", ["remap:Y=X"]),
+        new("map B onto A", "x20_pro", ["remap:B=A"]),
+        new("put jump on my back paddle M3", "x20_pro", ["paddle:M3=A"]),
+        new("M4 should be B", "x20_pro", ["paddle:M4=B"]),
+        new("reset the right trigger to normal", "x20_pro", ["reset:RightTrigger"]),
+        new("undo all my changes", "x20_pro", ["reset:All"]),
+        new("wipe every setting", "x20_pro", ["reset:All"]),
+        new("pc mode on", "x20_pro", ["pc_mode:PcMode=on"]),
+        new("games don't see my settings", "x20_pro", ["pc_mode:PcMode=on"]),
+        new("turn pc mode off please", "x20_pro", ["pc_mode:PcMode=off"]),
+        new("make my sticks smooth and turn on pc mode", "x20_pro", ["stick_curve:LeftStick=smooth"], ["pc_mode:PcMode=on"]),
+        new("can you make my rumble weaker", "x20_pro"),
+        new("set the right stick full speed to 40", "x20_pro"),
+        new("turbo on X at 90 a second", "x20_pro"),
+        new("why would i lower full at on a trigger?", "x20_pro"),
+        new("what's the point of a stick curve", "x20_pro"),
+    ];
+
+    /// <summary>Offline mode's final test (13 Oct): written after the matcher and the phrasebook were chosen on
+    /// <see cref="OfflineHeldOut"/> (which, once looked at, became the development set), and scored once.</summary>
+    public static readonly BenchCase[] OfflineFinal =
+    [
+        new("my right analog creeps upward when i let go", "x20_pro", ["stick_deadzone:RightStick"]),
+        new("help me hit headshots from far away", "x20_pro", ["stick_curve:RightStick=slow"]),
+        new("sticks feel jerky, smooth them", "x20_pro", ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),
+        new("make the right stick snappier", "x20_pro", ["stick_curve:RightStick=quick"]),
+        new("left stick dead zone at 5", "x20_pro", ["stick_deadzone:LeftStick=5"]),
+        new("right stick should hit max at 80", "x20_pro", ["stick_full_at:RightStick=80"]),
+        new("i want instant triggers for valorant", "x20_pro", ["trigger_full_at:RightTrigger", "trigger_deadzone:RightTrigger"]),
+        new("smoother braking in gran turismo", "x20_pro", ["trigger_curve:LeftTrigger=slow", "trigger_curve:RightTrigger=slow"]),
+        new("set the left trigger dead zone to 4", "x20_pro", ["trigger_deadzone:LeftTrigger=4"]),
+        new("rapid fire on RB at 15", "x20_pro", ["turbo:RB=15"]),
+        new("stop turbo on Y", "x20_pro", ["turbo:Y=0", "reset:Y"]),
+        new("swap Y and B", "x20_pro", ["remap:Y=B"], ["remap:B=Y"]),
+        new("make LB send X", "x20_pro", ["remap:LB=X"]),
+        new("put jump on paddle M6", "x20_pro", ["paddle:M6=A"]),
+        new("reset the B button", "x20_pro", ["reset:B"]),
+        new("set everything back to how it was", "x20_pro", ["reset:All"]),
+        new("enable pc mode", "x20_pro", ["pc_mode:PcMode=on"]),
+        new("disable pc mode", "x20_pro", ["pc_mode:PcMode=off"]),
+        new("change the led colour", "x20_pro"),
+        new("left trigger full at 5", "x20_pro"),
     ];
 
     public static readonly BenchCase[] Cases =

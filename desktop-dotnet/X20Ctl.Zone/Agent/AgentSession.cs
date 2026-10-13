@@ -17,8 +17,12 @@ public interface IAgentModel
 
 /// <summary>One sentence handled end to end: every model attempt (a malformed first one is kept, not hidden), the verdict
 /// on the last, and the outcome it leads to.</summary>
-public sealed record AgentTurn(string Sentence, IReadOnlyList<ModelReply> Attempts, AgentVerdict Verdict, AgentOutcome Outcome, DriftReport? Measured = null)
+public sealed record AgentTurn(string Sentence, IReadOnlyList<ModelReply> Attempts, AgentVerdict Verdict, AgentOutcome Outcome, DriftReport? Measured = null, IReadOnlyList<DocHit>? Offered = null)
 {
+    /// <summary>The doc passages the model was given this turn, numbered from 1.</summary>
+    public IReadOnlyList<DocHit> Docs => Offered ?? [];
+    /// <summary>The passages the answer cites.</summary>
+    public IEnumerable<DocHit> Cited => (Verdict.Proposal?.Sources ?? []).Where(n => n >= 1 && n <= Docs.Count).Select(n => Docs[n - 1]);
     public ModelReply Reply => Attempts[^1];
 }
 
@@ -34,14 +38,20 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     public string SystemPromptOverride { get; set; } = "";
     /// <summary>Reads the real sticks when the model asks to measure drift. None: the model is told it can't measure.</summary>
     public IDriftMeter? Meter { get; set; }
+    /// <summary>Finds the doc passages closest to the sentence (M5). None: no docs are offered.</summary>
+    public IDocSearch? Docs { get; set; }
+    public const int DocCount = 3;
 
     public async Task<AgentTurn> Ask(string sentence, PcModeProfile current, CancellationToken cancel = default)
     {
         var messages = new List<ChatMessage> { new("system", SystemPrompt(current)) };
         messages.AddRange(history.TakeLast(Remembered));
+        // the docs: only passages close enough to be about this sentence, numbered for citing
+        var offered = Docs == null ? [] : (await Docs.Search(sentence, DocCount, cancel)).Where(h => h.Score >= Docs.Enough).ToList();
+        if (offered.Count > 0) messages.Add(new("system", AgentDocs.Prompt(offered)));
         messages.Add(new("user", sentence));
         var attempts = new List<ModelReply>();
-        var verdict = await Answer(messages, attempts, null, cancel);
+        var verdict = await Answer(messages, attempts, null, offered.Count, cancel);
         // a reading first: the model asked to measure, so the app measures the real sticks and the model answers again
         // with the numbers. Once per turn; the dead zone it then picks is checked against what was measured
         DriftReport? measured = null;
@@ -51,25 +61,25 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             messages.Add(new("assistant", attempts[^1].Content));
             messages.Add(new("user", (measured.Problem == null ? "The app measured, with no hand on the sticks: " : "The app couldn't measure: ") + measured.Describe() +
                 " Now answer with the changes (no measure_drift this time), and explain the numbers in the recap."));
-            verdict = await Answer(messages, attempts, measured, cancel);
+            verdict = await Answer(messages, attempts, measured, offered.Count, cancel);
         }
         var outcome = AgentApplier.Apply(current, verdict);
         history.Add(new("user", sentence));
         history.Add(new("assistant", verdict.Proposal?.Speech ?? "(no usable reply)"));
-        return new(sentence, attempts, verdict, outcome, measured);
+        return new(sentence, attempts, verdict, outcome, measured, offered);
     }
 
     /// <summary>One reply, checked; with one second chance: the model sees exactly what the validator objected to and
     /// answers again. Every attempt is kept and shown; if the second is still wrong, it stands, and nothing changes.</summary>
-    async Task<AgentVerdict> Answer(List<ChatMessage> messages, List<ModelReply> attempts, DriftReport? measured, CancellationToken cancel)
+    async Task<AgentVerdict> Answer(List<ChatMessage> messages, List<ModelReply> attempts, DriftReport? measured, int offered, CancellationToken cancel)
     {
         attempts.Add(await model.Chat(messages, SchemaText, cancel));
-        var verdict = ProposalValidator.Check(attempts[^1].Content, modelId, measured);
+        var verdict = ProposalValidator.Check(attempts[^1].Content, modelId, measured, offered);
         if (verdict.Valid) return verdict;
         messages.Add(new("assistant", attempts[^1].Content));
         messages.Add(new("user", "The app rejected that reply, so nothing changed: " + Problems(verdict) + " Answer again with only the JSON object. If what I asked isn't possible, say so with no actions."));
         attempts.Add(await model.Chat(messages, SchemaText, cancel));
-        return ProposalValidator.Check(attempts[^1].Content, modelId, measured);
+        return ProposalValidator.Check(attempts[^1].Content, modelId, measured, offered);
     }
 
     public void Forget() => history.Clear();
@@ -90,6 +100,9 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - "actions": the changes, empty when nothing should change.
             - "recap": why these changes fit what the owner asked, from the meanings below: what each change does, what it is good for, and what to watch out for. Two to four short sentences, with the real numbers. When the owner asks a question instead (what is good or bad, what something does), answer it here, with no actions.
             - "assumptions": anything you guessed, such as which button a game uses to jump.
+            - "sources": the numbers of the doc passages your recap used, or empty.
+
+            Docs: when passages from the X20CTL docs are given, and the owner asks how the app works, where something is, or what to do when something fails, answer in the recap from those passages only and put their numbers in "sources". If they don't answer it, say you can't confirm that from the docs. When no passages are given and the owner asks about the app or the controller beyond the settings above (prices, other consoles, battery life, hardware facts), say you can't confirm that from the docs. Never cite a number you weren't given; never make up app features or facts.
 
             Actions (action, target, value):
             - stick_deadzone: LeftStick or RightStick, percent 0-40. How much of the centre is ignored. Drift or a stick that moves by itself: raise it a little.
@@ -165,8 +178,9 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
                 ["actions"] = new JsonObject { ["type"] = "array", ["items"] = action, ["maxItems"] = AgentVocabulary.MaxActions },
                 ["recap"] = new JsonObject { ["type"] = "string" },
                 ["assumptions"] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } },
+                ["sources"] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "integer" } },
             },
-            ["required"] = new JsonArray("speech", "actions", "recap", "assumptions"),
+            ["required"] = new JsonArray("speech", "actions", "recap", "assumptions", "sources"),
             ["additionalProperties"] = false,
         };
         return root.ToJsonString();

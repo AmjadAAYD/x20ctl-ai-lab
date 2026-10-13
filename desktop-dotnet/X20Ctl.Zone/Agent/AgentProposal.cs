@@ -34,8 +34,9 @@ public sealed record AgentAction(string Action, string Target, JsonElement Value
     public string ValueText => Value.ValueKind == JsonValueKind.String ? Value.GetString() ?? "" : Value.GetRawText();
 }
 /// <summary>Speech: what the agent says, short. Recap: why the changes fit what was asked (or the answer to a question), from
-/// the settings' meanings in <see cref="AgentKnowledge"/>.</summary>
-public sealed record AgentProposal(string Speech, IReadOnlyList<AgentAction> Actions, string Recap, IReadOnlyList<string> Assumptions);
+/// the settings' meanings in <see cref="AgentKnowledge"/>.
+/// Sources: the numbers of the doc passages the recap was taken from (M5), empty when none were used.</summary>
+public sealed record AgentProposal(string Speech, IReadOnlyList<AgentAction> Actions, string Recap, IReadOnlyList<string> Assumptions, IReadOnlyList<int> Sources);
 
 public enum CheckState { Ok, Rejected, Unavailable }
 public sealed record ActionCheck(AgentAction Action, CheckState State, string Message);
@@ -59,11 +60,15 @@ public static class ProposalValidator
 
     /// <param name="measured">What the app measured earlier in this turn, if anything: a dead zone below a stick's measured
     /// drift is then rejected, because it would let the drift through.</param>
-    public static AgentVerdict Check(string json, string modelId, DriftReport? measured = null)
+    /// <param name="offered">How many doc passages the model was given this turn: citing any other number is a made-up
+    /// source, and the reply is refused.</param>
+    public static AgentVerdict Check(string json, string modelId, DriftReport? measured = null, int offered = 0)
     {
         AgentProposal proposal;
         try { proposal = Parse(json); }
         catch (Exception error) when (error is JsonException or InvalidDataException) { return new(null, error is JsonException ? "Not valid JSON." : error.Message, []); }
+        var made = proposal.Sources.Where(n => n < 1 || n > offered).ToList();
+        if (made.Count > 0) return new(proposal, offered == 0 ? $"Cites source [{made[0]}], but no doc passages were given." : $"Cites source [{made[0]}], but only [1] to [{offered}] were given.", []);
         var checks = new List<ActionCheck>();
         for (int i = 0; i < proposal.Actions.Count; i++)
         {
@@ -81,7 +86,7 @@ public static class ProposalValidator
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         if (root.ValueKind != JsonValueKind.Object) throw new InvalidDataException("The reply isn't a JSON object.");
-        Only(root, Fields, "reply");
+        Only(root, Fields, "reply", optional: "sources");
         string speech = Text(root, "speech", "reply");
         if (!root.TryGetProperty("actions", out var list) || list.ValueKind != JsonValueKind.Array) throw new InvalidDataException("\"actions\" is missing or not a list.");
         if (list.GetArrayLength() > AgentVocabulary.MaxActions) throw new InvalidDataException($"More than {AgentVocabulary.MaxActions} actions.");
@@ -96,13 +101,19 @@ public static class ProposalValidator
         if (!root.TryGetProperty("assumptions", out var assumed) || assumed.ValueKind != JsonValueKind.Array || assumed.EnumerateArray().Any(a => a.ValueKind != JsonValueKind.String))
             throw new InvalidDataException("\"assumptions\" is missing or not a list of text.");
         string recap = Text(root, "recap", "reply");
-        return new(speech, actions, recap, assumed.EnumerateArray().Select(a => a.GetString()!).ToArray());
+        var sources = new List<int>();
+        if (root.TryGetProperty("sources", out var cited))
+        {
+            if (cited.ValueKind != JsonValueKind.Array || cited.EnumerateArray().Any(n => n.ValueKind != JsonValueKind.Number || !n.TryGetInt32(out _))) throw new InvalidDataException("\"sources\" is not a list of whole numbers.");
+            sources.AddRange(cited.EnumerateArray().Select(n => n.GetInt32()).Distinct());
+        }
+        return new(speech, actions, recap, assumed.EnumerateArray().Select(a => a.GetString()!).ToArray(), sources);
     }
 
-    static void Only(JsonElement element, string[] fields, string what)
+    static void Only(JsonElement element, string[] fields, string what, string? optional = null)
     {
         foreach (var property in element.EnumerateObject())
-            if (!fields.Contains(property.Name)) throw new InvalidDataException($"Unknown field \"{property.Name}\" in the {what}.");
+            if (!fields.Contains(property.Name) && property.Name != optional) throw new InvalidDataException($"Unknown field \"{property.Name}\" in the {what}.");
         foreach (var field in fields)
             if (!element.TryGetProperty(field, out _)) throw new InvalidDataException($"The {what} has no \"{field}\".");
     }

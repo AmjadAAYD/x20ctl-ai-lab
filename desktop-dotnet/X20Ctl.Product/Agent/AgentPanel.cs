@@ -27,6 +27,24 @@ public sealed class AgentPanel
     static bool offlineChosen;
     public static bool Offline => offlineChosen || state is ModelState.NotInstalled or ModelState.Missing or ModelState.Failed;
     /// <summary>Asks whichever agent is in use now, so the switch works mid-conversation.</summary>
+    // the docs (M5): searched by meaning with the embedding model, or by words offline or when it can't be reached
+    static readonly Lazy<IReadOnlyList<DocChunk>> docs = new(() => AgentDocs.Load(Path.Combine(AppContext.BaseDirectory, "Help")));
+    static readonly Lazy<KeywordSearch> keywords = new(() => new KeywordSearch(docs.Value));
+    static readonly Lazy<EmbeddingSearch> meanings = new(() => new EmbeddingSearch(docs.Value, new OllamaEmbedder(),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "x20ctl", "agent", "doc-embeddings.json")));
+    sealed class EitherDocs : IDocSearch
+    {
+        bool fellBack;
+        IDocSearch Now => Offline || fellBack ? keywords.Value : meanings.Value;
+        public string Method => Now.Method;
+        public double Enough => Now.Enough;
+        public async Task<IReadOnlyList<DocHit>> Search(string question, int count, CancellationToken cancel)
+        {
+            if (Offline || fellBack) return await keywords.Value.Search(question, count, cancel);
+            try { return await meanings.Value.Search(question, count, cancel); }
+            catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { fellBack = true; return await keywords.Value.Search(question, count, cancel); }
+        }
+    }
     sealed class Either : IAgentModel
     {
         public string Name => Offline ? offlineAgent.Name : model.Name;
@@ -70,8 +88,8 @@ public sealed class AgentPanel
         this.modelId = modelId; this.link = link;
         string name = controllerName.Replace("EasySMX ", "");
         // drift is read from the real controller; a review harness can hand in its own reading instead
-        session = new AgentSession(new Either(), modelId, name) { Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
-        greeting = "Agent XCTL, in your " + name + ". Tell me how you play, or what feels wrong, and I'll set myself up.";
+        session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
+        greeting = "Agent XCTL, in your " + name + ". Tell me how you play, or what feels wrong, and I'll set myself up. Don't know what to say? Say HELP.";
 
         // title bar: the mark, the name, the model's state; drag it to move the window
         var mark = new Grid { Width = 40, Height = 40, Margin = new(0, 0, 12, 0), Children = { new System.Windows.Shapes.Ellipse { Fill = AgentMark.Field() }, AgentMark.Glyph(26) } };
@@ -105,7 +123,9 @@ public sealed class AgentPanel
             var chip = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 30, MinHeight = 0, Padding = new(12, 0, 12, 0), Margin = new(0, 0, 6, 6), Content = Kit.Text(s, 13, "DS.TextSoft") };
             chip.Click += (_, _) => { Input.Text = s; Send(); }; register(chip); chips.Children.Add(chip);
         }
-        var bottom = new StackPanel { Children = { chips, row } };
+        var hint = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 28, MinHeight = 0, Padding = new(12, 0, 12, 0), Margin = new(0, 2, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, Content = Kit.Text(AgentHelp.Hint, 13, "DS.AccentHi") };
+        hint.Click += (_, _) => { Input.Text = "HELP"; Send(); }; register(hint);
+        var bottom = new StackPanel { Children = { chips, hint, row } };
 
         scroller = new ScrollViewer { Content = transcript, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         var layout = new DockPanel();
@@ -196,6 +216,8 @@ public sealed class AgentPanel
     public async Task<AgentTurn?> Ask(string sentence)
     {
         if (busy) return null;
+        // the help list is the app's own answer: instant, the same online and offline
+        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); ShowHelp(); return null; }
         if (!Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); return null; }
         busy = true; ShowState(); Thinking?.Invoke(true); chips.Visibility = Visibility.Collapsed;
         Bubble(sentence, mine: true);
@@ -225,6 +247,23 @@ public sealed class AgentPanel
             return null;
         }
         finally { busy = false; if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } ShowState(); Thinking?.Invoke(false); Input.Focus(); }
+    }
+
+    // ---- HELP: situations, each with the sentence to say; a click says it ----
+    void ShowHelp()
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(Wrap("Have this? Say this!", 16, "DS.Text").Also(t => t.FontWeight = FontWeights.SemiBold));
+        stack.Children.Add(Wrap("Click a sentence to send it, or say it your own way.", 13.5, "DS.TextMuted", 2));
+        foreach (var h in AgentHelp.Situations)
+        {
+            var say = new Button { Style = DS.Style("DS.ActionSecondary"), MinHeight = 0, Padding = new(10, 5, 10, 5), Margin = new(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left,
+                Content = Wrap("“" + h.Say + "”", 14, "DS.AccentHi") };
+            string sentence = h.Say;
+            say.Click += (_, _) => { if (!busy) { Input.Text = sentence; Send(); } };
+            stack.Children.Add(new StackPanel { Margin = new(0, 10, 0, 0), Children = { Wrap(h.Have, 13.5, "DS.TextSoft"), say } });
+        }
+        var bubble = Bubble("", false); bubble.Child = stack; scroller.ScrollToEnd();
     }
 
     // ---- the drift reading: a countdown while the sticks are read ----
@@ -282,6 +321,8 @@ public sealed class AgentPanel
         // the switch: "" when it worked, otherwise why not
         if (switched != null && turn.Outcome.PcMode is { } pc)
             stack.Children.Add(Wrap(switched.Length == 0 ? $"PC mode   {(pc ? "on" : "off")}" : "PC mode · " + switched, 14, switched.Length == 0 ? "DS.AccentHi" : "DS.Warn", 6));
+        // where the answer came from: the doc passages it cites, each opening to its full text
+        foreach (var hit in turn.Cited) stack.Children.Add(Source(hit));
         foreach (var skipped in v.Checks.Where(c => c.State == CheckState.Unavailable))
             stack.Children.Add(Wrap($"{skipped.Action.Target}: {skipped.Message}", 14, "DS.Warn", 6));
         // the app's own line: the truth about what happened, whatever the model said
@@ -342,6 +383,16 @@ public sealed class AgentPanel
         }
         var paddles = AgentVocabulary.Paddles(modelId);
         if (paddles.Length > 0) settings.Children.Add(Wrap($"Paddles {paddles[0]}–{paddles[^1]} are programmed on the controller, which isn't supported yet.", 12.5, "DS.TextMuted", 8));
+    }
+
+    UIElement Source(DocHit hit)
+    {
+        string text = hit.Chunk.Text, shortText = text.Length > 170 ? text[..170].TrimEnd() + "…" : text;
+        var body = Wrap(shortText, 13.5, "DS.TextSoft", 4);
+        var card = new Button { Style = DS.Style("DS.ActionSecondary"), MinHeight = 0, Padding = new(12, 8, 12, 8), Margin = new(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left,
+            Content = new StackPanel { Children = { Wrap("Source · " + hit.Chunk.Where, 12.5, "DS.AccentHi").Also(t => t.FontWeight = FontWeights.SemiBold), body } } };
+        card.Click += (_, _) => body.Text = body.Text == shortText ? text : shortText;
+        return card;
     }
 
     static Button Small(string text) => new() { Style = DS.Style("DS.ActionSecondary"), Height = 30, MinHeight = 0, Padding = new(12, 0, 12, 0), Content = Kit.Text(text, 13, "DS.TextSoft") };

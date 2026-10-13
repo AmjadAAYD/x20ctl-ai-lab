@@ -1,0 +1,3866 @@
+[
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Hook jump up to the back paddles",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Configure my rear stick for jumping",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Assign the jump command to paddle two",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Link the jump function to paddle five",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Can you map A on my rear paddles?",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Put jumping on the first back paddle",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Activate the jump feature on paddle three",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Map B to my rear paddles instead",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Make paddle five do the jumping",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Change my back stick to jump mode",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Assign jump to the second rear paddle",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "I want my M7 to jump instead of shoot",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Link jump command to paddle one here",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Configure rear pad three for jumping",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Put a jump function on M8 please",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Map my back paddles to jump instead of shoot",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Set paddle four to act as jump key",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "paddle_set",
+    "Sentence": "Hook jump up on my rear stick now",
+    "Why": "names no paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap sticks one and two please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I need to switch triggers left and right",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange buttons three and four for me",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip the face buttons on my controller",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Can you swap bumper L with bumper R?",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch my analog sticks around please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I want to exchange button five and six",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap my shoulder triggers A and B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip left stick and right stick positions",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange the paddle on the back with the other one",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch button number seven with number eight",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I'd like to swap my thumbsticks",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Make me exchange trigger top left with trigger top right",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap the face buttons on my PS controller",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip buttons one and two around",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Can you switch my grip triggers?",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange the left analog stick with the right one",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I need to swap bumper up and bumper down",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch my X button with my square button",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip trigger left and trigger right please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange button four with button five",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap my back paddles around for me",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I want to switch stick one and stick two",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip the face buttons on my Xbox controller",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I need to flip button six and button seven",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap my analog sticks like a mirror image",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange paddle one with paddle two on the back",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch A and B like the classic controllers",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip the left stick and right stick positions for me",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange bumper L with bumper R, please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I want to swap trigger top left with trigger top right",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Can you switch my grip triggers around?",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Make me exchange paddle back left with paddle back right",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip button number seven with number eight on my setup",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap the face buttons on my PS controller, thanks",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch my analog sticks one and two",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I need to flip trigger left and trigger right",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange shoulder trigger A with shoulder trigger B for me",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip the X button and the square button positions",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch stick one and stick two please, gamer here",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I'd like to exchange bumper up and bumper down",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap the face buttons on my Xbox controller, thanks",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange trigger right with trigger left for me",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip the analog sticks around please, I'm confused",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch button five and button six on my device",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Can you flip my thumbsticks positions?",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I want to swap shoulder triggers L and R",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange the grip triggers please, make it quick",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip bumper left and bumper right, thanks a lot",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch my analog stick one with analog stick two",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Can you exchange trigger left and trigger right?",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "I need to flip buttons three and four on my pad",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap my face buttons like the old Nintendo style",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Exchange paddle left back with paddle right back please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip trigger top right with trigger top left, thanks",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure stick 1 down to trigger start",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Change paddle 3 input to Z",
+    "Why": "names a paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Let me use my thumbstick as the home button",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Rig A to send a B signal instead",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Swap the roles of left and right triggers",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Make pressing number pad one act as enter",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn the left stick into a shoulder button",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map face button 4 to work like face button 1",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set the top right paddle to trigger X",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure analog stick 2 up as the select key",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Make the cross shape input act like square",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn right trigger into a macro for A",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map the center of stick 1 to start",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Let bottom right paddle act as number 5",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure face button 2 to behave like X",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn square into triangle on my controller",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set analog stick 2 down to trigger B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Have top left paddle work as the guide button",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map circle to function like cross",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "I need X to work just like A does",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map A to behave exactly like B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure stick 1 down as the start key",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Have paddle 2 act like number 3",
+    "Why": "names a paddle"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Rig face button 4 to work as face button 1",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn the cross shape input into an X command",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set bottom left paddle to function like select",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Let me use stick 2 right as the pause button",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map shoulder button 3 to act like face button 5",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure number pad 2 to send a B signal",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Have my left thumbstick down trigger the Y button",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Remap the top center paddle to work as home",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn right bumper into an action for A",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set stick 1 up to function exactly like select",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "I want face button 2 to behave like triangle",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Make bottom right paddle send a C signal",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Rig the center of stick 2 to act as start",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure face button 1 to act like circle",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Let bottom left paddle trigger the square button",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn the D-pad left into an A signal please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set stick 2 down to function as the home key",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Delete my custom config and start fresh",
+    "Why": "names one control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Put my right pad back to center.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Restore default for my D-pad.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Clear my analog left.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the capture button.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Put my shoulder R back to factory settings.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Restore factory settings for my left side.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Set my trigger R to neutral.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the voice command button.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Undo everything on my top row.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the connect button.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Clear my left pad inputs.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the home screen button.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the touchpad.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Undo mapping on the capture button.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Set the guide light to factory settings.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default my left pad click.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the home input.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Clear settings on the D-pad.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Clear my analog right drift.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the capture input.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Undo mapping on left hat switch.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Clear settings on share pad.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default my touch input.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the voice command trigger.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Use the default curve on my triggers",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Apply the fine setting to my left trigger",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Switch my right trigger to the quick setting",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Apply default to both sticks and triggers",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Switch both triggers to smooth movement",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Set my triggers to use the default curve",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Use the quick curve on my left trigger",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Apply the default setting to my triggers and sticks",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Set my right trigger curve to slow please",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Apply the fine profile to my triggers and left stick",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Use the fine curve on my right trigger only",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Disable deadband on gamepad ports 1 and 2",
+    "Why": "names a number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Stop my triggers from ignoring small presses too",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Right trigger deadzone 3 please",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Set the deadzone on the left side to half percent.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Make the right trigger deadzone equal to 0.2.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_drift",
+    "Sentence": "Need help with my triggers drifting left.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_drift",
+    "Sentence": "Check if my triggers are drifting down.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_drift",
+    "Sentence": "Left trigger seems to have drift issues.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_drift",
+    "Sentence": "Why is my camera turning by itself again?",
+    "Why": "a question"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_drift",
+    "Sentence": "Check if my triggers are registering input down by default.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_drift",
+    "Sentence": "Can you help with my triggers drifting down constantly?",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Increase the responsiveness of my triggers",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Why does my aim take so long to adjust?",
+    "Why": "a question"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Why is my right thumbstick so sluggish?",
+    "Why": "a question"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Why does my camera lag when I move?",
+    "Why": "a question"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Make my triggers fire faster please.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Why is my right analog so delayed?",
+    "Why": "a question"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Left trigger needs full speed at 78.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set left trigger max at 91.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Right trigger full throttle at 79.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Can you bump the outer dead zone on my triggers to 72?",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "I want the right trigger hitting max at 80.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set the outer dead zone for my left trigger to 78.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "I need left trigger maxed out at 93.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Make right trigger reach max speed at 79.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Give left trigger full throttle at 75.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "right trigger too sensitive for subtle inputs",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "right trigger feels dead on light press",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "my finger flick on triggers gets dropped",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "My right trigger feels dead for any light pressure.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Smooth up the left trigger input too",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Smooth up the response time on my triggers",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Can you reduce jitter on my right trigger?",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "I need less micro-jitter on the left trigger",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Fix the abrupt stopping on my left trigger",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Less jitter please on the right trigger area",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Deadzone on the triggers feels off and jumps my aim.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Put both sticks on the default curve",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Switch left stick to slow mode now",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "I want both sticks in fine detail mode",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Change left stick to slow response",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "My left stick needs that smooth transition",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Right stick to slow curve now",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Change both sticks to the quick curve",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Switch right stick to default setting",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Right stick on quick curve for me",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Right stick needs that default tune",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Use fine tune on my left stick",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Both sticks in fine detail mode now",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "My left stick wants smooth transition",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Right stick go slow curve now",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Change both sticks to quick curve",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Right stick fast response now bro",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Quick up on my left stick man",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Default settings on all my sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "No dead zone allowed on my controller sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Clear out any threshold settings on the sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Stop ignoring input below 5% on the triggers",
+    "Why": "names a number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Full sensitivity on both analog sticks now",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "No more ignoring small movements on the sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "I need 100% sensitivity on all four sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Calibrate my sticks to detect every micro-move",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "No threshold filters on my analog sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Fix the laggy start point on my sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Full sensitivity mode for all analog sticks now",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Disable input filtering under 5 percent movement",
+    "Why": "names a number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make my left trigger ignore small presses.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Turn off the sensitivity for my left trigger finger.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set the right stick button to only work when pushed hard.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Stop registering light touches on either trigger.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Create a blind spot for my left analog touch pad.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Give my left side some breathing room by adding dead zone.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right trigger needs a larger ignore area now.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Adjust the left analog to have a silent zone of 4.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Fix my right trigger by setting a custom dead range.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Turn off tiny movements for the right trigger button.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set up a 7 unit dead zone on the left analog stick.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Disable light presses on my primary controller side.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Add a soft zone to the right input device.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "My left trigger feels too sensitive, add padding.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right analog needs a bigger blind spot please.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set left dead zone high so I don't drift.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Adjust right side to not react until force is greater.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make my left analog stick button require hard pushes",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Disable small input on either trigger now",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set right analog button dead range to 4",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Turn off light touches for the left trigger",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Stop registering under 1 on both sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right analog needs a custom dead space of 2",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make left trigger button work only when pressed deep",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set up silent zone on left stick at 4.5",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure right analog to ignore small moves",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Give left trigger a larger ignore area today",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Fix right stick button with dead zone 3",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Turn off tiny jitters on left analog now",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Add buffer to right analog at 1.9 units",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Shorten the pull on the left stick click",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Adjust my right stick to click faster",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "I need the left analog stick to count as fully pressed at 70.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set the right stick deadzone max to 25.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Make left analog stick register full at 85.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right stick full input threshold please set to 40.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set my controller right stick max pressure at 45.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Make right analog stick full register at 55.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set left stick deadzone upper limit to 65.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Adjust my right analog stick full count to 35.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set right analog stick max value to 60 for full input.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Adjust left stick sensitivity so 90 is full.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right analog stick full value please set to 32.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Please add progressive mapping to these sticks",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "How do I prevent sudden braking in games?",
+    "Why": "a question"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Set up these sticks for smooth racing lines",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Tune these sticks for gentle throttle in Assetto Corsa.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "How do I soften the response on my gas pedal?",
+    "Why": "a question"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "My left stick feels too twitchy, make it gradual.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Adjust the deadzone on these sticks for racing sims.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Need linear action on these sticks for slow builds.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "My right stick needs smoother input for racing games.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "greeting",
+    "Sentence": "reset screen",
+    "Why": "closer to reset_target"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "greeting",
+    "Sentence": "button mapping ask",
+    "Why": "closer to reset_all"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "greeting",
+    "Sentence": "paddle controls info",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "greeting",
+    "Sentence": "number pad functions",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "greeting",
+    "Sentence": "face buttons list",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "greeting",
+    "Sentence": "joystick range explain",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "greeting",
+    "Sentence": "Hey, I need a hand with this controller.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "Switch back to controller mode",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "No more PC mode please",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "Turn the PC setting down",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "Remove PC mode from my setup",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "Switch out PC mode for standard control",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "Switch to native input instead of PC mode",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "Switch away from PC mode please",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "Get rid of PC mode",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "End PC mode usage",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_on",
+    "Sentence": "I want PC mode enabled now",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_on",
+    "Sentence": "Activate the desktop mode for my stick",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "pc_mode_on",
+    "Sentence": "Set this up as a PC controller please",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch trigger left shoulder with trigger right shoulder",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set LT to function as RT",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Swap the input of right trigger with A",
+    "Why": "closer to remap_swap"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "I messed up, fix it",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Default mode only",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Reset stick and trigger defaults",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "I want standard settings again",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Reset paddle positions",
+    "Why": "closer to reset_target"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Revert my whole profile",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Reset button mapping",
+    "Why": "closer to reset_target"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Nuke my custom setup",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset my left bumper.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Undo the mapping on my L2 trigger.",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default my left trigger.",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Clear my right stick drift calibration.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Clear drift on the right analog.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Set right paddle to fine, left to quick",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Make right stick default, keep left as is",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Reset everything except right stick which stays fine",
+    "Why": "closer to reset_all"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Set both sticks to the fine mode immediately",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "My controller feels off, set all curves to smooth",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Give me the smooth setting for both sticks today",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "My right analog stick has too much drift; fix it.",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Adjust my right stick so it doesn't ignore small moves.",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "My thumbsticks are ignoring tiny movements; fix that.",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Fix the unresponsive area around my center stick position.",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Fix the drift on my analog sticks",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Make my right pad ignore small movements",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Stop ignoring tiny moves on my thumbsticks",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Set neutral zone to zero on both inputs",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Turn off stick drift settings in options",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Fix the input delay on my gamepad immediately",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Set neutral threshold to minimum on left",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Make my right thumbstick ignore center drift",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Zero the offset on my main controller please",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Disable any hidden dead zone settings now",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Adjust both pads so tiny moves register",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Make my right stick ignore inputs below 7",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "I need the right analog nub to ignore inputs under 9.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Make left analog ignore inputs below 10 please.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Make the right analog stick snappier",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "My aiming is laggy, fix that",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Fix the slow reaction time on my inputs",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Make the movement sticks more direct",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Quicken the left stick's turn rate",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Stop feeling like I'm moving in mud, make it quick",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Enhance the responsiveness of both sticks please",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Fix the sluggishness on my gamepad inputs",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Fix the lag in my left stick.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "My paddles feel too slow, speed them up.",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Make my inputs feel less muddy.",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set my controllers to 82 for full stick response.",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "need to fix dead zone on left analog stick",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "left analog stick drift but ignores tiny moves",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "fix the input threshold on my controller",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "left stick ignores my gentle steering inputs",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "right analog dead zone is way too big",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "My character doesn't turn when I wiggle the controller slightly.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "I can't do fine aiming, the stick is too insensitive right now.",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "I need a profile setting to stop ignoring light touches.",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "Please enable micro-input detection for my left stick.",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_small_moves",
+    "Sentence": "Left analog stick drift but ignores tiny wiggles now.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Make my controller inputs fluid",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Can you reduce stick drift noise?",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "My right paddle feels laggy, fix it",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Fix my controller's shaky feeling",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "My left stick is too twitchy, help",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "My controller feels erratic, make it steady",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Give me a smoother experience with my sticks",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Help my gamepad move without stopping",
+    "Why": "closer to greeting"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Fix the hesitation in my button presses",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Eliminate the jerkiness in my controller",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Smooth up the response on my number pad buttons",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Stop my left analog stick from shaking so much",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "I want buttery motion for my right thumbstick",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Make my left paddle track without any jitter",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Smooth up the left analog input completely",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "I need steady responses for my paddles only",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Right stick drift to zero for accuracy",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "My right stick feels sloppy, fix it",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Help me track targets accurately",
+    "Why": "closer to greeting"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Set right stick to sniper specs",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Enhance my target acquisition speed",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "I need that right stick to be laser precise please.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Make aiming feel solid when I shoot far away.",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Help me stop missing shots with the right stick.",
+    "Why": "closer to greeting"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Make my crosshair follow perfectly with right stick.",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Adjust right analog to stop aim slop entirely.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Need less sensitivity on both sticks please.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Can we tone down the twitchiness on my right side?",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Right analog feels overly responsive and jerky.",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Sensitivity settings seem broken or misconfigured today.",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Left stick drifts and causes unwanted aim shifts.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Camera turns are too snappy and hard to smooth out.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "I'm having trouble controlling direction due to high sensitivity.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Both sticks contribute to a very jittery aiming experience.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "This paddle makes me jump shots",
+    "Why": "closer to paddle_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Need to tame these fast movements",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "My left button needs that fine curve",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Set both paddles to slow mode here",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Can you make the left trigger smooth?",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Hey bot, make my triggers quick please",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Set default for my whole controller",
+    "Why": "closer to reset_target"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Make left paddle smooth mode okay?",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "My right trigger has too much dead zone, fix it",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set trigger sensitivity to ignore nothing",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set stick deadzone to absolute zero instantly",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Turn off any automatic stick dead zone adjustment",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Make my controllers feel like they have no weight delay",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Clear out the dead zone area immediately",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set my triggers to detect zero dead space",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Eliminate the silent zone on my triggers",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set my controller to zero deadzone mode",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left side needs more buffer, set it to 2.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Create blind spot on left trigger at 3.5",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Speed up my triggers",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "I need faster shots on my controller",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Instant fire on all weapon buttons",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Speed up the action on my right grip",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Make firing quicker without delay",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Enable fast fire mode on my paddle",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Snap those off instantly",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Faster click on the L2 button",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "My controller feels sluggish, fix it now",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Lower the threshold on both sides",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Give me instant reaction triggers please",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Boost the speed of every shooter key",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "My left grip clicks are delayed, fix",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "My weapon inputs feel too heavy, lighten them",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Make hitting the target button immediate",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Quick fire enablement for my controller",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Adjust the stick deadzone to be smoother",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Can't stop fast enough, soften my triggers",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Make my inputs feel like real car pedals",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Looking for a smooth curve on the right bumper input.",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "I need a linear feel on the right trigger now.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "I need more control over the right trigger curve.",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "turbo_off",
+    "Sentence": "kill the rapid fire feature",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "turbo_off",
+    "Sentence": "Remove rapid fire from my Z trigger.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "turbo_off",
+    "Sentence": "I want to end rapid fire on Y button.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "turbo_off",
+    "Sentence": "Deactivate quick fire on start please.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "I need turbo on X and Y",
+    "Why": "closer to remap_swap"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Activate turbo on the left bumper",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Make the right stick shoot fast",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Reverse the D-pad directions",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Make Start do what View does",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap the face buttons A through Y",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Turn the D-pad into an analog stick",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip the shoulder buttons around",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Make A send the signal of B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Switch the bottom row buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Reverse the action of the view button",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Trade the left bumper for the right one",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Cross A and B functions",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap the thumbstick positions",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Reverse the faceplate buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Interchange the analog stick inputs",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Flip the top two buttons on the controller",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Swap the directional pad with ABXY",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Give me A and B swapped please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set Start to function as View",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Link Y output to the A input",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Swap Z on the D-pad to match Y",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure A to behave like Y please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Make Start act like View",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn my stick right click into A",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set Y to work exactly as Z does",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map View to behave exactly as Start does.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set Y to work as Z on my controller.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure A to fire the same action as X.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Change my right bumper to do the View function.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Force Start button to send a View signal instead.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Make RB act as Z when I push it.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn my stick right click into an A input.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set D-pad left to work exactly as Right does.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Have View send the same data as Start button.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set Z to work exactly as D-pad left does.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map A output to the input of X now.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Remap Start to fire the View signal instead.",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map A to act like B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Have LB fire Z when pressed",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Link W output to the V input",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Change my right bumper to do A",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Force B button to send A signal",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set V as the new behavior for W",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Have the D-pad up send Z signal",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure B to behave like A please",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Remap RB to output A signal",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Turn my stick right click into B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set W to work exactly as V does",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Map Y input to Z output",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Have View fire Start when clicked",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Configure A to trigger B now",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set Z function to match W behavior",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Undo all adjustments and go back to start",
+    "Why": "names one control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Roll back every slider and menu to default",
+    "Why": "names one control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Delete my saved changes so we start fresh again.",
+    "Why": "names one control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the face buttons on my controller",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default the touchpad input area",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default the options button settings",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset my analog nub on the left",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Bring my top left paddle back to rest",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "I need my left face button reset",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default the guide light stick input",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the Xbox logo button function",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default the touchpad input area settings",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the down trigger to factory settings",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset all inputs on the upper right paddle",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default the right face button cluster",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "I need a reset for my left paddle.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the touchpad sensitivity area.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Default the right paddle input.",
+    "Why": "names no control"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Put dead zone on L2 at 15.",
+    "Why": "names a trigger"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_drift",
+    "Sentence": "How do I stop my left stick from wandering off",
+    "Why": "a question"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Turn the right stick touch zone to 5.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set both analog sticks' dead zones to 1.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Dead zone for left stick needs to be 2.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set both triggers and sticks dead zones to 5.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left stick touch threshold set to 7 please.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right analog pad dead zone is now 1.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left stick dead zone value needs updating to 8.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set left analog pad dead zone to 9.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Both sticks and triggers get a 3 dead zone now.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure the right stick touch zone to 7.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Give my controller's left stick a 9-unit blind spot.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make the right analog stick touch point equal 6.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set my gamepad's left stick blind zone to 3.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left analog stick needs a touch zone of 8.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set both sticks and triggers blind zones to 4.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Adjust right stick dead zone value to 2 now.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set the gamepad right stick touch point to 8.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Deadzone on right analog pad should be 3.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make both sticks' touch zones equal 7.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right stick touch offset needs to be 2.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Adjust left stick touch sensitivity to 4.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Please set my right analog pad dead zone to 20.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left stick touch threshold needs to be set at 7.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Give the controller left analog pad a 9-unit dead zone.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right stick touch zone value needs 25.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Both analog sticks get a 30 dead zone value.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right stick full at 80 please.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Dead zone removed for left trigger now.",
+    "Why": "has no number"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set right stick complete at 70.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "I want left stick full press to be 70.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right stick full at number 90 please.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Define left stick full point as 90 now.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Make my left stick hit full press at 70.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right stick full activation at 80 please.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set the left stick full count at 75.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right stick max out at 90 please.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Left stick full activation set as 30.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Set the brake analogs to progressive mode for rally racing.",
+    "Why": "names a stick"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "greeting",
+    "Sentence": "Here",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "greeting",
+    "Sentence": "Start",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "greeting",
+    "Sentence": "Hey stick",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "greeting",
+    "Sentence": "Nice to meet you input",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "greeting",
+    "Sentence": "Salutations to you",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "greeting",
+    "Sentence": "Welcome back assist",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "No more PC mode",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "Shut down PC settings",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "pc_mode_off",
+    "Sentence": "No more PC mode please",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "pc_mode_on",
+    "Sentence": "I need PC mode enabled",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Change LB to act like RB",
+    "Why": "closer to remap_to"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_swap",
+    "Sentence": "Make the start button behave like select",
+    "Why": "closer to reset_target"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "remap_to",
+    "Sentence": "Set X as the new behavior for B",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_all",
+    "Sentence": "Give me a brand new default configuration",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "I need my left trigger reset to default",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "My right bumper needs a reset",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset the A, B, X, and Y buttons all together",
+    "Why": "closer to remap_swap"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "Reset my controller's left trigger to zero",
+    "Why": "closer to reset_all"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "reset_target",
+    "Sentence": "I want my right analog stick reset.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Make my right stick behave like the slow preset",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Set both joysticks to the fine adjustment mode",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Configure my sticks for a smooth experience using the smooth curve",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_curve_set",
+    "Sentence": "Configure my analog sticks to use the slow curve profile",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "My right stick has too much dead zone, fix it",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Get rid of the dead zone on my left and right stick",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Dead zone for right stick is now 7.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Dead zone for both sticks set to 7.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_deadzone_set",
+    "Sentence": "I need the right thumbstick deadzone set at 12 percent.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Need more responsiveness from my controller",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "I need instant feedback on my sticks",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "My right analog input needs a major speed boost",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Right stick acceleration feels way off",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Need tighter turn speeds on my sticks",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "My controller input is dragging, fix it",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Faster camera movement from my left analog",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Stop the sluggishness in my stick movements",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Give my right stick a quicken treatment",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Increase the velocity of my analog inputs",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Crunch my sticks for better speed",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "Increase movement speed on both sticks",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_fast",
+    "Sentence": "My camera tracking is behind my hands",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set left analog dead zone full speed to 78.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Fix my stick inputs to be smooth.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Stop the stutter on my aiming stick.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Fix the left stick movement please.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Stop the jitter on my right stick.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Fix the shaky motion on the right stick.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_smooth",
+    "Sentence": "Fix the jittery feel on the left side.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_sniping",
+    "Sentence": "Need fine tuning on right stick for range",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Need right stick to be more precise",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Left stick makes my character jump unexpectedly",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Right stick feels like it's reacting to tiny movements",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Character creeps when I barely touch the left stick",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "The view shakes a lot with minor stick nudges",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Need less twitchy response on my right analog nub",
+    "Why": "closer to reset_target"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Make stick input more stable for long range engagements",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Left stick causes unwanted camera rotation on small touches",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "stick_twitchy",
+    "Sentence": "Need smoother camera control not this much jumping",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Enable the quick response on the right trigger.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_curve_set",
+    "Sentence": "Make the left trigger dead zone set to slow now.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set trigger dead zone to zero.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Make triggers respond without a dead zone.",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Turn off the dead zone for my triggers now.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "I need zero dead zone on my triggers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Clear the dead zone on the left and right triggers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set my triggers to have no dead zone.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Remove any dead zone from these triggers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Reset the trigger dead zone to nothing.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "My triggers need zero dead zone please.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Remove the dead zone from my game triggers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Give both triggers a 2-unit dead zone.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "I need the right pad dead zone set to 7.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Give the left paddle a 3-unit dead zone.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Deadzone on both face buttons should be 4.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right bumper needs a 2 dead zone adjustment.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Dead zone on left trigger should be set to 1.",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure both triggers with a value of 15.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set gamepad right trigger dead zone value to 3.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure left trigger dead zone at number 18.",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "My left trigger feels too slow, fix it.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Enable instant shooting on all triggers.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "I want zero delay when I press the trigger.",
+    "Why": "closer to remap_to"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Adjust my gamepad for rapid fire shots.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Reduce trigger travel distance for speed.",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Help me get quick shot response from my stick buttons.",
+    "Why": "closer to greeting"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Set up immediate trigger actuation please.",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Fix my slow triggering issue right away.",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Give me that rapid fire feel I crave.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Make my weapon handling faster by speeding up triggers.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "I require ultra-fast trigger response for my next match.",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Crank up the sensitivity on my left shoulder button.",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Make those triggers snap shut faster please.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Activate super fast fire rates on the left side.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Turn off any lag when pulling the back button.",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Get me instant blasts for my sniper rifle.",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_fast",
+    "Sentence": "Speed up every single firing mechanism here.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set my thumbstick max at 15.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set my thumbstick max value at 15.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "trigger_slow",
+    "Sentence": "Tweak the brake inputs to feel more progressive during tight turns.",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Turbo on Y",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Enable turbo mode on L2",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Turbo on X",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Quick fire toggle on D now",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Enable quick fire sequence on N",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Turbo left bumper",
+    "Why": "closer to reset_target"
+  },
+  {
+    "from": "phrasebook-v2-raw.json",
+    "Intent": "turbo_on",
+    "Sentence": "Turbo mode on my right stick",
+    "Why": "closer to turbo_off"
+  }
+]
