@@ -17,6 +17,15 @@ public sealed record BenchCase(string Sentence, string ModelId, params string[][
 }
 
 /// <summary>How a variant of the model's settings is run: temperature, and whether the reply is held to the JSON schema.</summary>
+/// <summary>The bench's drift reading: no controller, the same fixed numbers every run (right stick wandering to 6.4%, left
+/// to 4.2%), so a drift sentence is scored on whether the dead zone covers what was measured.</summary>
+public sealed class BenchMeter : IDriftMeter
+{
+    public static readonly DriftReport Reading = new([new("LeftStick", 1.8, 0.9, 4.2, 3000), new("RightStick", 3.1, -2.4, 6.4, 3000)], null);
+    public Task<DriftReport> Measure(IReadOnlyList<string> sticks, CancellationToken cancel) =>
+        Task.FromResult(new DriftReport(Reading.Sticks.Where(d => sticks.Contains(d.Stick)).ToList(), null));
+}
+
 public sealed record BenchVariant(string Name, double Temperature, bool Schema, bool Bounded = false);
 
 /// <summary>One sentence, one run: what the first attempt was worth, and where the whole turn (with its repair) ended.</summary>
@@ -26,7 +35,7 @@ public sealed record BenchRun(BenchVariant Variant, BenchCase Case, int Run, boo
     {
         var first = turn.Attempts[0];
         var firstVerdict = ProposalValidator.Check(first.Content, c.ModelId);
-        return new(variant, c, run, AgentBench.IsJson(first.Content), firstVerdict.StructureError == null, firstVerdict.Valid, turn.Verdict.Valid, AgentBench.Matches(c, turn.Verdict),
+        return new(variant, c, run, AgentBench.IsJson(first.Content), firstVerdict.StructureError == null, firstVerdict.Valid, turn.Verdict.Valid, AgentBench.Matches(c, turn.Verdict) && (!AgentBench.DriftCases.Contains(c) || turn.Measured is { Problem: null }),
             turn.Attempts.Count, turn.Attempts.Sum(a => a.TotalMs), turn.Attempts.Sum(a => a.OutputTokens), turn.Attempts.Sum(a => a.PromptTokens), first.Content);
     }
 }
@@ -38,6 +47,17 @@ public sealed record BenchRun(BenchVariant Variant, BenchCase Case, int Run, boo
 /// </summary>
 public static class AgentBench
 {
+    /// <summary>The drift sentences (M3), scored with <see cref="BenchMeter"/>: right means it measured first and the dead zone
+    /// covers what was measured (the validator refuses less), on the stick the sentence names, or both when it names neither.</summary>
+    public static readonly BenchCase[] DriftCases =
+    [
+        new("My right stick drifts a little", "x20_pro", ["stick_deadzone:RightStick"]),
+        new("My left stick moves on its own", "x20_pro", ["stick_deadzone:LeftStick"]),
+        new("Fix my stick drift", "x20_pro", ["stick_deadzone:LeftStick"], ["stick_deadzone:RightStick"]),
+        new("My camera keeps slowly turning by itself", "x20_pro", ["stick_deadzone:RightStick"]),
+        new("Check my sticks for drift", "x20_pro", ["stick_deadzone:LeftStick"], ["stick_deadzone:RightStick"]),
+    ];
+
     public static readonly BenchCase[] Cases =
     [
         new("Make my sticks smooth", "x20_pro", ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),

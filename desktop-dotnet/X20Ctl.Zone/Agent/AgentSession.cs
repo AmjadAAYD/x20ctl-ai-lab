@@ -17,7 +17,7 @@ public interface IAgentModel
 
 /// <summary>One sentence handled end to end: every model attempt (a malformed first one is kept, not hidden), the verdict
 /// on the last, and the outcome it leads to.</summary>
-public sealed record AgentTurn(string Sentence, IReadOnlyList<ModelReply> Attempts, AgentVerdict Verdict, AgentOutcome Outcome)
+public sealed record AgentTurn(string Sentence, IReadOnlyList<ModelReply> Attempts, AgentVerdict Verdict, AgentOutcome Outcome, DriftReport? Measured = null)
 {
     public ModelReply Reply => Attempts[^1];
 }
@@ -32,27 +32,44 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     readonly List<ChatMessage> history = new();
     const int Remembered = 6;
     public string SystemPromptOverride { get; set; } = "";
+    /// <summary>Reads the real sticks when the model asks to measure drift. None: the model is told it can't measure.</summary>
+    public IDriftMeter? Meter { get; set; }
 
     public async Task<AgentTurn> Ask(string sentence, PcModeProfile current, CancellationToken cancel = default)
     {
         var messages = new List<ChatMessage> { new("system", SystemPrompt(current)) };
         messages.AddRange(history.TakeLast(Remembered));
         messages.Add(new("user", sentence));
-        var attempts = new List<ModelReply> { await model.Chat(messages, SchemaText, cancel) };
-        var verdict = ProposalValidator.Check(attempts[0].Content, modelId);
-        // one second chance: the model sees exactly what the validator objected to and answers again. Both attempts are
-        // kept and shown; if the second is still wrong, it stands, and nothing changes
-        if (!verdict.Valid)
+        var attempts = new List<ModelReply>();
+        var verdict = await Answer(messages, attempts, null, cancel);
+        // a reading first: the model asked to measure, so the app measures the real sticks and the model answers again
+        // with the numbers. Once per turn; the dead zone it then picks is checked against what was measured
+        DriftReport? measured = null;
+        if (verdict.Valid && verdict.Proposal!.Actions.Where(a => a.Action == AgentVocabulary.MeasureDrift).Select(a => a.Target).Distinct().ToList() is { Count: > 0 } sticks)
         {
-            messages.Add(new("assistant", attempts[0].Content));
-            messages.Add(new("user", "The app rejected that reply, so nothing changed: " + Problems(verdict) + " Answer again with only the JSON object. If what I asked isn't possible, say so with no actions."));
-            attempts.Add(await model.Chat(messages, SchemaText, cancel));
-            verdict = ProposalValidator.Check(attempts[1].Content, modelId);
+            measured = Meter == null ? new DriftReport([], "Measuring isn't available here: no controller is being read.") : await Meter.Measure(sticks, cancel);
+            messages.Add(new("assistant", attempts[^1].Content));
+            messages.Add(new("user", (measured.Problem == null ? "The app measured, with no hand on the sticks: " : "The app couldn't measure: ") + measured.Describe() +
+                " Now answer with the changes (no measure_drift this time), and explain the numbers in the recap."));
+            verdict = await Answer(messages, attempts, measured, cancel);
         }
         var outcome = AgentApplier.Apply(current, verdict);
         history.Add(new("user", sentence));
         history.Add(new("assistant", verdict.Proposal?.Speech ?? "(no usable reply)"));
-        return new(sentence, attempts, verdict, outcome);
+        return new(sentence, attempts, verdict, outcome, measured);
+    }
+
+    /// <summary>One reply, checked; with one second chance: the model sees exactly what the validator objected to and
+    /// answers again. Every attempt is kept and shown; if the second is still wrong, it stands, and nothing changes.</summary>
+    async Task<AgentVerdict> Answer(List<ChatMessage> messages, List<ModelReply> attempts, DriftReport? measured, CancellationToken cancel)
+    {
+        attempts.Add(await model.Chat(messages, SchemaText, cancel));
+        var verdict = ProposalValidator.Check(attempts[^1].Content, modelId, measured);
+        if (verdict.Valid) return verdict;
+        messages.Add(new("assistant", attempts[^1].Content));
+        messages.Add(new("user", "The app rejected that reply, so nothing changed: " + Problems(verdict) + " Answer again with only the JSON object. If what I asked isn't possible, say so with no actions."));
+        attempts.Add(await model.Chat(messages, SchemaText, cancel));
+        return ProposalValidator.Check(attempts[^1].Content, modelId, measured);
     }
 
     public void Forget() => history.Clear();
@@ -87,6 +104,11 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - reset: a stick, trigger or button, or All, value 0. Back to default.
             - paddle: a paddle, value A or B. My paddles: {paddles}. Paddles only take this action, and only send A or B. Jump is A in most games.
 
+            - measure_drift: LeftStick or RightStick, value 0. Reads where the stick rests with no hand on it, for three seconds. Changes nothing.
+
+            Drift: when the owner says a stick drifts, moves on its own, or the aim creeps, measure it first: reply with only measure_drift actions (one per stick named, both if they don't say which) and no other actions. The app then sends you what it measured. Answer that with stick_deadzone at least the smallest dead zone it gives for each drifting stick, and explain the numbers in the recap. If it measured no drift worth a dead zone, change nothing and say so.
+
+            Reset everything -> one action: reset All, value 0. Turn turbo off -> turbo with value 0.
             What people mean: smooth -> stick_curve smooth. Fast or responsive sticks -> stick_curve quick, or stick_full_at about 80. Precise, slow, sniping -> stick_curve slow (not fine: fine is slightly quick). Fast triggers -> trigger_full_at 30-50 and trigger_deadzone 0. Slow, progressive triggers -> trigger_curve slow.
 
             {AgentKnowledge.Prompt()}

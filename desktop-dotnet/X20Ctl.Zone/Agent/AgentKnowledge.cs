@@ -46,6 +46,8 @@ public static class AgentKnowledge
             "semi-automatic weapons and mashing, usually 8 to 15", "too fast and some games miss presses; it breaks actions that need a hold"),
         new(AgentVocabulary.Paddle, "Paddle", "a rear paddle sends A or B",
             "", "", "jumping or dodging without taking a thumb off the right stick", "on this controller a paddle can only send A or B"),
+        new(AgentVocabulary.MeasureDrift, "Drift reading", "reads where a stick rests with no hand on it, for three seconds, and how far it wanders",
+            "", "", "finding the real drift before choosing a dead zone", "the stick must be left alone while it reads"),
         new(AgentVocabulary.Reset, "Reset", "puts a stick, trigger or button back to its default", "", "", "starting over", "the change is undone"),
     ];
 

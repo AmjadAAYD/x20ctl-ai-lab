@@ -50,7 +50,7 @@ public sealed class AgentTour
     public void Skip() => skip.Cancel();
 
     /// <summary>Every step in turn: visit its page, show the change, hold so it can be read. Returns when done or skipped.</summary>
-    public async Task Play(IReadOnlyList<TourStep> steps, PcModeProfile before, PcModeProfile after, Action<TourStep> visit)
+    public async Task Play(IReadOnlyList<TourStep> steps, PcModeProfile before, PcModeProfile after, DriftReport? measured, Action<TourStep> visit)
     {
         try
         {
@@ -59,7 +59,7 @@ public sealed class AgentTour
                 var step = steps[i];
                 visit(step);
                 counter.Text = steps.Count == 1 ? "What changed" : $"{i + 1} of {steps.Count}";
-                var show = Build(step, before, after, out var play);
+                var show = Build(step, before, after, measured?.For(step.Target), out var play);
                 body.Children.Clear(); body.Children.Add(show);
                 if (i > 0) Fx.Appear(show, .98, 260);
                 int morph = DS.Motion ? 2000 : 0, hold = 2600 + 700 * step.Rows.Count;
@@ -76,11 +76,14 @@ public sealed class AgentTour
     }
 
     /// <summary>One step's content, and the action that animates it from before to after.</summary>
-    FrameworkElement Build(TourStep step, PcModeProfile before, PcModeProfile after, out Action<int> play)
+    FrameworkElement Build(TourStep step, PcModeProfile before, PcModeProfile after, StickDrift? drift, out Action<int> play)
     {
         var stack = new StackPanel();
         stack.Children.Add(Kit.Text(AgentApplier.Name(step.Target), 24, "DS.Text", FontWeights.SemiBold).Also(t => t.Margin = new(0, 0, 0, 12)));
-        var picture = step.Kind == TourKind.Button ? Caps(step, before, after, out play) : Response(step, before, after, out play);
+        // a drift fix is shown at the stick's centre, zoomed in, where it happens; everything else as the response graph
+        var picture = step.Kind == TourKind.Button ? Caps(step, before, after, out play)
+            : drift != null && step.Rows.All(r => r.Meaning.Action == AgentVocabulary.StickDeadzone) ? Centre(step, before, after, drift, out play)
+            : Response(step, before, after, drift, out play);
         stack.Children.Add(picture);
         foreach (var row in step.Rows)
         {
@@ -90,6 +93,8 @@ public sealed class AgentTour
             stack.Children.Add(line);
             stack.Children.Add(Wrap(char.ToUpper(row.Meaning.What[0]) + row.Meaning.What[1..] + ".", 13.5, "DS.TextSoft", 4));
             if (Direction(row) is { Length: > 0 } direction) stack.Children.Add(Wrap(direction, 13.5, "DS.TextSoft", 2));
+            if (drift != null && row.Meaning.Action == AgentVocabulary.StickDeadzone)
+                stack.Children.Add(Wrap(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Measured with no hand on it: wandered up to {drift.Peak:0.0}%. The dead zone now covers it."), 13.5, "DS.Text", 4));
             stack.Children.Add(Wrap("Good for " + row.Meaning.Good + ".", 13.5, "DS.Success", 4));
             stack.Children.Add(Wrap("Watch out: " + row.Meaning.Careful + ".", 13.5, "DS.Warn", 2));
         }
@@ -107,7 +112,7 @@ public sealed class AgentTour
     }
 
     // ---- sticks and triggers: the response, bending ----
-    UIElement Response(TourStep step, PcModeProfile before, PcModeProfile after, out Action<int> play)
+    UIElement Response(TourStep step, PcModeProfile before, PcModeProfile after, StickDrift? drift, out Action<int> play)
     {
         var canvas = new Canvas { Width = W, Height = H, ClipToBounds = false, Margin = new(0, 0, 0, 22) };
         var grid = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255));
@@ -123,6 +128,14 @@ public sealed class AgentTour
         var full = new Rectangle { Height = H, Width = (100 - fromOuter) / 100 * W, Fill = new SolidColorBrush(Color.FromArgb(40, 61, 214, 140)) };
         Canvas.SetLeft(full, fromOuter / 100 * W);
         canvas.Children.Add(dead); canvas.Children.Add(full);
+        // the measured drift, as a line the dead zone grows past
+        if (drift != null)
+        {
+            double x = Math.Min(drift.Peak, 100) / 100 * W;
+            canvas.Children.Add(new Line { X1 = x, X2 = x, Y1 = 0, Y2 = H, Stroke = new SolidColorBrush(AgentMark.Red), StrokeThickness = 2, StrokeDashArray = [3, 2] });
+            var said = Kit.Text(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"drift {drift.Peak:0.0}%"), 12, "DS.Text", FontWeights.SemiBold);
+            Canvas.SetLeft(said, x + 6); Canvas.SetTop(said, H - 40); canvas.Children.Add(said);
+        }
         var was = Points(fromCurve, fromTuning); var now = Points(toCurve, toTuning);
         canvas.Children.Add(new Polyline { Points = was, Stroke = new SolidColorBrush(Color.FromArgb(120, 200, 215, 240)), StrokeThickness = 2, StrokeDashArray = [3, 3] });
         var line = new Polyline { Points = was, Stroke = DS.Brush("DS.AccentHi"), StrokeThickness = 3.5, StrokeLineJoin = PenLineJoin.Round, Effect = new DropShadowEffect { Color = Color.FromRgb(70, 150, 255), BlurRadius = 14, ShadowDepth = 0, Opacity = .8 } };
@@ -149,6 +162,39 @@ public sealed class AgentTour
             _ = Count(fromHalf, toHalf, ms, Mark);
         };
         return canvas;
+    }
+
+    // ---- a drift fix: the stick's centre, zoomed so the edge is 20% of travel ----
+    UIElement Centre(TourStep step, PcModeProfile before, PcModeProfile after, StickDrift drift, out Action<int> play)
+    {
+        const double S = 220, Edge = 20; double R = S / 2 - 4, scale = R / Edge;
+        double Inner(PcModeProfile p) => p.Sticks.GetValueOrDefault(step.Target)?.Inner ?? p.Curves.GetValueOrDefault(step.Target)?.Inner ?? 0;
+        double from = Math.Min(Inner(before), Edge), to = Math.Min(Inner(after), Edge);
+        var canvas = new Canvas { Width = S, Height = S, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 0, 0, 8) };
+        UIElement Ring(double radius, Brush stroke, Brush? fill, double thickness, DoubleCollection? dash = null)
+        { var e = new Ellipse { Width = radius * 2, Height = radius * 2, Stroke = stroke, Fill = fill, StrokeThickness = thickness, StrokeDashArray = dash }; Canvas.SetLeft(e, S / 2 - radius); Canvas.SetTop(e, S / 2 - radius); return e; }
+        var faint = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+        canvas.Children.Add(Ring(R, faint, new SolidColorBrush(Color.FromArgb(60, 4, 10, 26)), 1));
+        canvas.Children.Add(new Line { X1 = S / 2, X2 = S / 2, Y1 = 4, Y2 = S - 4, Stroke = faint });
+        canvas.Children.Add(new Line { Y1 = S / 2, Y2 = S / 2, X1 = 4, X2 = S - 4, Stroke = faint });
+        // the dead zone: everything inside it is ignored
+        var zone = new Ellipse { Fill = new SolidColorBrush(Color.FromArgb(90, 70, 150, 255)), Stroke = DS.Brush("DS.AccentHi"), StrokeThickness = 2 };
+        void Zone(double pct) { zone.Width = zone.Height = Math.Max(0, pct * scale * 2); Canvas.SetLeft(zone, S / 2 - pct * scale); Canvas.SetTop(zone, S / 2 - pct * scale); }
+        Zone(from); canvas.Children.Add(zone);
+        // what was measured: where it rests, and how far it wandered
+        canvas.Children.Add(Ring(Math.Min(drift.Peak, Edge) * scale, new SolidColorBrush(AgentMark.Red), null, 2, [3, 2]));
+        var rest = new Ellipse { Width = 9, Height = 9, Fill = new SolidColorBrush(AgentMark.Red) };
+        Canvas.SetLeft(rest, S / 2 + Math.Clamp(drift.RestX, -Edge, Edge) * scale - 4.5); Canvas.SetTop(rest, S / 2 - Math.Clamp(drift.RestY, -Edge, Edge) * scale - 4.5); canvas.Children.Add(rest);
+        var tag = Kit.Text("", 13, "DS.Text", FontWeights.SemiBold);
+        void Tag(double pct) => tag.Text = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"dead zone {pct:0.#}%  ·  drift {drift.Peak:0.0}%");
+        Tag(from);
+        var legend = Kit.Text("The stick's centre, zoomed in: the edge is 20% of its travel. Red: where it rested with no hand on it.", 12, "DS.TextMuted").Also(t => { t.TextWrapping = TextWrapping.Wrap; t.TextTrimming = TextTrimming.None; t.TextAlignment = TextAlignment.Center; t.Margin = new(0, 6, 0, 0); });
+        play = ms =>
+        {
+            if (ms == 0) { Zone(to); Tag(to); return; }
+            _ = Count(from, to, ms, pct => { Zone(pct); Tag(pct); });
+        };
+        return new StackPanel { Margin = new(0, 0, 0, 6), Children = { canvas, tag.Also(t => t.HorizontalAlignment = HorizontalAlignment.Center), legend } };
     }
 
     async Task Count(double from, double to, int ms, Action<double> show)

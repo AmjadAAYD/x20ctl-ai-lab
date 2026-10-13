@@ -132,7 +132,7 @@ public partial class StudioScene : UserControl
     {
         if (agentPanel == null)
         {
-            agentPanel = new(Model.Id, Model.Name, PcMode, RegisterFocus);
+            agentPanel = new(Model.Id, Model.Name, PcMode, RegisterFocus, Player, AgentMeter);
             agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 172);
             agentPanel.CloseRequested += CloseAgent; agentPanel.Thinking += agentOrb.SetThinking; agentPanel.Walkthrough = PlayAgentTour;
             Grid.SetZIndex(agentPanel.Body, 41); StudioShell.Children.Add(agentPanel.Body);
@@ -146,13 +146,15 @@ public partial class StudioScene : UserControl
     public void CloseAgent() { if (agentPanel == null) return; agentPanel.Hide(); agentOrb.ToolTip = "Agent XCTL"; agentOrb.Focus(); }
 
     private Agent.AgentTour? agentTour;
+    /// <summary>A stand-in for the controller's drift reading, set by review harnesses before the window opens.</summary>
+    public Func<Action<string, int>, X20Ctl.Zone.Agent.IDriftMeter>? AgentMeter { get; set; }
     /// <summary>The walk-through playing now, if any.</summary>
     public Agent.AgentTour? AgentTour => agentTour;
     /// <summary>A walk-through started (for review captures).</summary>
     public event Action<Agent.AgentTour>? AgentTourStarted;
     /// <summary>After the agent changes something: the window steps aside, each change is shown on the page where it lives,
     /// then the window comes back.</summary>
-    private async Task PlayAgentTour(X20Ctl.Zone.PcMode.PcModeProfile before, X20Ctl.Zone.PcMode.PcModeProfile after)
+    private async Task PlayAgentTour(X20Ctl.Zone.PcMode.PcModeProfile before, X20Ctl.Zone.PcMode.PcModeProfile after, X20Ctl.Zone.Agent.DriftReport? measured)
     {
         var steps = X20Ctl.Zone.Agent.AgentKnowledge.Tour(before, after);
         if (steps.Count == 0 || agentTour != null) return;
@@ -160,7 +162,7 @@ public partial class StudioScene : UserControl
         var tour = agentTour = new Agent.AgentTour();
         Grid.SetZIndex(tour.Card, 45); StudioShell.Children.Add(tour.Card); Fx.Appear(tour.Card, .96, 320);
         AgentTourStarted?.Invoke(tour);
-        try { await tour.Play(steps, before, after, Visit); }
+        try { await tour.Play(steps, before, after, measured, Visit); }
         finally
         {
             agentTour = null;

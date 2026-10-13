@@ -23,7 +23,7 @@ internal static class TalkReview
         try
         {
             window.Show(); window.WindowState = WindowState.Maximized; await Task.Delay(500);
-            await Controller("x20_pro", 0, "1-pro", ["Make my right stick good for sniping", "What's good and bad about hair triggers?", "I want faster triggers for shooting", "Turbo on X, 12 presses a second", "Put jump on M5", "Set my left stick dead zone to 260"]);
+            await Controller("x20_pro", 0, "1-pro", ["Make my right stick good for sniping", "What's good and bad about hair triggers?", "I want faster triggers for shooting", "Turbo on X, 12 presses a second", "Put jump on M5", "Set my left stick dead zone to 260", "My right stick drifts a little, can you fix it?"]);
             window.Host.ReturnToZone(); await Task.Delay(700);
             await Controller("x20", 1, "2-x20", ["Put jump on M5"]);
             log.AppendLine("== fixture file after the run");
@@ -43,6 +43,8 @@ internal static class TalkReview
             int stop = 0;
             // the walk-through: a capture of each step once it has finished moving (the card holds it for a few seconds)
             studio.AgentTourStarted += tour => tour.Held += step => _ = Shot($"{prefix}-tour-{++stop}-{step.Target}");
+            // the drift reading: a labelled stand-in (no controller is read here), with a capture mid-countdown
+            studio.AgentMeter = progress => new FixtureMeter(progress, () => Shot($"{prefix}-measuring"));
             studio.OpenAgent(); var talk = studio.AgentWindow!;
             await Shot(prefix + "-0-open");
             int n = 0;
@@ -56,6 +58,7 @@ internal static class TalkReview
                 foreach (var c in turn.Verdict.Checks) log.AppendLine($"  {c.State,-11} {c.Action.Action} {c.Action.Target} {c.Action.ValueText} · {c.Message}");
                 log.AppendLine("valid: " + turn.Verdict.Valid + (turn.Outcome.Error != null ? " · " + turn.Outcome.Error : ""));
                 foreach (var c in turn.Outcome.Changes) log.AppendLine($"  changed {c.What}: {c.Before} -> {c.After}");
+                if (turn.Measured != null) log.AppendLine("measured (fixture): " + turn.Measured.Describe());
                 if (turn.Verdict.Proposal?.Recap is { Length: > 0 } recap) log.AppendLine("recap: " + recap);
                 log.AppendLine("stats: " + AgentSession.Stats(turn));
             }
@@ -70,6 +73,18 @@ internal static class TalkReview
                 if (e is { IsVisible: true }) log.AppendLine($"[{name}] {what} at {e.TransformToAncestor(window.Stage).TransformBounds(new Rect(e.RenderSize))}");
             var bmp = new RenderTargetBitmap((int)window.Stage.ActualWidth, (int)window.Stage.ActualHeight, 96, 96, PixelFormats.Pbgra32); bmp.Render(window.Stage);
             var enc = new PngBitmapEncoder(); enc.Frames.Add(BitmapFrame.Create(bmp)); using var f = File.Create(Path.Combine(directory, name + ".png")); enc.Save(f);
+        }
+    }
+
+    /// <summary>A review stand-in for the drift reading: counts down like the real one, then reports a right stick that rests
+    /// a little off centre and wanders up to 6.4%, a left stick that is clean. Labelled fixture in the log.</summary>
+    sealed class FixtureMeter(Action<string, int> progress, Func<Task> shot) : IDriftMeter
+    {
+        public async Task<DriftReport> Measure(IReadOnlyList<string> sticks, CancellationToken cancel)
+        {
+            for (int s = 5; s > 0; s--) { progress(s > 3 ? "Let go of the sticks" : "Reading the sticks", s); await Task.Delay(1000, cancel); if (s == 3) await shot(); }
+            var all = new[] { new StickDrift("LeftStick", 0.2, -0.1, 0.6, 3000), new StickDrift("RightStick", 3.1, -2.4, 6.4, 3000) };
+            return new(all.Where(d => sticks.Contains(d.Stick)).ToList(), null);
         }
     }
 }

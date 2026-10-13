@@ -33,7 +33,7 @@ public sealed class AgentPanel
     /// <summary>Minimise or close was chosen: the host puts the window away (the conversation stays).</summary>
     public event Action? CloseRequested;
     /// <summary>Plays the walk-through of a change (before, after) on the host's pages, and returns when it is over.</summary>
-    public Func<PcModeProfile, PcModeProfile, Task>? Walkthrough { get; set; }
+    public Func<PcModeProfile, PcModeProfile, DriftReport?, Task>? Walkthrough { get; set; }
     /// <summary>The agent started or stopped thinking.</summary>
     public event Action<bool>? Thinking;
     readonly string modelId, greeting;
@@ -54,11 +54,12 @@ public sealed class AgentPanel
     PcModeProfile preview = new(); // the settings when PC mode isn't reachable from this window
     bool busy;
 
-    public AgentPanel(string modelId, string controllerName, PcModeLink? link, Action<Button> register)
+    public AgentPanel(string modelId, string controllerName, PcModeLink? link, Action<Button> register, int player = 0, Func<Action<string, int>, IDriftMeter>? meter = null)
     {
         this.modelId = modelId; this.link = link;
         string name = controllerName.Replace("EasySMX ", "");
-        session = new AgentSession(model, modelId, name);
+        // drift is read from the real controller; a review harness can hand in its own reading instead
+        session = new AgentSession(model, modelId, name) { Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring) };
         greeting = "Agent XCTL, in your " + name + ". Tell me how you play, or what feels wrong, and I'll set myself up.";
 
         // title bar: the mark, the name, the model's state; drag it to move the window
@@ -192,7 +193,7 @@ public sealed class AgentPanel
                 try { Store(next); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); return turn; }
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
-                if (Walkthrough != null) await Walkthrough(before, next);
+                if (Walkthrough != null) await Walkthrough(before, next, turn.Measured);
                 Say(turn, before); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
             else Say(turn, null);
@@ -204,7 +205,20 @@ public sealed class AgentPanel
             Say(error is TaskCanceledException ? "I took too long to answer. Try again." : "I couldn't reach the model: " + error.Message, null);
             return null;
         }
-        finally { busy = false; ShowState(); Thinking?.Invoke(false); Input.Focus(); }
+        finally { busy = false; if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } ShowState(); Thinking?.Invoke(false); Input.Focus(); }
+    }
+
+    // ---- the drift reading: a countdown while the sticks are read ----
+    Border? measuring;
+    void Measuring(string phase, int seconds)
+    {
+        if (measuring == null)
+        {
+            measuring = Bubble("", mine: false); measuring.BorderBrush = DS.Brush("DS.Warn");
+            measuring.Child = new StackPanel { Children = { Kit.Text("", 16, "DS.Text", FontWeights.SemiBold), Wrap("Hands off the controller: I'm reading where the sticks rest.", 13.5, "DS.TextSoft", 4) } };
+        }
+        ((TextBlock)((StackPanel)measuring.Child).Children[0]).Text = $"{phase} · {seconds}";
+        scroller.ScrollToEnd();
     }
     public static ModelState State => state;
     public PcModeProfile Settings => Current;
@@ -234,6 +248,13 @@ public sealed class AgentPanel
         var stack = new StackPanel();
         var v = turn.Verdict;
         stack.Children.Add(Wrap(v.Proposal?.Speech is { Length: > 0 } speech ? speech : "I didn't give a usable answer.", 15, "DS.Text"));
+        // what the app itself measured, before what the model made of it
+        if (turn.Measured is { } m)
+        {
+            if (m.Problem != null) stack.Children.Add(Wrap("Not measured · " + m.Problem, 14, "DS.Warn", 8));
+            foreach (var d in m.Sticks)
+                stack.Children.Add(Wrap(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Measured · {AgentApplier.Name(d.Stick)} rests at {d.RestX:+0.0;-0.0;0.0}%, {d.RestY:+0.0;-0.0;0.0}% and wanders up to {d.Peak:0.0}%"), 14, "DS.Warn", 8));
+        }
         foreach (var c in turn.Outcome.Changes)
             stack.Children.Add(Wrap($"{c.What}   {c.Before} → {c.After}", 14, "DS.AccentHi", 6));
         // why it fits, or the answer to a question: the model's words, from the settings' meanings

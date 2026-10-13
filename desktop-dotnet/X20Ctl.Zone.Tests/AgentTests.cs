@@ -290,6 +290,57 @@ public sealed class AgentTests
         Assert.Empty(AgentKnowledge.Tour(after, after));
     }
 
+    sealed class FakeMeter(double peak) : IDriftMeter
+    {
+        public List<string> Asked { get; } = new();
+        public Task<DriftReport> Measure(IReadOnlyList<string> sticks, CancellationToken cancel)
+        { Asked.AddRange(sticks); return Task.FromResult(new DriftReport(sticks.Select(s => new StickDrift(s, 1.2, -0.4, peak, 600)).ToList(), null)); }
+    }
+
+    [Fact]
+    public void A_drift_reading_keeps_the_furthest_point_and_notices_a_thumb()
+    {
+        var s = new DriftSampler("RightStick");
+        for (int i = 0; i < 99; i++) s.Add(500, -250);
+        s.Add(1000, -500); // the furthest it wandered: 3.4% from the centre, while it rests around 1.5%
+        var r = s.Result();
+        Assert.Equal(1.5, r.RestX); Assert.Equal(-0.8, r.RestY); Assert.Equal(3.4, r.Peak); Assert.Equal(100, r.Samples);
+        Assert.Equal(5, r.Suggested); // the smallest whole dead zone past 3.4, plus one to spare
+        Assert.False(s.Touched);
+        s.Add(12000, 0); Assert.True(s.Touched);
+        Assert.Equal(0, new StickDrift("LeftStick", 0, 0, .6, 10).Suggested);   // clean: nothing to hide
+        Assert.Equal(40, new StickDrift("LeftStick", 0, 0, 45, 10).Suggested);  // never past the dead zone's range
+    }
+
+    [Fact]
+    public async Task Drift_is_measured_first_and_the_dead_zone_must_hide_what_was_measured()
+    {
+        var meter = new FakeMeter(3.4);
+        var model = new ScriptedModel(
+            Reply(Act("measure_drift", "RightStick", "0")),
+            Reply(Act("stick_deadzone", "RightStick", "3")),   // under the measured 3.4%: rejected
+            Reply(Act("stick_deadzone", "RightStick", "5")));
+        var turn = await new AgentSession(model, "x20_pro", "X20 Pro") { Meter = meter }.Ask("my right stick drifts", new PcModeProfile());
+        Assert.Equal(["RightStick"], meter.Asked);
+        Assert.Contains("wandered up to 3.4%", model.Seen[1][^1].Content);
+        Assert.Contains("Use at least 5", model.Seen[2][^1].Content);
+        Assert.Equal(3, turn.Attempts.Count);
+        Assert.True(turn.Verdict.Valid);
+        Assert.Equal(5, turn.Outcome.Next!.Sticks["RightStick"].Inner);
+        Assert.Equal(3.4, turn.Measured!.For("RightStick")!.Peak);
+    }
+
+    [Fact]
+    public async Task Without_a_meter_the_model_is_told_it_cannot_measure()
+    {
+        var model = new ScriptedModel(Reply(Act("measure_drift", "LeftStick", "0")), Reply());
+        var turn = await new AgentSession(model, "x20_pro", "X20 Pro").Ask("left stick drifts", new PcModeProfile());
+        Assert.Contains("couldn't measure", model.Seen[1][^1].Content);
+        Assert.NotNull(turn.Measured!.Problem);
+        Assert.Empty(turn.Outcome.Changes);
+        Assert.False(ProposalValidator.Check(Reply(Act("measure_drift", "A", "0")), "x20_pro").Valid); // sticks only
+    }
+
     [Fact]
     public void Curve_meanings_come_from_the_response_PC_mode_runs()
     {

@@ -9,8 +9,8 @@ namespace X20Ctl.Zone.Agent;
 public static class AgentVocabulary
 {
     public const string StickDeadzone = "stick_deadzone", StickFullAt = "stick_full_at", StickAntiDeadzone = "stick_anti_deadzone", StickCurve = "stick_curve",
-        TriggerDeadzone = "trigger_deadzone", TriggerFullAt = "trigger_full_at", TriggerCurve = "trigger_curve", Remap = "remap", Turbo = "turbo", Reset = "reset", Paddle = "paddle";
-    public static readonly string[] Actions = [StickDeadzone, StickFullAt, StickAntiDeadzone, StickCurve, TriggerDeadzone, TriggerFullAt, TriggerCurve, Remap, Turbo, Reset, Paddle];
+        TriggerDeadzone = "trigger_deadzone", TriggerFullAt = "trigger_full_at", TriggerCurve = "trigger_curve", Remap = "remap", Turbo = "turbo", Reset = "reset", Paddle = "paddle", MeasureDrift = "measure_drift";
+    public static readonly string[] Actions = [StickDeadzone, StickFullAt, StickAntiDeadzone, StickCurve, TriggerDeadzone, TriggerFullAt, TriggerCurve, Remap, Turbo, Reset, Paddle, MeasureDrift];
     public static readonly string[] Sticks = ["LeftStick", "RightStick"], Triggers = ["LeftTrigger", "RightTrigger"];
     public static readonly string[] Buttons = [.. PadButtons.Mask.Keys, "LT", "RT"];
     public static readonly string[] AllPaddles = ["M1", "M2", "M3", "M4", "M5", "M6"];
@@ -57,7 +57,9 @@ public static class ProposalValidator
 {
     static readonly string[] Fields = ["speech", "actions", "recap", "assumptions"], ActionFields = ["action", "target", "value", "reason"];
 
-    public static AgentVerdict Check(string json, string modelId)
+    /// <param name="measured">What the app measured earlier in this turn, if anything: a dead zone below a stick's measured
+    /// drift is then rejected, because it would let the drift through.</param>
+    public static AgentVerdict Check(string json, string modelId, DriftReport? measured = null)
     {
         AgentProposal proposal;
         try { proposal = Parse(json); }
@@ -68,7 +70,7 @@ public static class ProposalValidator
             var action = proposal.Actions[i];
             var earlier = proposal.Actions.Take(i).FirstOrDefault(a => a.Action == action.Action && a.Target == action.Target);
             if (earlier != null && earlier.ValueText != action.ValueText) { checks.Add(new(action, CheckState.Rejected, $"Conflicts with an earlier change to {action.Target}.")); continue; }
-            var (state, message) = Rule(action, modelId);
+            var (state, message) = Rule(action, modelId, measured);
             checks.Add(new(action, state, earlier != null && state == CheckState.Ok ? "Same as an earlier change." : message));
         }
         return new(proposal, null, checks);
@@ -107,7 +109,7 @@ public static class ProposalValidator
     static string Text(JsonElement element, string field, string what) =>
         element.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString()! : throw new InvalidDataException($"The {what}'s \"{field}\" is missing or isn't text.");
 
-    static (CheckState, string) Rule(AgentAction a, string modelId)
+    static (CheckState, string) Rule(AgentAction a, string modelId, DriftReport? measured)
     {
         static (CheckState, string) No(string why) => (CheckState.Rejected, why);
         if (!AgentVocabulary.Actions.Contains(a.Action)) return No($"\"{a.Action}\" isn't something I can do.");
@@ -122,7 +124,11 @@ public static class ProposalValidator
             case AgentVocabulary.StickDeadzone or AgentVocabulary.StickFullAt or AgentVocabulary.StickAntiDeadzone:
                 if (!stick) return No($"{a.Action} needs LeftStick or RightStick, not {a.Target}.");
                 var (low, high) = a.Action switch { AgentVocabulary.StickDeadzone => (0.0, StickTuning.MaxInner), AgentVocabulary.StickAntiDeadzone => (0.0, StickTuning.MaxAnti), _ => (StickTuning.MinOuter, 100.0) };
-                return Number(a, low, high, decimals: true);
+                var range = Number(a, low, high, decimals: true);
+                // grounded in the measurement: a dead zone the measured drift reaches past doesn't fix it
+                if (range.Item1 == CheckState.Ok && a.Action == AgentVocabulary.StickDeadzone && measured?.For(a.Target) is { Suggested: > 0 } drift && a.Value.GetDouble() <= drift.Peak)
+                    return No(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"The {AgentApplier.Name(a.Target).ToLowerInvariant()} was measured wandering up to {drift.Peak:0.0}% with no hand on it, so a {a.Value.GetDouble():0.#}% dead zone lets the drift through. Use at least {drift.Suggested}."));
+                return range;
             case AgentVocabulary.TriggerDeadzone or AgentVocabulary.TriggerFullAt:
                 if (!trigger) return No($"{a.Action} needs LeftTrigger or RightTrigger, not {a.Target}.");
                 return a.Action == AgentVocabulary.TriggerDeadzone ? Number(a, 0, AgentVocabulary.MaxTriggerDeadzone, decimals: false) : Number(a, AgentVocabulary.MinTriggerFullAt, 100, decimals: false);
@@ -136,6 +142,8 @@ public static class ProposalValidator
                 if (!button) return No($"{a.Target} isn't a button that can have turbo.");
                 if (a.Value.ValueKind != JsonValueKind.Number || !a.Value.TryGetInt32(out int hz)) return No("Turbo needs a whole number of presses a second.");
                 return hz == 0 || hz is >= PcModeProfile.MinTurboHz and <= PcModeProfile.MaxTurboHz ? (CheckState.Ok, "In range.") : No($"Turbo is {PcModeProfile.MinTurboHz} to {PcModeProfile.MaxTurboHz} presses a second, or 0 for off; {hz} is outside.");
+            case AgentVocabulary.MeasureDrift:
+                return stick ? (CheckState.Ok, "A reading: changes nothing.") : No($"measure_drift needs LeftStick or RightStick, not {a.Target}.");
             case AgentVocabulary.Reset:
                 return stick || trigger || button || a.Target == AgentVocabulary.All ? (CheckState.Ok, "Back to default.") : No($"{a.Target} has nothing to reset.");
             default: // paddle
