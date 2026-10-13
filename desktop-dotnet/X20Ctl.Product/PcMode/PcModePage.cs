@@ -98,6 +98,17 @@ public sealed class PcModePage : Border
     public static event Action? NoticeAccepted;
     /// <summary>The switch changed. The Studio reopens, so its tabs unlock (or lock) for this controller.</summary>
     public event Action<bool>? Switched;
+    static event Action? SwitchedElsewhere;
+    /// <summary>Agent XCTL switched PC mode: the same as the switch here, without the notice (the owner asked for it in
+    /// words). Returns why it couldn't, or null.</summary>
+    public static string? SwitchFromAgent(PcModeLink link, bool on)
+    {
+        if (on && !PcModeSetup.Ready) return "PC mode needs its drivers first: Tools, PC mode, Set up.";
+        link.Service.Enabled = on;
+        try { link.Preferences?.SetPcMode(on); } catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException) { return "Switched, but couldn't remember it: " + error.Message; }
+        SwitchedElsewhere?.Invoke();
+        return null;
+    }
 
     readonly PcModeService service; readonly PcModeStore store; readonly ProductPreferences? preferences;
     readonly Dictionary<string, ComboBox> turbo = new();
@@ -111,7 +122,7 @@ public sealed class PcModePage : Border
     readonly Ellipse dot = new() { Width = 14, Height = 14, VerticalAlignment = VerticalAlignment.Center };
     readonly CheckBox enable = new() { Style = DS.Style("DS.Toggle"), VerticalAlignment = VerticalAlignment.Center };
     readonly Border notice; readonly Button setup;
-    bool loading, pendingSave;
+    bool loading, pendingSave, syncing;
 
     public Button Back { get; }
     public CheckBox Switch => enable;
@@ -143,7 +154,7 @@ public sealed class PcModePage : Border
         setupNote = Wrap("", 14, "DS.TextMuted", 8); stack.Children.Add(setupNote);
         // shows the saved choice; whether the service runs is the host's call (review and fixture windows never start it)
         enable.IsChecked = preferences?.PcMode ?? true;
-        enable.Checked += (_, _) => SetEnabled(true); enable.Unchecked += (_, _) => SetEnabled(false);
+        enable.Checked += (_, _) => { if (!syncing) SetEnabled(true); }; enable.Unchecked += (_, _) => { if (!syncing) SetEnabled(false); };
 
         // where the settings are edited
         var edit = new StackPanel { Margin = new(0, 22, 0, 0), Children = { Kit.Text("Where you change the settings", 17, "DS.Text", FontWeights.SemiBold),
@@ -222,8 +233,9 @@ public sealed class PcModePage : Border
         loading = true; ListProfiles(); Fill(store.Get(StoreKey)); loading = false;
         // the service outlives this page: listen only while shown
         Action changed = () => Dispatcher.BeginInvoke(Refresh);
-        Loaded += (_, _) => { service.Changed -= changed; service.Changed += changed; Refresh(); };
-        Unloaded += (_, _) => service.Changed -= changed;
+        Action elsewhere = () => { syncing = true; enable.IsChecked = service.Enabled; syncing = false; Refresh(); };
+        Loaded += (_, _) => { service.Changed -= changed; service.Changed += changed; SwitchedElsewhere -= elsewhere; SwitchedElsewhere += elsewhere; Refresh(); };
+        Unloaded += (_, _) => { service.Changed -= changed; SwitchedElsewhere -= elsewhere; };
         Refresh();
     }
 

@@ -9,14 +9,14 @@ namespace X20Ctl.Zone.Agent;
 public static class AgentVocabulary
 {
     public const string StickDeadzone = "stick_deadzone", StickFullAt = "stick_full_at", StickAntiDeadzone = "stick_anti_deadzone", StickCurve = "stick_curve",
-        TriggerDeadzone = "trigger_deadzone", TriggerFullAt = "trigger_full_at", TriggerCurve = "trigger_curve", Remap = "remap", Turbo = "turbo", Reset = "reset", Paddle = "paddle", MeasureDrift = "measure_drift";
-    public static readonly string[] Actions = [StickDeadzone, StickFullAt, StickAntiDeadzone, StickCurve, TriggerDeadzone, TriggerFullAt, TriggerCurve, Remap, Turbo, Reset, Paddle, MeasureDrift];
+        TriggerDeadzone = "trigger_deadzone", TriggerFullAt = "trigger_full_at", TriggerCurve = "trigger_curve", Remap = "remap", Turbo = "turbo", Reset = "reset", Paddle = "paddle", MeasureDrift = "measure_drift", PcMode = "pc_mode";
+    public static readonly string[] Actions = [StickDeadzone, StickFullAt, StickAntiDeadzone, StickCurve, TriggerDeadzone, TriggerFullAt, TriggerCurve, Remap, Turbo, Reset, Paddle, MeasureDrift, PcMode];
     public static readonly string[] Sticks = ["LeftStick", "RightStick"], Triggers = ["LeftTrigger", "RightTrigger"];
     public static readonly string[] Buttons = [.. PadButtons.Mask.Keys, "LT", "RT"];
     public static readonly string[] AllPaddles = ["M1", "M2", "M3", "M4", "M5", "M6"];
     public static IReadOnlyCollection<string> Curves => CurveDraft.Presets.Keys.ToArray();
-    public const string All = "All";
-    public static readonly string[] Targets = [.. Sticks, .. Triggers, .. Buttons, .. AllPaddles, All];
+    public const string All = "All", PcModeTarget = "PcMode";
+    public static readonly string[] Targets = [.. Sticks, .. Triggers, .. Buttons, .. AllPaddles, All, PcModeTarget];
     public const int MaxTriggerDeadzone = 40, MinTriggerFullAt = 10, MaxActions = 8;
 
     /// <summary>The rear paddles a model has, from x20ctl/controllers/catalog.json (macroSlots).</summary>
@@ -142,6 +142,9 @@ public static class ProposalValidator
                 if (!button) return No($"{a.Target} isn't a button that can have turbo.");
                 if (a.Value.ValueKind != JsonValueKind.Number || !a.Value.TryGetInt32(out int hz)) return No("Turbo needs a whole number of presses a second.");
                 return hz == 0 || hz is >= PcModeProfile.MinTurboHz and <= PcModeProfile.MaxTurboHz ? (CheckState.Ok, "In range.") : No($"Turbo is {PcModeProfile.MinTurboHz} to {PcModeProfile.MaxTurboHz} presses a second, or 0 for off; {hz} is outside.");
+            case AgentVocabulary.PcMode:
+                if (a.Target != AgentVocabulary.PcModeTarget) return No($"pc_mode needs the target PcMode, not {a.Target}.");
+                return Word(a, ["on", "off"]);
             case AgentVocabulary.MeasureDrift:
                 return stick ? (CheckState.Ok, "A reading: changes nothing.") : No($"measure_drift needs LeftStick or RightStick, not {a.Target}.");
             case AgentVocabulary.Reset:

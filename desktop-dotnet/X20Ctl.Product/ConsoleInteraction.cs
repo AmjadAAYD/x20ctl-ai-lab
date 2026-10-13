@@ -27,6 +27,19 @@ public sealed class PhysicalHotspot : Button
         reveal.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(290))));
         BeginAnimation(RevealProperty, reveal);
     }
+    /// <summary>Agent XCTL changed this control: it glows a few times, apart from the selection. Steady without motion.</summary>
+    public void Mark(int times = 4)
+    {
+        var glow = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
+        if (animate)
+        {
+            glow.KeyFrames.Add(new EasingDoubleKeyFrame(.85, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(420)), new SineEase()));
+            glow.KeyFrames.Add(new EasingDoubleKeyFrame(.15, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1000)), new SineEase()));
+            glow.RepeatBehavior = new RepeatBehavior(times);
+        }
+        else { glow.KeyFrames.Add(new DiscreteDoubleKeyFrame(.7, KeyTime.FromTimeSpan(TimeSpan.Zero))); glow.KeyFrames.Add(new DiscreteDoubleKeyFrame(.7, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(times)))); }
+        BeginAnimation(RevealProperty, glow);
+    }
     public PhysicalHotspot(ControlRegion region, bool animations,bool compactPreview=false)
     {
         Region = region; animate = animations; compact=compactPreview; Width = region.Bounds.Width * 1536; Height = region.Bounds.Height * 1024;

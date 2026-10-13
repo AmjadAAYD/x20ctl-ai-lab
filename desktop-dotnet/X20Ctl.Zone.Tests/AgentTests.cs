@@ -342,6 +342,18 @@ public sealed class AgentTests
     }
 
     [Fact]
+    public void PC_mode_is_switched_by_its_own_action_and_changes_no_setting()
+    {
+        var on = AgentApplier.Apply(new PcModeProfile(), ProposalValidator.Check(Reply(Act("pc_mode", "PcMode", "\"on\"")), "x20_pro"));
+        Assert.True(on.PcMode); Assert.Empty(on.Changes); Assert.NotNull(on.Next);
+        var both = AgentApplier.Apply(new PcModeProfile(), ProposalValidator.Check(Reply(Act("pc_mode", "PcMode", "\"off\""), Act("turbo", "X", "12")), "x20_pro"));
+        Assert.False(both.PcMode); Assert.Single(both.Changes);
+        Assert.Null(AgentApplier.Apply(new PcModeProfile(), ProposalValidator.Check(Reply(Act("turbo", "X", "12")), "x20_pro")).PcMode);
+        Assert.False(ProposalValidator.Check(Reply(Act("pc_mode", "PcMode", "\"maybe\"")), "x20_pro").Valid);
+        Assert.False(ProposalValidator.Check(Reply(Act("pc_mode", "A", "\"on\"")), "x20_pro").Valid);
+    }
+
+    [Fact]
     public void Curve_meanings_come_from_the_response_PC_mode_runs()
     {
         Assert.Equal((50, 75), AgentKnowledge.Shape("default"));

@@ -167,6 +167,7 @@ public partial class StudioScene : UserControl
         {
             agentTour = null;
             Fx.Leave(tour.Card, () => StudioShell.Children.Remove(tour.Card), .97, 220);
+            MarkAgentChanges(steps.Select(s => s.Target));
             OpenAgent();
         }
 
@@ -181,6 +182,18 @@ public partial class StudioScene : UserControl
             if (!IsCurves) ShowCurves(true);
             Curves.SelectChannel(Enum.Parse<CurveChannel>(step.Target));
         }
+    }
+    /// <summary>Every control the agent just changed glows on the controller, on the side where most of them are.</summary>
+    public IReadOnlyList<string> MarkAgentChanges(IEnumerable<string> targets)
+    {
+        var keys = targets.Select(t => t switch { "LeftStick" => "L3", "RightStick" => "R3", "LeftTrigger" => "LT", "RightTrigger" => "RT", _ => t })
+            .Where(controls.ContainsKey).Distinct().ToList();
+        if (keys.Count == 0) return keys;
+        var regions = keys.Select(k => layout.Controls.First(r => r.Key == k)).ToList();
+        bool rear = regions.Count(r => r.View is "back" or "shoulder") * 2 > regions.Count;
+        if (rear != IsRear) ShowController(rear);
+        foreach (var k in keys) controls[k].Mark();
+        return keys;
     }
     private readonly ButtonsConsolePage? buttonsPage;
     /// <summary>Title-bar pills: Support (Ko-fi, opens only when chosen) in the same quiet glass as the Zone, and the controller name.</summary>

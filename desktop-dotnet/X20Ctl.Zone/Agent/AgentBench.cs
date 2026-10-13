@@ -58,6 +58,19 @@ public static class AgentBench
         new("Check my sticks for drift", "x20_pro", ["stick_deadzone:LeftStick"], ["stick_deadzone:RightStick"]),
     ];
 
+    /// <summary>M3's other sentences: resetting, turbo off, and PC mode on and off.</summary>
+    public static readonly BenchCase[] M3Cases =
+    [
+        new("Reset everything", "x20_pro", ["reset:All"]),
+        new("Put all my settings back to default", "x20_pro", ["reset:All"]),
+        new("Turn off turbo on X", "x20_pro", ["turbo:X=0", "reset:X"]),
+        new("Stop the turbo on RB", "x20_pro", ["turbo:RB=0", "reset:RB"]),
+        new("Turn on PC mode", "x20_pro", ["pc_mode:PcMode=on"]),
+        new("My settings don't do anything in games", "x20_pro", ["pc_mode:PcMode=on"]),
+        new("Switch PC mode off", "x20_pro", ["pc_mode:PcMode=off"]),
+        new("Make my sticks smooth and turn PC mode on", "x20_pro", ["pc_mode:PcMode=on"], ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),
+    ];
+
     public static readonly BenchCase[] Cases =
     [
         new("Make my sticks smooth", "x20_pro", ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),

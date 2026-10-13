@@ -188,15 +188,17 @@ public sealed class AgentPanel
         {
             var turn = await session.Ask(sentence, before);
             transcript.Children.Remove(thinking);
+            // PC mode on or off, when asked: the switch itself, not a setting
+            string? switched = turn.Outcome.PcMode is { } on ? (link == null ? "PC mode isn't reachable from this window." : PcModePage.SwitchFromAgent(link, on) ?? "") : null;
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
                 try { Store(next); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); return turn; }
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
                 if (Walkthrough != null) await Walkthrough(before, next, turn.Measured);
-                Say(turn, before); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
+                Say(turn, before, switched: switched); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
-            else Say(turn, null);
+            else { Say(turn, null, switched: switched); if (switched != null) ShowSettings(new HashSet<string>()); }
             return turn;
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
@@ -243,7 +245,7 @@ public sealed class AgentPanel
     void Say(string text, string? detail) { var b = Bubble(text, false); if (detail != null) ((TextBlock)b.Child).Text += "\n" + detail; }
 
     /// <summary>One answer: the model's words, then what the app did, then the details on request.</summary>
-    void Say(AgentTurn turn, PcModeProfile? undo, string? failure = null)
+    void Say(AgentTurn turn, PcModeProfile? undo, string? failure = null, string? switched = null)
     {
         var stack = new StackPanel();
         var v = turn.Verdict;
@@ -260,10 +262,14 @@ public sealed class AgentPanel
         // why it fits, or the answer to a question: the model's words, from the settings' meanings
         if (v.Valid && v.Proposal?.Recap is { Length: > 0 } recap)
             stack.Children.Add(new Border { BorderBrush = DS.Brush("DS.AccentHi"), BorderThickness = new(2, 0, 0, 0), Padding = new(12, 2, 0, 2), Margin = new(0, 10, 0, 0), Child = Wrap(recap, 14.5, "DS.TextSoft") });
+        // the switch: "" when it worked, otherwise why not
+        if (switched != null && turn.Outcome.PcMode is { } pc)
+            stack.Children.Add(Wrap(switched.Length == 0 ? $"PC mode   {(pc ? "on" : "off")}" : "PC mode · " + switched, 14, switched.Length == 0 ? "DS.AccentHi" : "DS.Warn", 6));
         foreach (var skipped in v.Checks.Where(c => c.State == CheckState.Unavailable))
             stack.Children.Add(Wrap($"{skipped.Action.Target}: {skipped.Message}", 14, "DS.Warn", 6));
         // the app's own line: the truth about what happened, whatever the model said
-        string verdict = failure ?? (turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(link == null ? " · preview only" : "")}"
+        string verdict = failure ?? (turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && switched == "" ? "Applied · PC mode switched " + (turn.Outcome.PcMode == true ? "on" : "off")
+            : turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(link == null ? " · preview only" : "")}"
             : !v.Valid ? "Rejected · nothing changed · " + AgentSession.Problems(v)
             : turn.Outcome.Error != null ? "Rejected · " + turn.Outcome.Error : "No changes");
         stack.Children.Add(Wrap(verdict, 14, failure != null || !v.Valid || turn.Outcome.Error != null ? "DS.Danger" : turn.Outcome.Changes.Count > 0 ? "DS.Success" : "DS.TextMuted", 10).Also(t => t.FontWeight = FontWeights.SemiBold));

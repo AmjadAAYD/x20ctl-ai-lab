@@ -5,7 +5,8 @@ namespace X20Ctl.Zone.Agent;
 
 public sealed record AgentChange(string What, string Before, string After);
 /// <summary>The profile a verdict leads to, and what changed. Next is null when the proposal was rejected: nothing moves.</summary>
-public sealed record AgentOutcome(PcModeProfile? Next, IReadOnlyList<AgentChange> Changes, string? Error);
+/// <param name="PcMode">PC mode switched on (true) or off (false) by the proposal; null when it doesn't say.</param>
+public sealed record AgentOutcome(PcModeProfile? Next, IReadOnlyList<AgentChange> Changes, string? Error, bool? PcMode = null);
 
 /// <summary>
 /// Turns a validated proposal into the next PC mode profile. Pure: it copies the current profile, never touches it, and
@@ -20,7 +21,8 @@ public static class AgentApplier
         foreach (var action in verdict.Applicable) Do(next, action);
         try { next.Validate(); }
         catch (InvalidDataException error) { return new(null, [], "The result wouldn't be a valid setting (" + error.Message.TrimEnd('.') + "), so nothing was changed."); }
-        return new(next, Diff(current, next), null);
+        bool? pc = verdict.Applicable.LastOrDefault(a => a.Action == AgentVocabulary.PcMode) is { } s ? s.ValueText == "on" : null;
+        return new(next, Diff(current, next), null, pc);
     }
 
     static void Do(PcModeProfile p, AgentAction a)

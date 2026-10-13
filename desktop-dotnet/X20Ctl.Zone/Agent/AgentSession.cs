@@ -104,6 +104,8 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - reset: a stick, trigger or button, or All, value 0. Back to default.
             - paddle: a paddle, value A or B. My paddles: {paddles}. Paddles only take this action, and only send A or B. Jump is A in most games.
 
+            - pc_mode: target PcMode, value "on" or "off". PC mode is how my settings reach games on this PC. When the owner wants the settings to work in games, or says nothing changed in game, switch it on.
+
             - measure_drift: LeftStick or RightStick, value 0. Reads where the stick rests with no hand on it, for three seconds. Changes nothing.
 
             Drift: when the owner says a stick drifts, moves on its own, or the aim creeps, measure it first: reply with only measure_drift actions (one per stick named, both if they don't say which) and no other actions. The app then sends you what it measured. Answer that with stick_deadzone at least the smallest dead zone it gives for each drifting stick, and explain the numbers in the recap. If it measured no drift worth a dead zone, change nothing and say so.
