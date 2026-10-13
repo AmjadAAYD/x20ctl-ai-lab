@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Text.Json;
 using X20Ctl.Zone;
 namespace X20Ctl.Product;
@@ -47,8 +48,9 @@ public sealed class ProductHost : Grid
         support=openSupport??ProductLinks.OpenSupport;
         preferences=new(assignmentPath==null?Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"x20ctl","native","preferences.v1.json"):Path.Combine(Path.GetDirectoryName(Path.GetFullPath(assignmentPath))!,"preferences-fixture.json"));
         try{preferences.Load();preferencesHealthy=true;}catch(Exception error) when(error is IOException or System.Text.Json.JsonException or InvalidOperationException){Zone.FeedbackText.Text="Startup preferences unavailable; original file preserved. "+error.Message;}
-        // Tools → "Keep X20CTL up to date": only when turned on, never for review fixtures
-        if(preferencesHealthy&&preferences.AutoUpdate&&assignmentPath==null)_=CheckUpdatesAtLaunch();
+        // every launch asks GitHub for a newer version (owner request, 13 Oct 2026); a popup follows the intro only when there is one.
+        // Tools → "Keep X20CTL up to date" decides whether it also installs itself. Never for review fixtures.
+        if(assignmentPath==null)_=CheckUpdatesAtLaunch(preferencesHealthy&&preferences.AutoUpdate);
         // a review or fixture window gets a store beside its own files and a service that never starts
         pcModeStore=new(assignmentPath==null?X20Ctl.Zone.PcMode.PcModeStore.DefaultPath:Path.Combine(Path.GetDirectoryName(Path.GetFullPath(assignmentPath))!,"pc-mode-fixture.json"));pcModeStore.Load();
         PcMode=new(pcModeStore){Enabled=assignmentPath==null&&(!preferencesHealthy||preferences.PcMode)};
@@ -193,7 +195,7 @@ public sealed class ProductHost : Grid
     }
     private void CompleteIntro()
     {
-        if(Intro!=null){Children.Remove(Intro);Intro=null;}Zone.Opacity=1;Zone.IsEnabled=true;
+        if(Intro!=null){Children.Remove(Intro);Intro=null;}Zone.Opacity=1;Zone.IsEnabled=true;if(updateText!=null)ShowUpdatePopup();
         if(preferencesHealthy)try{preferences.MarkIntroSeen();}catch(Exception error) when(error is IOException or InvalidOperationException){Zone.FeedbackText.Text="Startup preference could not be saved; original file preserved. "+error.Message;}
     }
     private void OpenSupport(){try{support(ProductLinks.Support);}catch(Exception error){Zone.FeedbackText.Text="Could not open your browser. Support X20CTL: "+ProductLinks.Support+" · "+error.Message;}}
@@ -210,7 +212,36 @@ public sealed class ProductHost : Grid
     public void OpenWriteScan()=>OpenWriteScan(null);
     public void OpenWriteScan(Scanner.ReadReport? read){if(WriteScan!=null)return;WriteScan=new(CloseWriteScan,read);Children.Add(WriteScan);Panel.SetZIndex(WriteScan,40);Fx.Appear(WriteScan,1.06,360);}
     public void CloseWriteScan(){if(WriteScan==null){RemoveOrphans();return;}if(!WriteScan.TryClose())return;var closing=WriteScan;WriteScan=null;closing.Shutdown();Fx.Leave(closing,()=>Children.Remove(closing),1.05,240);Settings?.WriteScan.Focus();}
-    private async Task CheckUpdatesAtLaunch(){await Task.Delay(4000);if(await Updater.AutoRun() is { } message)Zone.FeedbackText.Text=message;}
+    private string? updateText;private bool updateShown;
+    private async Task CheckUpdatesAtLaunch(bool install)
+    {
+        await Task.Delay(4000);
+        try{if(install)await Updater.AutoRun();else Updater.Ready=await Updater.Latest();}catch(Exception){return;}
+        if(Updater.Ready is not {} release)return;
+        updateText=Updater.Installed is {} installed?$"Version {installed} is installed. It starts the next time you open X20CTL.":$"{release.Title} is out. You have {Updater.Current}.";
+        if(Intro==null)ShowUpdatePopup();
+    }
+    /// <summary>The one popup: shown after the intro, once, and only when a newer version exists.</summary>
+    private void ShowUpdatePopup()
+    {
+        if(updateShown||updateText==null||Updater.Ready is not {} release)return;updateShown=true;
+        var message=Kit.Text(updateText,15,"DS.Text");message.TextWrapping=TextWrapping.Wrap;message.MaxWidth=420;
+        var go=new Button{Style=DS.Style("DS.ActionPrimary"),Height=42,MinHeight=0,Padding=new(22,0,22,0),Margin=new(0,0,10,0),Content=Updater.Installed!=null?"OK":Updater.CanInstall?"Update now":"Get it on GitHub"};
+        var later=new Button{Style=DS.Style("DS.ActionSecondary"),Height=42,MinHeight=0,Padding=new(22,0,22,0),Content="Later"};
+        var card=new Border{CornerRadius=new(16),Padding=new(26),Background=new SolidColorBrush(Color.FromRgb(14,24,50)),BorderBrush=new SolidColorBrush(Color.FromArgb(120,125,182,255)),BorderThickness=new(1),HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,
+            Child=new StackPanel{Children={Kit.Text("New version",20,"DS.Text",FontWeights.SemiBold),new Border{Height=10},message,new Border{Height=20},new StackPanel{Orientation=Orientation.Horizontal,Children={go,later}}}}};
+        var layer=new Grid{Background=new SolidColorBrush(Color.FromArgb(150,2,6,18)),Children={card}};
+        void Close(){Children.Remove(layer);}
+        later.Click+=(_,_)=>Close();
+        go.Click+=async(_,_)=>
+        {
+            if(Updater.Installed!=null){Close();return;}
+            if(Updater.CanInstall){go.IsEnabled=false;go.Content="Updating";var(_,text)=await Updater.Install(release);message.Text=text;go.Content="OK";go.IsEnabled=true;go.Click+=(_,_)=>Close();return;}
+            try{if(!ReviewSandbox.Active)System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Updater.ReleasesPage){UseShellExecute=true});}catch(Exception){}
+            Close();
+        };
+        Panel.SetZIndex(layer,35);Children.Add(layer);go.Focus();
+    }
     public void CloseSettings(){if(Settings!=null){var leaving=Settings;Settings=null;Fx.Leave(leaving,()=>Children.Remove(leaving),1.03,220);}Zone.IsEnabled=true;}
     public void ResetTransientInput(){nativeArmed=false;Zone.SuspendNavigation();Studio?.Tester?.ClearKeyboardKeys();Studio?.ReleaseTransientInput();}
     public event Action? HomeRequested;
