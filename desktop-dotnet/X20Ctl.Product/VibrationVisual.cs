@@ -151,39 +151,38 @@ public sealed class VibrationVisual : Grid
                 }
                 return;
             }
-            // owner, 13 Oct 2026: the outline rings looked horrible; each motor is now a hologram that flickers on the beat:
-            // an iridescent body that drifts, scanlines running through it, a bright rim and a faint colour split.
-            double shift = moving ? time * .55 % 1 : .2, level = .45 + .55 * s;
+            // owner, 13 Oct 2026, twice: no outline rings, no flat hologram. Each motor is an energy burst: a ring of spokes that
+            // dances like a sound spectrum, shockwaves leaving it on every thump, and a white-hot core.
+            double level = .45 + .55 * s, period = 60 / (72 + 108 * s);
             foreach (var track in tracks)
             {
-                var b = track.Shape.Bounds;
-                double grow = 1 + .012 * beat * level;
-                dc.PushTransform(new ScaleTransform(grow, grow, track.Center.X, track.Center.Y));
-                if (moving && beat > .55)
-                {   // the beat glitches the projection: a magenta and a cyan copy slip apart for a moment
-                    double slip = 3.5 * (beat - .55) * level;
-                    dc.PushTransform(new TranslateTransform(slip, 0));
-                    dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(120 * beat * level), 255, 90, 220)), 2) { LineJoin = PenLineJoin.Round }, track.Shape);
-                    dc.Pop();
-                    dc.PushTransform(new TranslateTransform(-slip, 0));
-                    dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(120 * beat * level), 80, 230, 255)), 2) { LineJoin = PenLineJoin.Round }, track.Shape);
-                    dc.Pop();
+                var b = track.Shape.Bounds; var c = track.Center;
+                double baseR = Math.Min(b.Width, b.Height) * (track.Grip ? .5 : .62), core = baseR * .56 * (1 + .12 * beat * level);
+                // shockwaves: three rings leave the motor in turn, growing and thinning as they fade, colour turning cyan to magenta
+                for (int k = 0; k < 3; k++)
+                {
+                    double age = moving ? (time / period * .5 + k / 3.0) % 1 : .25 + k * .25, fade = Math.Pow(1 - age, 1.7);
+                    double r = core + baseR * 1.35 * age;
+                    var color = Mix(Color.FromRgb(90, 235, 255), Color.FromRgb(255, 90, 215), age);
+                    dc.DrawEllipse(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(215 * fade * level, 0, 255), color.R, color.G, color.B)), 1 + 5.5 * fade), c, r, r * .92);
                 }
-                byte body = (byte)Math.Clamp((34 + 70 * beat) * level, 0, 255);
-                double band = Math.Max(120, b.Height), y0 = b.Top - band + shift * band;
-                var fill = new LinearGradientBrush(new GradientStopCollection {
-                    new(Color.FromArgb(body, 70, 220, 255), 0), new(Color.FromArgb(body, 130, 110, 255), .35), new(Color.FromArgb(body, 255, 110, 220), .65), new(Color.FromArgb(body, 70, 220, 255), 1) },
-                    new Point(b.Left, y0), new Point(b.Right, y0 + band)) { MappingMode = BrushMappingMode.Absolute, SpreadMethod = GradientSpreadMethod.Repeat };
-                dc.DrawGeometry(fill, null, track.Shape);
-                // scanlines, crawling upward
-                dc.PushClip(track.Shape);
-                var line = new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((40 + 60 * beat) * level, 0, 255), 200, 240, 255));
-                double off = moving ? -time * 26 % 7 : 0;
-                for (double y = b.Top + off; y < b.Bottom; y += 7) dc.DrawRectangle(line, null, new Rect(b.Left, y, b.Width, 1.3));
-                dc.Pop();
-                var rim = Mix(Ice, White, beat);
-                dc.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((110 + 145 * beat) * level, 0, 255), rim.R, rim.G, rim.B)), 1.4 + 1.4 * beat) { LineJoin = PenLineJoin.Round }, track.Shape);
-                dc.Pop();
+                // the spectrum: spokes round the core whose lengths ride two slow waves, kicked outward by the beat
+                const int spokes = 72;
+                double spin = moving ? time * .5 * track.Direction : 0;
+                for (int n = 0; n < spokes; n++)
+                {
+                    double angle = n * Math.Tau / spokes + spin, wave = .5 + .5 * Math.Sin(angle * 5 + time * 6.5) * Math.Sin(angle * 3 - time * 4.2);
+                    double length = 5 + (14 + 46 * beat * level) * (.25 + .75 * wave);
+                    var dir = new Vector(Math.Cos(angle), Math.Sin(angle) * .92);
+                    var color = Mix(Color.FromRgb(70, 225, 255), Color.FromRgb(255, 95, 215), .5 + .5 * Math.Sin(angle * 2 + time * 1.3));
+                    var pen = new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((120 + 135 * beat) * level, 0, 255), color.R, color.G, color.B)), 3.4) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+                    dc.DrawLine(pen, c + dir * (core + 4), c + dir * (core + 4 + length));
+                }
+                // the core: white-hot, blooming on the thump, with a thin bright ring marking its edge
+                double bloom = core * (1.05 + .35 * beat);
+                dc.DrawEllipse(new RadialGradientBrush(new GradientStopCollection {
+                    new(Color.FromArgb((byte)Math.Clamp((140 + 115 * beat) * level, 0, 255), 255, 255, 255), 0), new(Color.FromArgb((byte)(110 * level), 110, 220, 255), .45), new(Color.FromArgb(0, 80, 140, 255), 1) }),
+                    new Pen(new SolidColorBrush(Color.FromArgb((byte)Math.Clamp((90 + 150 * beat) * level, 0, 255), 235, 248, 255)), 1.6), c, bloom, bloom * .92);
             }
         }        /// <summary>A polyline through <paramref name="count"/> points starting at <paramref name="start"/>, wrapping round the contour.</summary>
         private static StreamGeometry Poly(Point[] points, int start, int count, bool closed)

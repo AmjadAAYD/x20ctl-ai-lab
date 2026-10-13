@@ -84,7 +84,7 @@ public sealed class DashboardConsolePage : Grid
         featured.Children.Add(artHost);
         featured.Children.Add(new Border { CornerRadius = new(20), BorderThickness = new(1), BorderBrush = new LinearGradientBrush(Color.FromArgb(110, 120, 170, 255), Color.FromArgb(30, 120, 170, 255), 90) });
         play = new Button { Style = DS.Style("DS.ActionPrimary"), Width = 200, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(0, 0, 30, 26), Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Icon("", 17, "DS.Text").Also(i => i.Margin = new(0, 0, 12, 0)), Kit.Text("Play", 16, "DS.Text", FontWeights.SemiBold) } } };
-        play.Click += (_, _) => { if (current != null) GameLibrary.Launch(current); };
+        play.Click += (_, _) => PlayGame(current, play);
         // the banner: the game's logo and when it was last played, large on the left; Play in blue at the bottom right
         var info = new StackPanel { Width = 520,
             Children = { Kit.Text("FEATURED", 12.5, "DS.AccentHi", FontWeights.SemiBold).Also(t => t.Margin = new(0, 0, 0, 8)), logo, featuredTitle, featuredMeta.Also(t => t.Margin = new(0, 8, 0, 0)) } };
@@ -95,7 +95,7 @@ public sealed class DashboardConsolePage : Grid
 
         // ---- bottom: games shelf ----
         shelfScroll = new ScrollViewer { Content = shelf, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false, Padding = new(4, 6, 4, 6) };
-        var shelfPanel = new DockPanel { Children = { new DockPanel { Margin = new(2, 0, 0, 8), Children = { Kit.Text("Your games", 19, "DS.Text", FontWeights.SemiBold) } }.Also(d => DockPanel.SetDock(d, Dock.Top)), shelfScroll } };
+        var shelfPanel = new DockPanel { Children = { new DockPanel { Margin = new(2, 0, 0, 8), Children = { AddButton("Add a folder", AddFolderClick), AddButton("Add a game", AddGameClick), Kit.Text("Your games", 19, "DS.Text", FontWeights.SemiBold) } }.Also(d => DockPanel.SetDock(d, Dock.Top)), shelfScroll } };
         Grid.SetRow(shelfPanel, 4); Children.Add(shelfPanel);
         Feature(null);
         Loaded += async (_, _) => await Populate();
@@ -157,8 +157,74 @@ public sealed class DashboardConsolePage : Grid
         b.GotKeyboardFocus += (_, _) => { Feature(g); art.BorderBrush = Brushes.White; art.Effect = new DropShadowEffect { Color = Kit.Blue, BlurRadius = 26, ShadowDepth = 0, Opacity = .9 }; Lift(stack, 1.06); title.Foreground = DS.Brush("DS.Text"); b.BringIntoView(new Rect(-40, 0, coverHeight + 100, coverHeight + 70)); };
         b.LostKeyboardFocus += (_, _) => { art.BorderBrush = Brushes.Transparent; art.Effect = null; Lift(stack, 1); title.Foreground = DS.Brush("DS.TextSoft"); };
         b.MouseEnter += (_, _) => Feature(g);
-        b.Click += (_, _) => GameLibrary.Launch(g);
+        b.Click += (_, _) => PlayGame(g, art);
         return b;
+    }
+
+    private Button AddButton(string text, Action click)
+    {
+        var button = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 30, MinHeight = 0, Padding = new(14, 0, 14, 0), Margin = new(8, 0, 4, 0), Content = Kit.Text(text, 13, "DS.Text"), FocusVisualStyle = null };
+        button.Click += (_, _) => click(); DockPanel.SetDock(button, Dock.Right); return button;
+    }
+    private void AddGameClick()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Programs (*.exe)|*.exe", Title = "Add a game" };
+        if (dialog.ShowDialog() == true) { GameLibrary.AddGame(dialog.FileName); Rescan(); }
+    }
+    private void AddFolderClick()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Add a folder" };
+        if (dialog.ShowDialog() == true) { GameLibrary.AddFolder(dialog.FolderName); Rescan(); }
+    }
+
+    private bool playing;
+    /// <summary>Play: the game's picture grows from its tile until it fills the page, the game starts, and once it is really
+    /// running the page says "In game" and gives itself back (owner request, 13 Oct 2026).</summary>
+    private async void PlayGame(GameEntry? game, FrameworkElement source)
+    {
+        if (game == null || playing) return; playing = true;
+        try
+        {
+            var image = Bitmap(game.Cover) ?? Bitmap(game.Hero);
+            var at = source.TranslatePoint(new Point(0, 0), this);
+            double w = Math.Max(1, source.ActualWidth), h = Math.Max(1, source.ActualHeight), pageW = ActualWidth, pageH = ActualHeight;
+            Brush fill = image != null ? new ImageBrush(image) { Stretch = Stretch.UniformToFill } : new LinearGradientBrush(Color.FromRgb(28, 52, 110), Color.FromRgb(10, 18, 44), 90);
+            var zoom = new Border { Background = fill, CornerRadius = new(14), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new(at.X, at.Y, 0, 0), Width = w, Height = h, ClipToBounds = true };
+            var dim = new Border { Background = new SolidColorBrush(Color.FromArgb(150, 2, 6, 18)) };
+            var label = Kit.Text("Starting " + game.Name, 30, "DS.Text", FontWeights.SemiBold); label.HorizontalAlignment = HorizontalAlignment.Center; label.VerticalAlignment = VerticalAlignment.Center; label.Opacity = 0;
+            zoom.Child = new Grid { Children = { dim, label } };
+            Grid.SetRowSpan(zoom, 5); Panel.SetZIndex(zoom, 50); Children.Add(zoom);
+            int ms = animate ? 380 : 0;
+            if (ms > 0)
+            {
+                var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut };
+                zoom.BeginAnimation(MarginProperty, new System.Windows.Media.Animation.ThicknessAnimation(new Thickness(0), TimeSpan.FromMilliseconds(ms)) { EasingFunction = ease });
+                zoom.BeginAnimation(WidthProperty, new System.Windows.Media.Animation.DoubleAnimation(pageW, TimeSpan.FromMilliseconds(ms)) { EasingFunction = ease });
+                zoom.BeginAnimation(HeightProperty, new System.Windows.Media.Animation.DoubleAnimation(pageH, TimeSpan.FromMilliseconds(ms)) { EasingFunction = ease });
+                await Task.Delay(ms);
+            }
+            zoom.BeginAnimation(MarginProperty, null); zoom.BeginAnimation(WidthProperty, null); zoom.BeginAnimation(HeightProperty, null);
+            zoom.Margin = new(0); zoom.Width = double.NaN; zoom.Height = double.NaN; zoom.CornerRadius = new(0);
+            label.Opacity = 1;
+            if (!ReviewSandbox.Active)
+            {
+                try { GameLibrary.Launch(game); }
+                catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException) { label.Text = "Could not start " + game.Name; await Task.Delay(1800); Children.Remove(zoom); return; }
+                // the game counts as started once a process from its own folder is up; without a folder, give it a few seconds
+                bool up = false;
+                for (int i = 0; i < 90 && !up; i++)
+                {
+                    await Task.Delay(1000);
+                    up = game.Dir == null ? i >= 5 : await Task.Run(() => GameLibrary.IsRunning(game));
+                }
+                if (!up) { Children.Remove(zoom); return; }
+            }
+            label.Text = "In game · " + game.Name;
+            await Task.Delay(2200);
+            if (animate) { zoom.BeginAnimation(OpacityProperty, DS.To(0, 320)); await Task.Delay(330); }
+            Children.Remove(zoom);
+        }
+        finally { playing = false; }
     }
 
     private void Feature(GameEntry? g)
@@ -169,7 +235,7 @@ public sealed class DashboardConsolePage : Grid
         heroArt.Source = hero; if (hero != null) { if (animate) heroArt.BeginAnimation(OpacityProperty, DS.To(1, 320)); else heroArt.Opacity = 1; }
         logo.Source = mark; logo.Visibility = mark != null ? Visibility.Visible : Visibility.Collapsed; logo.Margin = new(0, 8, 0, 6);
         featuredTitle.Text = g?.Name ?? "Your library"; featuredTitle.Visibility = mark == null ? Visibility.Visible : Visibility.Collapsed;
-        featuredMeta.Text = g == null ? "Scanning installed Steam and Epic games…" : $"{g.Store} · {(g.LastPlayed is { } t ? "Last played " + t.ToString("d MMM yyyy") : "Installed")}";
+        featuredMeta.Text = g == null ? "Scanning installed games…" : $"{g.Store} · {(g.LastPlayed is { } t ? "Last played " + t.ToString("d MMM yyyy") : "Installed")}";
         play.IsEnabled = g != null;
     }
 
