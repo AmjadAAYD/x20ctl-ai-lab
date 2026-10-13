@@ -100,6 +100,9 @@ public sealed class AgentPanel
     readonly Border[] leds = new Border[4];
     readonly List<(TranslateTransform Look, ScaleTransform Lid, int Inward)> eyes = [];
     readonly TranslateTransform shake = new();
+    // a silly question: the eyes squeeze into > < for a moment (owner request, 13 Oct 2026)
+    readonly List<(UIElement Pupil, UIElement Squint)> squints = [];
+    int laughing;
     readonly System.Windows.Threading.DispatcherTimer blink = new() { Interval = TimeSpan.FromSeconds(4) };
 
     /// <summary>The controller is drawn at this size and scaled as a whole to the room it's given: wide, across the Studio
@@ -336,10 +339,37 @@ public sealed class AgentPanel
                 new System.Windows.Shapes.Ellipse { Fill = new RadialGradientBrush(new GradientStopCollection { new(Color.FromRgb(58, 72, 102), 0), new(CapDark, 1) }) { GradientOrigin = new(.4, .35) }, Stroke = new SolidColorBrush(Edge), StrokeThickness = 1.5 },
                 new System.Windows.Shapes.Ellipse { Margin = new(9), Stroke = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)), StrokeThickness = 1 },
                 pupil,
+                Squint(cx < DesignWidth / 2),
             },
         };
         Canvas.SetLeft(cap, cx - 37); Canvas.SetTop(cap, cy - 37); pad.Children.Add(cap);
         eyes.Add((look, lid, cx < DesignWidth / 2 ? 1 : -1));
+        squints.Add((pupil, cap.Children[^1]));
+    }
+
+    /// <summary>The left eye's ">" or the right eye's "<": lit like the pupil, hidden until it laughs.</summary>
+    static System.Windows.Shapes.Path Squint(bool left) => new()
+    {
+        Data = Geometry.Parse(left ? "M 0,0 L 24,15 L 0,30" : "M 24,0 L 0,15 L 24,30"), Width = 24, Height = 30,
+        Stroke = new SolidColorBrush(AgentMark.Ice), StrokeThickness = 6, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round,
+        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Visibility = Visibility.Collapsed,
+        Effect = new DropShadowEffect { Color = AgentMark.Ice, BlurRadius = 18, ShadowDepth = 0, Opacity = 1 },
+    };
+
+    /// <summary>"> <": it laughs at a silly question, then looks normal again.</summary>
+    async void Laugh()
+    {
+        int me = ++laughing;
+        foreach (var (pupil, squint) in squints) { pupil.Visibility = Visibility.Hidden; squint.Visibility = Visibility.Visible; if (DS.Motion) Fx.Appear((FrameworkElement)squint, .6, 220); }
+        if (DS.Motion)
+        {
+            var giggle = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames();
+            double t = 0; foreach (double y in new[] { -3.0, 2, -3, 2, -2, 0 }) giggle.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(y, TimeSpan.FromMilliseconds(t += 90)));
+            shake.BeginAnimation(TranslateTransform.YProperty, giggle);
+        }
+        await Task.Delay(2400);
+        if (me != laughing) return;
+        foreach (var (pupil, squint) in squints) { squint.Visibility = Visibility.Collapsed; pupil.Visibility = Visibility.Visible; }
     }
 
     void Look(Gaze gaze)
@@ -513,6 +543,7 @@ public sealed class AgentPanel
                 Say(turn, before, switched: switched); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
             else { Say(turn, null, switched: switched); if (switched != null) ShowSettings(new HashSet<string>()); }
+            if (turn.Verdict.Proposal?.Speech.StartsWith("How silly", StringComparison.OrdinalIgnoreCase) == true) Laugh();
             if (!turn.Verdict.Valid || turn.Outcome.Error != null) { Look(Gaze.Down); await Task.Delay(1400); }
             return turn;
         }
