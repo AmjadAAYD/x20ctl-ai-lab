@@ -39,7 +39,7 @@ public static class AgentIdeas
     /// <summary>The ideas that match what's typed, best first; everything (the HELP list first) when nothing is typed.</summary>
     public static IReadOnlyList<AgentIdea> Search(string query, int count = 12)
     {
-        var words = Words(query).Where(w => w.Length >= 2 && !Filler.Contains(w)).Distinct().ToList();
+        var words = Words(AgentSpelling.Fix(query)).Where(w => w.Length >= 2 && !Filler.Contains(w)).Distinct().ToList();
         if (words.Count == 0) return All.Take(count).ToList();
         return catalogue.Value.Select((c, order) => (c.Idea, order, Score: words.Sum(w => Score(w, c.Tokens, c.Words))))
             .Where(r => r.Score > 0).OrderByDescending(r => r.Score).ThenBy(r => r.order).Take(count).Select(r => r.Idea).ToList();
@@ -64,6 +64,7 @@ public static class AgentIdeas
     /// <summary>The message is only a topic ("Sticks", "dead zone", "my triggers"), not a request: the topic as typed, or null.</summary>
     public static string? Topic(string sentence)
     {
+        sentence = AgentSpelling.Fix(sentence);
         var all = Words(sentence).ToList();
         if (all.Count == 0 || all.Count > 3) return null;
         var meaningful = all.Where(w => !Filler.Contains(w)).ToList();
@@ -71,5 +72,17 @@ public static class AgentIdeas
         return sentence.Trim().TrimEnd('?', '!', '.').Trim();
     }
 
-    public static string TopicReply(string topic) => $"I've seen you search about “{topic}”. Is there any help you need?";
+    /// <summary>What the agent says about a search, in different words each time; a typo is read as what was meant.</summary>
+    public static string TopicReply(string topic)
+    {
+        topic = AgentSpelling.Fix(topic.Trim());
+        return AgentVariety.Pick("topic", [
+            $"I've seen you search about “{topic}”. Is there any help you need?",
+            $"Ooh, “{topic}”! *perks up* Need a hand with that?",
+            $"“{topic}”, huh? Pick an idea on the left, or tell me what feels off.",
+            $"Looking into “{topic}”? I know a thing or two. What's bugging you?",
+            $"Searching “{topic}”… I've got ideas. Want me to fix something?",
+            $"Aha, “{topic}”. My favourite subject today. What should I change?",
+        ]);
+    }
 }

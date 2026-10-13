@@ -410,19 +410,19 @@ public sealed class AgentPanel
         switch (command)
         {
             case AgentCommand.AboutController:
-                Say(AgentCommands.AboutController, null); Look(Gaze.Typing); _ = Lights(AgentMood.Good); break;
+                Say(AgentCommands.AboutController(padName), null); Look(Gaze.Typing); _ = Lights(AgentMood.Good); break;
             case AgentCommand.Battery:
                 Searching(true);
                 string? level = await Task.Run(() => XInputDriftMeter.BatteryLevel(player));
                 Searching(false); Say(AgentCommands.Battery(level, padName), null); _ = Lights(level == null ? AgentMood.Unsure : AgentMood.Good);
                 break;
             case AgentCommand.ChangeController:
-                Say(AgentCommands.ChangeController, null); _ = Lights(AgentMood.Good);
+                Say(AgentCommands.ChangeController(), null); _ = Lights(AgentMood.Good);
                 await Task.Delay(1400); ChangeControllerRequested?.Invoke(); break;
             case AgentCommand.Star:
-                Say(AgentCommands.Star, null); _ = Lights(AgentMood.Good); Open(ExternalLinks.Repository); break;
+                Say(AgentCommands.Star(), null); _ = Lights(AgentMood.Good); Open(ExternalLinks.Repository); break;
             case AgentCommand.Donate:
-                Say(AgentCommands.Donate, null); _ = Lights(AgentMood.Good); Open(ProductLinks.Support); break;
+                Say(AgentCommands.Donate(), null); _ = Lights(AgentMood.Good); Open(ProductLinks.Support); break;
         }
     }
 
@@ -545,7 +545,7 @@ public sealed class AgentPanel
     {
         if (busy) return null;
         // the help list is the app's own answer: instant, the same online and offline
-        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say("Here's everything I can do, on the left. Pick one, or search it. *proudly clicks every button*", null); _ = Lights(AgentMood.Good); return null; }
+        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say(AgentVariety.Pick("help", ["Here's everything I can do, on the left. Pick one, or search it. *proudly clicks every button*", "Ta-da! My whole skill list, on the left. Pick one.", "On the left: everything I'm good at. It's a long list. *ahem*"]), null); _ = Lights(AgentMood.Good); return null; }
         // a topic alone is a search: the ideas narrow to it, and the app answers itself
         // the app's own commands: the controller's name, the battery, another controller, a star, a donation
         if (AgentCommands.Parse(sentence) is var command and not AgentCommand.None) { Bubble(sentence, mine: true); await Do(command); return null; }
@@ -576,7 +576,7 @@ public sealed class AgentPanel
                 Say(turn, before, switched: switched); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
             else { Say(turn, null, switched: switched); if (switched != null) ShowSettings(new HashSet<string>()); }
-            if (turn.Verdict.Proposal?.Speech.StartsWith("How silly", StringComparison.OrdinalIgnoreCase) == true) Laugh();
+            if (turn.Verdict.Proposal?.Speech is { } spoken && AgentCharacter.IsSilly(spoken)) Laugh();
             if (!turn.Verdict.Valid || turn.Outcome.Error != null) { Look(Gaze.Down); await Task.Delay(1400); }
             return turn;
         }

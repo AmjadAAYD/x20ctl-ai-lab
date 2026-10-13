@@ -36,8 +36,21 @@ public class AgentCommandsTests
     [Fact]
     public void Battery_answers_in_character()
     {
-        Assert.Contains("full", AgentCommands.Battery("full", "X20 Pro"));
+        Assert.Contains("full", AgentCommands.Battery("full", "X20 Pro"), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("cable", AgentCommands.Battery("wired", "X20 Pro"));
         Assert.Contains("X20 Pro connected", AgentCommands.Battery(null, "X20 Pro"));
+    }
+}
+
+public class AgentOfflineTypoTests
+{
+    [Theory]
+    [InlineData("make my stickss smooth", "stick_smooth")]
+    [InlineData("hair trigers for shooting", "trigger_fast")]
+    public async Task Offline_reads_typos(string sentence, string expected)
+    {
+        var turn = await new AgentSession(new OfflineAgent(), "x20_pro", "X20 Pro").Ask(sentence, new X20Ctl.Zone.PcMode.PcModeProfile());
+        Assert.NotEmpty(turn.Outcome.Changes);
+        Assert.Equal(expected, new OfflineAgent().Classify(AgentSpelling.Fix(sentence)).Intent?.Id);
     }
 }

@@ -77,6 +77,7 @@ public sealed class OfflineAgent : IAgentModel
             string why = Regex.Match(sentence, @"nothing changed: (.*?) Answer again", RegexOptions.Singleline) is { Success: true } m ? m.Groups[1].Value : "";
             return OfflinePlan.Say("I can't do that, so I changed nothing. " + why.Trim());
         }
+        sentence = AgentSpelling.Fix(sentence);
         string lower = sentence.ToLowerInvariant();
         if (Regex.IsMatch(lower, @"\b(rgb|leds?|lights?|lighting|colou?rs?|vibration|vibrate|rumble|haptics?|battery|firmware|gyro|motion|volume|sound|mic|microphone|bluetooth)\b"))
             return OfflinePlan.Say("I can't change that yet. I can set sticks, triggers, buttons, turbo, paddles, PC mode, and measure drift.");

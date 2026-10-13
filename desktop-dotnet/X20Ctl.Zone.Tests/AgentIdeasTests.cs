@@ -58,8 +58,37 @@ public class AgentIdeasTests
     public void A_request_is_not_a_search(string sentence) => Assert.Null(AgentIdeas.Topic(sentence));
 
     [Fact]
-    public void The_reply_says_what_was_searched() =>
-        Assert.Equal("I've seen you search about “sticks”. Is there any help you need?", AgentIdeas.TopicReply("sticks"));
+    public void The_reply_says_what_was_searched_in_different_words()
+    {
+        var replies = Enumerable.Range(0, 12).Select(_ => AgentIdeas.TopicReply("stickss")).ToList();
+        Assert.All(replies, r => Assert.Contains("“sticks”", r));
+        for (int i = 1; i < replies.Count; i++) Assert.NotEqual(replies[i - 1], replies[i]);
+        Assert.True(replies.Distinct().Count() >= 3);
+    }
+
+    [Theory]
+    [InlineData("stickss", "sticks")]
+    [InlineData("Stiks", "sticks")]
+    [InlineData("trigers", "triggers")]
+    [InlineData("turob", "turbo")]
+    [InlineData("paddels", "paddles")]
+    public void Typos_are_read_as_meant(string typed, string meant) => Assert.Equal(meant, AgentSpelling.Word(typed).ToLowerInvariant());
+
+    [Theory]
+    [InlineData("lb")]
+    [InlineData("rt")]
+    [InlineData("m1")]
+    [InlineData("sticks")]
+    [InlineData("zzzzzzzz")]
+    public void Known_and_short_words_are_left_alone(string word) => Assert.Equal(word, AgentSpelling.Word(word));
+
+    [Fact]
+    public void A_typo_search_finds_the_topic()
+    {
+        Assert.StartsWith("stick_", AgentIdeas.Search("stickss")[0].Intent);
+        Assert.Equal("sticks", AgentIdeas.Topic("Stickss"));
+        Assert.Equal(AgentCommand.Battery, AgentCommands.Parse("whats my batery"));
+    }
 }
 
 /// <summary>The character: off-topic questions in character, and the mood the player lights show.</summary>
@@ -90,7 +119,8 @@ public class AgentCharacterTests
     public async Task Offline_answers_off_topic_in_character()
     {
         var turn = await Ask("What's 12 times 7?");
-        Assert.Equal("How silly, I'm a controller, not a calculator! Ask me about sticks, triggers, buttons or turbo, and watch me shine.", turn.Verdict.Proposal!.Speech);
+        Assert.True(AgentCharacter.IsSilly(turn.Verdict.Proposal!.Speech));
+        Assert.Contains("a calculator", turn.Verdict.Proposal.Speech);
         Assert.Empty(turn.Outcome.Changes);
         Assert.Equal(AgentMood.Unsure, AgentCharacter.Mood(turn));
     }
@@ -112,5 +142,5 @@ public class AgentCharacterTests
     }
 
     [Fact]
-    public void The_prompt_carries_the_character() => Assert.Contains("How silly, I'm a controller, not a <thing>!", AgentSession.DefaultPrompt("X20 Pro", "x20_pro"));
+    public void The_prompt_carries_the_character() => Assert.Contains(AgentCharacter.SillyCore, AgentSession.DefaultPrompt("X20 Pro", "x20_pro"));
 }
