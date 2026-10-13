@@ -514,7 +514,7 @@ public sealed class AgentPanel
     {
         if (busy) return null;
         // the help list is the app's own answer: instant, the same online and offline
-        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say("Here's everything I can do, on the left. Pick one, or search it. I'm very talented.", null); _ = Lights(AgentMood.Good); return null; }
+        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say("Here's everything I can do, on the left. Pick one, or search it. *proudly clicks every button*", null); _ = Lights(AgentMood.Good); return null; }
         // a topic alone is a search: the ideas narrow to it, and the app answers itself
         if (AgentIdeas.Topic(sentence) is { } topic)
         {

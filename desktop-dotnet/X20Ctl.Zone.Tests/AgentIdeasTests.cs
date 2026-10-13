@@ -105,5 +105,12 @@ public class AgentCharacterTests
     public async Task Mood_follows_the_answer(string sentence, AgentMood mood) => Assert.Equal(mood, AgentCharacter.Mood(await Ask(sentence)));
 
     [Fact]
+    public void It_never_calls_itself_silly()
+    {
+        Assert.DoesNotContain("silly", AgentCharacter.Greeting("X20 Pro"), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("never describe yourself as silly", AgentCharacter.Persona);
+    }
+
+    [Fact]
     public void The_prompt_carries_the_character() => Assert.Contains("How silly, I'm a controller, not a <thing>!", AgentSession.DefaultPrompt("X20 Pro", "x20_pro"));
 }
