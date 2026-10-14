@@ -660,8 +660,8 @@ public sealed class AgentPanel
         if (!demoChosen && AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say(AgentVariety.Pick("help", ["Here's everything I can do, on the left. Pick one, or search it. *proudly clicks every button*", "Ta-da! My whole skill list, on the left. Pick one.", "On the left: everything I'm good at. It's a long list. *ahem*"]), null); _ = Lights(AgentMood.Good); return null; }
         // a topic alone is a search: the ideas narrow to it, and the app answers itself
         // the app's own commands: the controller's name, the battery, another controller, a star, a donation
-        if (!demoChosen && AgentCommands.Parse(sentence) is var command and not AgentCommand.None) { Bubble(sentence, mine: true); await Do(command); return null; }
-        if (!demoChosen && AgentIdeas.Topic(sentence) is { } topic)
+        if (!demoChosen && AgentCommands.Parse(sentence) is var command and not AgentCommand.None && (!session.HasPendingClarification || command != AgentCommand.AboutController)) { Bubble(sentence, mine: true); session.CancelClarification(); await Do(command); return null; }
+        if (!demoChosen && !session.HasPendingClarification && AgentIdeas.Topic(sentence) is { } topic)
         {
             Bubble(sentence, mine: true); announced = topic; Search.Text = topic; settle.Stop();
             Look(Gaze.Ideas); Say(AgentIdeas.TopicReply(topic), null); _ = Lights(AgentMood.Good); return null;
@@ -760,6 +760,25 @@ public sealed class AgentPanel
         }
         foreach (var c in turn.Outcome.Changes)
             stack.Children.Add(Wrap($"{c.What}   {c.Before} → {c.After}", 14, "DS.AccentHi", 6));
+        if (failure == null && undo != null && turn.Outcome.Next is { } saved)
+        {
+            foreach (var group in AgentResponsePreview.Samples(undo, saved).GroupBy(row => row.Target))
+            {
+                var preview = new StackPanel { Margin = new(0, 8, 0, 0) };
+                preview.Children.Add(Kit.Text(AgentApplier.Name(group.Key) + " · horizontal output", 12, "DS.TextMuted"));
+                var columns = new System.Windows.Controls.Primitives.UniformGrid { Columns = 3, Margin = new(0, 4, 0, 0) };
+                foreach (var sample in group)
+                {
+                    var cell = new StackPanel { Margin = new(0, 0, 10, 0) };
+                    cell.Children.Add(Kit.Text($"{sample.Input:0}% push", 12, "DS.TextSoft"));
+                    cell.Children.Add(Kit.Text(FormattableString.Invariant($"{sample.BeforePercent:0.0}% → {sample.AfterPercent:0.0}%"), 13, "DS.AccentHi"));
+                    columns.Children.Add(cell);
+                }
+                preview.Children.Add(columns);
+                if (group.First().ContextualNote is { } note) preview.Children.Add(Wrap(note, 12, "DS.TextMuted", 4));
+                stack.Children.Add(preview);
+            }
+        }
         // why it fits, or the answer to a question: the model's words, from the settings' meanings
         if (v.Valid && v.Proposal?.Recap is { Length: > 0 } recap)
             stack.Children.Add(new Border { BorderBrush = DS.Brush("DS.AccentHi"), BorderThickness = new(2, 0, 0, 0), Padding = new(12, 2, 0, 2), Margin = new(0, 10, 0, 0), Child = Wrap(recap, 13.5, "DS.TextSoft") });
@@ -792,7 +811,7 @@ public sealed class AgentPanel
         foreach (var a in v.Proposal?.Assumptions ?? []) details.Children.Add(Wrap("Assumed: " + a, 13.5, "DS.TextSoft", 4));
         for (int i = 0; i < turn.Attempts.Count; i++)
         {
-            details.Children.Add(Kit.Text(demoChosen ? "CANNED OUTPUT" : turn.Attempts.Count > 1 ? $"MODEL OUTPUT · ATTEMPT {i + 1}" : "MODEL OUTPUT", 12, "DS.TextMuted", FontWeights.SemiBold).Also(t => t.Margin = new(0, 10, 0, 4)));
+            details.Children.Add(Kit.Text(demoChosen ? "CANNED OUTPUT" : turn.Resolver.Length > 0 ? "APP CLARIFICATION" : turn.Attempts.Count > 1 ? $"MODEL OUTPUT · ATTEMPT {i + 1}" : "MODEL OUTPUT", 12, "DS.TextMuted", FontWeights.SemiBold).Also(t => t.Margin = new(0, 10, 0, 4)));
             details.Children.Add(new TextBox { Text = turn.Attempts[i].Content, IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, MaxHeight = 220, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new(10) });
         }
 

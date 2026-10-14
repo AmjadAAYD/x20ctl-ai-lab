@@ -25,7 +25,8 @@ public sealed class OfflineSlots
 public sealed record OfflinePlan(IReadOnlyList<(string Action, string Target, object Value)> Actions, string Speech, string Recap, IReadOnlyList<string> Assumptions)
 {
     public IReadOnlyList<int> Sources { get; init; } = [];
-    public static OfflinePlan Say(string speech, string recap = "") => new([], speech, recap, []);
+    public string Question { get; init; } = "";
+    public static OfflinePlan Say(string speech, string recap = "") => new([], speech, recap, []) { Question = System.Text.RegularExpressions.Regex.IsMatch(speech, @"^(Which|What maximum|What vertical|To what|Reset what)\b") ? speech : "" };
 }
 
 /// <summary>
@@ -414,6 +415,7 @@ public sealed class OfflineAgent : IAgentModel
         {
             w.WriteStartObject();
             w.WriteString("speech", plan.Speech);
+            w.WriteString("question", plan.Question);
             w.WriteStartArray("actions");
             foreach (var (action, target, value) in plan.Actions)
             {

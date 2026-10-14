@@ -17,7 +17,7 @@ public interface IAgentModel
 
 /// <summary>One sentence handled end to end: every model attempt (a malformed first one is kept, not hidden), the verdict
 /// on the last, and the outcome it leads to.</summary>
-public sealed record AgentTurn(string Sentence, IReadOnlyList<ModelReply> Attempts, AgentVerdict Verdict, AgentOutcome Outcome, DriftReport? Measured = null, IReadOnlyList<DocHit>? Offered = null)
+public sealed record AgentTurn(string Sentence, IReadOnlyList<ModelReply> Attempts, AgentVerdict Verdict, AgentOutcome Outcome, DriftReport? Measured = null, IReadOnlyList<DocHit>? Offered = null, string Resolver = "")
 {
     /// <summary>The doc passages the model was given this turn, numbered from 1.</summary>
     public IReadOnlyList<DocHit> Docs => Offered ?? [];
@@ -34,6 +34,9 @@ public sealed record AgentTurn(string Sentence, IReadOnlyList<ModelReply> Attemp
 public sealed class AgentSession(IAgentModel model, string modelId, string controllerName)
 {
     readonly List<ChatMessage> history = new();
+    public PendingClarification? Pending { get; private set; }
+    public bool HasPendingClarification => Pending != null;
+    public void CancelClarification() => Pending = null;
     // owner, 14 Oct 2026: a conversation remembers everything said and done in it, until a new one is started
     const int Remembered = 60;
     /// <summary>What this controller is, so a curve or a dead zone is chosen for it (sticks, triggers, motors, rate).</summary>
@@ -47,14 +50,30 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
 
     public async Task<AgentTurn> Ask(string sentence, PcModeProfile current, CancellationToken cancel = default)
     {
+        cancel.ThrowIfCancellationRequested();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        bool cancelled = AgentClarification.IsCancel(sentence);
+        if (cancelled || AgentClarification.IsNewRequest(sentence)) Pending = null;
+        var pending = Pending;
+        string intentSentence = pending == null ? sentence : AgentClarification.AnswerText(pending, sentence);
+        AgentProposal? resolved = cancelled ? new("Cancelled. Nothing changed.", [], "", [], [], "")
+            : pending == null ? null : AgentClarification.Resolve(pending, sentence);
         var messages = new List<ChatMessage> { new("system", SystemPrompt(current)) };
         messages.AddRange(history.TakeLast(Remembered));
+        if (pending != null) messages.Add(new("system", $"Pending request: {pending.Request}\nPending question: {pending.Question}\nThe owner's latest answer completes this request. Act when the missing details are supplied; ask only if details are still missing."));
         // the docs: only passages close enough to be about this sentence, numbered for citing
-        var offered = Docs == null ? [] : (await Docs.Search(sentence, DocCount, cancel)).Where(h => h.Score >= Docs.Enough).ToList();
+        var offered = Docs == null || resolved != null ? [] : (await Docs.Search(intentSentence, DocCount, cancel)).Where(h => h.Score >= Docs.Enough).ToList();
         if (offered.Count > 0) messages.Add(new("system", AgentDocs.Prompt(offered)));
-        messages.Add(new("user", sentence));
+        messages.Add(new("user", intentSentence));
         var attempts = new List<ModelReply>();
-        var verdict = await Answer(messages, attempts, null, offered.Count, cancel);
+        AgentVerdict verdict;
+        if (resolved != null)
+        {
+            string json = AgentClarification.Json(resolved);
+            attempts.Add(new(json, 0, 0, 0, clock.Elapsed.TotalMilliseconds));
+            verdict = ProposalValidator.Check(json, modelId);
+        }
+        else verdict = await Answer(messages, attempts, null, offered.Count, cancel);
         // a reading first: the model asked to measure, so the app measures the real sticks and the model answers again
         // with the numbers. Once per turn; the dead zone it then picks is checked against what was measured
         DriftReport? measured = null;
@@ -68,19 +87,19 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         }
         var outcome = AgentApplier.Apply(current, verdict);
         // Words like "slightly" must agree with the actual response, not just with valid ranges.
-        if (verdict.Valid && CurveIntentProblem(sentence, current, verdict) is { } mismatch)
+        if (verdict.Valid && CurveIntentProblem(intentSentence, current, verdict) is { } mismatch)
         {
             messages.Add(new("assistant", attempts[^1].Content));
             messages.Add(new("user", mismatch + " Choose custom points with the requested direction and amount relative to my current curve. Keep your speech exact."));
             var gentle = await Answer(messages, attempts, measured, offered.Count, cancel);
-            if (gentle.Valid && CurveIntentProblem(sentence, current, gentle) == null)
+            if (gentle.Valid && CurveIntentProblem(intentSentence, current, gentle) == null)
             { verdict = gentle; outcome = AgentApplier.Apply(current, gentle); }
             else
             { verdict = new(verdict.Proposal, mismatch, verdict.Checks); outcome = AgentApplier.Apply(current, verdict); }
         }
         // owner, 14 Oct 2026: it said "I'll set smooth" and nothing changed. A reply that promises a change but makes none
         // (no action, or values I already have) gets one more go, told exactly that
-        if (verdict.Valid && outcome.Changes.Count == 0 && outcome.Mouse == null && outcome.Page == null && outcome.PcMode == null && measured == null
+        if (resolved == null && verdict.Valid && outcome.Changes.Count == 0 && outcome.Mouse == null && outcome.Page == null && outcome.PcMode == null && measured == null
             && verdict.Proposal!.Question.Length == 0 && verdict.Proposal.Sources.Count == 0 && (verdict.Proposal.Actions.Count > 0 || Promises(verdict.Proposal.Speech)))
         {
             messages.Add(new("assistant", attempts[^1].Content));
@@ -94,7 +113,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         // owner, 14 Oct 2026: custom curves shaped for the request, not presets. A preset the owner didn't name is sent back
         // once to be shaped as points; kept only when the new answer is valid and changes something
         var unnamed = verdict.Valid ? verdict.Proposal!.Actions.Where(x => x.Action is AgentVocabulary.StickCurve or AgentVocabulary.TriggerCurve
-            && !System.Text.RegularExpressions.Regex.IsMatch(sentence, $@"\b{System.Text.RegularExpressions.Regex.Escape(x.ValueText)}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)).ToList() : [];
+            && !System.Text.RegularExpressions.Regex.IsMatch(intentSentence, $@"\b{System.Text.RegularExpressions.Regex.Escape(x.ValueText)}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)).ToList() : [];
         if (unnamed.Count > 0)
         {
             messages.Add(new("assistant", attempts[^1].Content));
@@ -103,6 +122,8 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             var reshaped = AgentApplier.Apply(current, shaped);
             if (shaped.Valid && reshaped.Changes.Count > 0) { verdict = shaped; outcome = reshaped; }
         }
+        if (verdict.Valid && outcome.Error == null)
+            Pending = verdict.Proposal is { Actions.Count: 0, Question.Length: > 0 } proposal ? new(intentSentence, proposal.Question) : null;
         history.Add(new("user", sentence));
         // what was said, what the app really did, and what was asked back, so the next sentence is read in context
         string done = outcome.Changes.Count > 0 ? " [applied: " + string.Join("; ", outcome.Changes.Select(c => $"{c.What} {c.Before} -> {c.After}")) + "]"
@@ -110,7 +131,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         if (outcome.Mouse is { } mouse) done += $" [mouse mode {(mouse ? "on" : "off")}]";
         if (outcome.Page is { } page) done += $" [opened {page}]";
         history.Add(new("assistant", (verdict.Proposal?.Speech ?? "(no usable reply)") + done + (verdict.Proposal?.Question is { Length: > 0 } asked ? " " + asked : "")));
-        return new(sentence, attempts, verdict, outcome, measured, offered);
+        return new(sentence, attempts, verdict, outcome, measured, offered, resolved == null ? "" : "App clarification");
     }
 
     /// <summary>One reply, checked; with one second chance: the model sees exactly what the validator objected to and
@@ -126,7 +147,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         return ProposalValidator.Check(attempts[^1].Content, modelId, measured, offered);
     }
 
-    public void Forget() => history.Clear();
+    public void Forget() { history.Clear(); Pending = null; }
 
     public static string? CurveIntentProblem(string sentence, PcModeProfile current, AgentVerdict verdict)
     {
@@ -297,6 +318,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     public static string Stats(AgentTurn turn)
     {
         var r = turn.Reply;
+        if (turn.Resolver.Length > 0) return turn.Resolver + " · " + turn.Attempts.Sum(a => a.TotalMs).ToString("0.#", CultureInfo.InvariantCulture) + " ms";
         if (turn.Attempts.All(a => a.PromptTokens == 0 && a.OutputTokens == 0)) return string.Create(CultureInfo.InvariantCulture, $"offline · {turn.Attempts.Sum(a => a.TotalMs):0.#} ms");
         string s = string.Format(CultureInfo.InvariantCulture, "{0} in · {1} out · {2:0.0} s", r.PromptTokens, r.OutputTokens, r.TotalMs / 1000);
         if (r.LoadMs > 500) s += string.Format(CultureInfo.InvariantCulture, " (loading {0:0.0} s)", r.LoadMs / 1000);
