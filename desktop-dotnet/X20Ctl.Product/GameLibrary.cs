@@ -41,11 +41,17 @@ public static class GameLibrary
     /// <summary>True once a process is running from the game's own folder: the game really started, not just the click.</summary>
     public static bool IsRunning(GameEntry game)
     {
-        if (game.Dir == null) return false;
-        string dir = Path.GetFullPath(game.Dir).TrimEnd('\\') + "\\";
+        string? exact = File.Exists(game.LaunchUri) && game.Store is "Added" or "Folder" or "GOG" ? Path.GetFullPath(game.LaunchUri) : null;
+        if (exact == null && game.Dir == null) return false;
+        string? dir = game.Dir == null ? null : Path.GetFullPath(game.Dir).TrimEnd('\\') + "\\";
         foreach (var p in Process.GetProcesses())
         {
-            try { if (p.MainModule?.FileName is { } f && f.StartsWith(dir, StringComparison.OrdinalIgnoreCase)) return true; }
+            try
+            {
+                if (p.MainModule?.FileName is { } f && (exact != null
+                    ? f.Equals(exact, StringComparison.OrdinalIgnoreCase)
+                    : dir != null && f.StartsWith(dir, StringComparison.OrdinalIgnoreCase) && !NotAGame.IsMatch(Path.GetFileName(f)))) return true;
+            }
             catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException) { }
             finally { p.Dispose(); }
         }
@@ -78,7 +84,7 @@ public static class GameLibrary
         string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         yield return Path.Combine(pf, "HoYoPlay", "games"); yield return @"C:\Games"; yield return @"D:\Games";
     }
-    private static readonly Regex NotAGame = new(@"unins|setup|install|crash|redist|dxsetup|dotnet|update|patch|helper|report|cef|webview", RegexOptions.IgnoreCase);
+    private static readonly Regex NotAGame = new(@"unins|setup|install|crash|redist|dxsetup|dotnet|update|patch|helper|report|cef|webview|launcher", RegexOptions.IgnoreCase);
     /// <summary>The folder's main program: the largest .exe that isn't an installer, updater or crash reporter.</summary>
     private static string? BestExe(string folder, int depth)
     {

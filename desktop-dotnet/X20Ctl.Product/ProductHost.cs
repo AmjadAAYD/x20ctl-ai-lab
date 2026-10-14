@@ -240,7 +240,7 @@ public sealed class ProductHost : Grid
     public void OpenWriteScan()=>OpenWriteScan(null);
     public void OpenWriteScan(Scanner.ReadReport? read){if(WriteScan!=null)return;WriteScan=new(CloseWriteScan,read);Children.Add(WriteScan);Panel.SetZIndex(WriteScan,40);Fx.Appear(WriteScan,1.06,360);}
     public void CloseWriteScan(){if(WriteScan==null){RemoveOrphans();return;}if(!WriteScan.TryClose())return;var closing=WriteScan;WriteScan=null;closing.Shutdown();Fx.Leave(closing,()=>Children.Remove(closing),1.05,240);Settings?.WriteScan.Focus();}
-    private string? updateText;private bool updateShown;
+    private string? updateText;private bool updateShown;private Grid? updateLayer;
     private async Task CheckUpdatesAtLaunch(bool install)
     {
         await Task.Delay(4000);
@@ -259,12 +259,20 @@ public sealed class ProductHost : Grid
         var card=new Border{CornerRadius=new(16),Padding=new(26),Background=new SolidColorBrush(Color.FromRgb(14,24,50)),BorderBrush=new SolidColorBrush(Color.FromArgb(120,125,182,255)),BorderThickness=new(1),HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,
             Child=new StackPanel{Children={Kit.Text("New version",20,"DS.Text",FontWeights.SemiBold),new Border{Height=10},message,new Border{Height=20},new StackPanel{Orientation=Orientation.Horizontal,Children={go,later}}}}};
         var layer=new Grid{Background=new SolidColorBrush(Color.FromArgb(150,2,6,18)),Children={card}};
-        void Close(){Children.Remove(layer);}
+        updateLayer=layer;bool finished=Updater.Installed!=null;
+        void Close(){Children.Remove(layer);updateLayer=null;}
         later.Click+=(_,_)=>Close();
         go.Click+=async(_,_)=>
         {
-            if(Updater.Installed!=null){Close();return;}
-            if(Updater.CanInstall){go.IsEnabled=false;go.Content="Updating";var(_,text)=await Updater.Install(release);message.Text=text;go.Content="OK";go.IsEnabled=true;go.Click+=(_,_)=>Close();return;}
+            if(finished){Close();return;}
+            if(Updater.CanInstall)
+            {
+                layer.IsEnabled=false;go.IsEnabled=later.IsEnabled=false;go.Content="Updating";
+                try{var(_,text)=await Updater.Install(release);message.Text=text;}
+                catch(Exception error) when(error is System.Net.Http.HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException){message.Text="Couldn't update: "+error.Message;}
+                finally{finished=true;go.Content="OK";go.IsEnabled=later.IsEnabled=true;layer.IsEnabled=true;}
+                return;
+            }
             try{if(!ReviewSandbox.Active)System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Updater.ReleasesPage){UseShellExecute=true});}catch(Exception){}
             Close();
         };
@@ -277,6 +285,14 @@ public sealed class ProductHost : Grid
     public void OnKeyDown(object sender, KeyEventArgs e)
     {
         var key=e.Key==Key.System?e.SystemKey:e.Key;
+        if(updateLayer!=null)
+        {
+            if(!updateLayer.IsEnabled){e.Handled=true;return;}
+            if(key is Key.Escape or Key.B && updateLayer.IsEnabled){var dismiss=updateLayer;Children.Remove(dismiss);updateLayer=null;}
+            else if(key is Key.A or Key.Enter && Keyboard.FocusedElement is Button choice && choice.IsEnabled){if(!e.IsRepeat)choice.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));}
+            else if(key is Key.Up or Key.Down or Key.Left or Key.Right && Keyboard.FocusedElement is UIElement focus)focus.MoveFocus(new(key is Key.Up or Key.Left?FocusNavigationDirection.Previous:FocusNavigationDirection.Next));
+            e.Handled=true;return;
+        }
         // the identity scan popup: Esc / B backs out, A / Enter presses the focused button, nothing behind it moves
         if(verifyLayer!=null){if(e.Key is Key.Escape or Key.B){verifyLayer.Children.OfType<ControllerVerifyView>().FirstOrDefault()?.RaiseCancel();}else if(e.Key is Key.A or Key.Enter&&Keyboard.FocusedElement is Button pressed&&!e.IsRepeat)pressed.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));e.Handled=true;return;}
         // the Controller Check is testing the controller: its presses are never navigation; the keyboard's Esc leaves
@@ -299,5 +315,5 @@ public sealed class ProductHost : Grid
         }
         if (Studio != null) Studio.OnKeyDown(sender, e); else Zone.OnKeyDown(sender, e);
     }
-    public void OnKeyUp(object sender, KeyEventArgs e) { if(Intro!=null||Settings!=null||Check!=null||WriteScan!=null)return;if(Studio!=null)Studio.OnKeyUp(sender,e);else if (Selector == null) Zone.OnKeyUp(sender, e); }
+    public void OnKeyUp(object sender, KeyEventArgs e) { if(updateLayer!=null||Intro!=null||Settings!=null||Check!=null||WriteScan!=null)return;if(Studio!=null)Studio.OnKeyUp(sender,e);else if (Selector == null) Zone.OnKeyUp(sender, e); }
 }

@@ -88,7 +88,7 @@ public sealed class PcModeService : IDisposable
     {
         timeBeginPeriod(1);
         var pairs = new List<Pair>(); var hidden = new List<string>(); bool cloakWasOn = false;
-        var clock = Stopwatch.StartNew(); bool anything = false; bool broken = false; string? exe = null;
+        var clock = Stopwatch.StartNew(); bool anything = false; bool broken = false; bool setupAttempted = false; string? exe = null;
         var profiles = new Dictionary<string, PcModeProfile>(); // read once per reload, by store key
         PcModeProfile ProfileOf(string key) { if (!profiles.TryGetValue(key, out var p)) profiles[key] = p = store.Get(key); return p; }
         void Assign()
@@ -144,6 +144,20 @@ public sealed class PcModeService : IDisposable
                 // with nothing to apply anywhere, stay out of the way; a game without settings while another has some
                 // keeps the virtual pads (passing straight through) so switching windows doesn't make pads come and go
                 if (!anything) { Teardown(); Set(PcModeState.Ready, "On, but there's nothing to apply yet. Change a button, curve, turbo or macro and it starts by itself."); Thread.Sleep(150); continue; }
+
+                if (!PcModeSetup.Ready)
+                {
+                    if (!setupAttempted)
+                    {
+                        setupAttempted = true; // cancellation or failure never causes a UAC prompt loop
+                        Set(PcModeState.NeedsAttention, "Setting up PC mode. Windows may ask for permission.");
+                        try { Set(PcModeState.NeedsAttention, PcModeSetup.Run(automatic: true).GetAwaiter().GetResult()); }
+                        catch (Exception error) when (error is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException or InvalidOperationException)
+                        { Set(PcModeState.NeedsAttention, "Couldn't set up PC mode: " + error.Message); }
+                    }
+                    if (!PcModeSetup.Ready) { Thread.Sleep(500); continue; }
+                }
+                if (stop || !enabled || paused) continue;
 
                 if (pairs.Count == 0)
                 {

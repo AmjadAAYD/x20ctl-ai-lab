@@ -27,6 +27,7 @@ public sealed class DashboardConsolePage : Grid
     private readonly List<(Button Card, GameEntry Game)> cards = new();
     private readonly bool animate;
     private GameEntry? current;
+    private int scanGeneration;
     public event Action? ConfigureRequested;
     /// <summary>The invitation in the hero's empty corner was chosen: open the agent.</summary>
     public event Action? AgentRequested;
@@ -34,7 +35,7 @@ public sealed class DashboardConsolePage : Grid
     /// <summary>What A does on the highlighted item, for the live footer.</summary>
     public string FocusAction => heroFocus?.IsKeyboardFocused == true ? "Configure" : play.IsKeyboardFocused || cards.Any(c => c.Card.IsKeyboardFocusWithin) ? "Play" : "Select";
     /// <summary>Y: scan the launchers again.</summary>
-    public async void Rescan() { scan = null; foreach (var (card, _) in cards) shelf.Children.Remove(card); cards.Clear(); shelf.Children.Clear(); gamesCount.Text = "…"; await Populate(); }
+    public async void Rescan() { scanGeneration++; scan = null; cards.Clear(); covers.Clear(); shelf.Children.Clear(); Feature(null); gamesCount.Text = "…"; await Populate(); }
     /// <summary>LT/RT: jump a page (five covers) along the shelf.</summary>
     public void PageShelf(int step) { if (cards.Count == 0) return; int i = Math.Max(0, cards.FindIndex(c => c.Card.IsKeyboardFocusWithin)); cards[Math.Clamp(i + step * 5, 0, cards.Count - 1)].Card.Focus(); }
     public ControllerShowcase Showcase { get; } = new() { Tilt = 0 };
@@ -131,11 +132,13 @@ public sealed class DashboardConsolePage : Grid
     private async Task Populate()
     {
         if (cards.Count > 0) return;
+        int generation = scanGeneration;
         scan ??= GameLibrary.ScanAsync();
         IReadOnlyList<GameEntry> list; try { list = await scan; } catch { list = []; }
-        if (cards.Count > 0) return; // a second Populate that started while the scan ran has already filled the shelf
+        if (generation != scanGeneration || cards.Count > 0) return;
+        shelf.Children.Clear();
         gamesCount.Text = list.Count.ToString();
-        if (list.Count == 0) { shelf.Children.Add(Kit.Info("No installed Steam or Epic games were found on this PC.")); return; }
+        if (list.Count == 0) { featuredMeta.Text = "No games found"; shelf.Children.Add(Kit.Info("No installed games found. Add a game or folder.")); return; }
         int i = 0;
         foreach (var g in list) { var card = Card(g); shelf.Children.Add(card); cards.Add((card, g)); if (animate) Enter(card, i++ * 35); }
         Feature(list[0]);
@@ -187,17 +190,19 @@ public sealed class DashboardConsolePage : Grid
     private async void PlayGame(GameEntry? game, FrameworkElement source)
     {
         if (game == null || playing) return; playing = true;
+        Grid overlay = Window.GetWindow(this) is ProductWindow window ? window.Host : this;
+        Border? zoom = null;
         try
         {
             var image = Bitmap(game.Cover) ?? Bitmap(game.Hero);
-            var at = source.TranslatePoint(new Point(0, 0), this);
-            double w = Math.Max(1, source.ActualWidth), h = Math.Max(1, source.ActualHeight), pageW = ActualWidth, pageH = ActualHeight;
+            var at = source.TranslatePoint(new Point(0, 0), overlay);
+            double w = Math.Max(1, source.ActualWidth), h = Math.Max(1, source.ActualHeight), pageW = overlay.ActualWidth, pageH = overlay.ActualHeight;
             Brush fill = image != null ? new ImageBrush(image) { Stretch = Stretch.UniformToFill } : new LinearGradientBrush(Color.FromRgb(28, 52, 110), Color.FromRgb(10, 18, 44), 90);
-            var zoom = new Border { Background = fill, CornerRadius = new(14), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new(at.X, at.Y, 0, 0), Width = w, Height = h, ClipToBounds = true };
+            zoom = new Border { Background = fill, CornerRadius = new(14), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new(at.X, at.Y, 0, 0), Width = w, Height = h, ClipToBounds = true };
             var dim = new Border { Background = new SolidColorBrush(Color.FromArgb(150, 2, 6, 18)) };
             var label = Kit.Text("Starting " + game.Name, 30, "DS.Text", FontWeights.SemiBold); label.HorizontalAlignment = HorizontalAlignment.Center; label.VerticalAlignment = VerticalAlignment.Center; label.Opacity = 0;
             zoom.Child = new Grid { Children = { dim, label } };
-            Grid.SetRowSpan(zoom, 5); Panel.SetZIndex(zoom, 50); Children.Add(zoom);
+            Grid.SetRowSpan(zoom, 5); Panel.SetZIndex(zoom, 50); overlay.Children.Add(zoom);
             int ms = animate ? 380 : 0;
             if (ms > 0)
             {
@@ -208,33 +213,32 @@ public sealed class DashboardConsolePage : Grid
                 await Task.Delay(ms);
             }
             zoom.BeginAnimation(MarginProperty, null); zoom.BeginAnimation(WidthProperty, null); zoom.BeginAnimation(HeightProperty, null);
-            zoom.Margin = new(0); zoom.Width = double.NaN; zoom.Height = double.NaN; zoom.CornerRadius = new(0);
+            zoom.Margin = new(0); zoom.Width = pageW; zoom.Height = pageH; zoom.CornerRadius = new(0);
             label.Opacity = 1;
             if (!ReviewSandbox.Active)
             {
                 try { GameLibrary.Launch(game); }
-                catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException) { label.Text = "Could not start " + game.Name; await Task.Delay(1800); Children.Remove(zoom); return; }
-                // the game counts as started once a process from its own folder is up; without a folder, give it a few seconds
+                catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException) { label.Text = "Could not start " + game.Name; await Task.Delay(1800); return; }
+                // A delay alone is never evidence that a game started.
                 bool up = false;
-                for (int i = 0; i < 90 && !up; i++)
+                for (int i = 0; i < 90 && !up && IsLoaded; i++)
                 {
                     await Task.Delay(1000);
-                    up = game.Dir == null ? i >= 5 : await Task.Run(() => GameLibrary.IsRunning(game));
+                    up = await Task.Run(() => GameLibrary.IsRunning(game));
                 }
-                if (!up) { Children.Remove(zoom); return; }
+                if (!up) { label.Text = "Start not detected · " + game.Name; await Task.Delay(1800); return; }
             }
             label.Text = "In game · " + game.Name;
             await Task.Delay(2200);
             if (animate) { zoom.BeginAnimation(OpacityProperty, DS.To(0, 320)); await Task.Delay(330); }
-            Children.Remove(zoom);
         }
-        finally { playing = false; }
+        finally { if (zoom != null) overlay.Children.Remove(zoom); playing = false; }
     }
 
     private void Feature(GameEntry? g)
     {
         if (g != null && ReferenceEquals(g, current)) return; current = g;
-        var hero = Bitmap(g?.Hero); var mark = Bitmap(g?.Logo);
+        var hero = Bitmap(g?.Hero) ?? Bitmap(g?.Cover); var mark = Bitmap(g?.Logo);
         if (animate && heroArt.Source != hero) { heroArt.BeginAnimation(OpacityProperty, null); heroArt.Opacity = 0; }
         heroArt.Source = hero; if (hero != null) { if (animate) heroArt.BeginAnimation(OpacityProperty, DS.To(1, 320)); else heroArt.Opacity = 1; }
         logo.Source = mark; logo.Visibility = mark != null ? Visibility.Visible : Visibility.Collapsed; logo.Margin = new(0, 8, 0, 6);

@@ -38,7 +38,16 @@ public static class PcModeSetup
     }
 
     /// <summary>Runs whichever installers are missing and are bundled beside the app. Returns what happened, in a sentence.</summary>
-    public static async Task<string> Run()
+    static readonly SemaphoreSlim installLock = new(1, 1);
+    public static async Task<string> Run(bool automatic = false)
+    {
+        if (ReviewSandbox.Active) return "Driver setup is disabled in fixtures.";
+        await installLock.WaitAsync();
+        try { return await Install(automatic); }
+        finally { installLock.Release(); }
+    }
+
+    static async Task<string> Install(bool automatic)
     {
         var missing = new List<(string Name, string? File, string Page)>();
         if (!BusInstalled) missing.Add(("virtual controller driver", Find("ViGEmBus"), BusPage));
@@ -47,12 +56,14 @@ public static class PcModeSetup
         var notBundled = missing.Where(m => m.File == null).ToList();
         if (notBundled.Count > 0)
         {
+            if (automatic) return $"The packaged {notBundled[0].Name} is missing or failed verification. Use Set up PC mode.";
             ExternalLinks.Open(notBundled[0].Page);
             return $"This copy of X20CTL doesn't carry the {notBundled[0].Name}. The official page opened: install it, then come back here.";
         }
         foreach (var (name, file, _) in missing)
         {
-            var process = Process.Start(new ProcessStartInfo(file!, "/passive /norestart") { UseShellExecute = true, Verb = "runas" });
+            // Quiet installer UI still requires Windows UAC consent.
+            using var process = Process.Start(new ProcessStartInfo(file!, "/quiet /norestart") { UseShellExecute = true, Verb = "runas" });
             if (process == null) return $"Couldn't start the {name} installer.";
             await process.WaitForExitAsync();
             if (process.ExitCode is not (0 or 3010)) return $"The {name} installer stopped with code {process.ExitCode}. Nothing was changed on your controller.";
