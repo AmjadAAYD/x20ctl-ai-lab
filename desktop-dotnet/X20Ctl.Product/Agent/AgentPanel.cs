@@ -138,15 +138,15 @@ public sealed class AgentPanel
         DockPanel.SetDock(settingsToggle, Dock.Right); heading.Children.Add(settingsToggle);
         statusDot.Margin = new(12, 0, 6, 0);
         heading.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Text("Agent XCTL", 15, "DS.Text", FontWeights.SemiBold), statusDot, status } });
-        settingsBox = new Border { Visibility = Visibility.Collapsed, Margin = new(0, 0, 0, 8), Padding = new(14, 10, 14, 6), CornerRadius = new(12), Background = new SolidColorBrush(Color.FromArgb(120, 20, 30, 56)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 120, 170, 255)), BorderThickness = new(1),
-            Child = new ScrollViewer { MaxHeight = 170, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 8)), settings } } } };
         var lab = AgentLab.Create(session, model, modelId, name, on =>
         {
             demoChosen = on; session.Forget();
             ShowState(); ShowSettings(new HashSet<string>());
             Say(on ? AgentDemo.Label : "Canned demo off", null);
         }, () => busy);
-        var top = new StackPanel { Children = { heading, lab, settingsBox } };
+        settingsBox = new Border { Visibility = Visibility.Collapsed, Margin = new(0, 0, 0, 8), Padding = new(14, 10, 14, 6), CornerRadius = new(12), Background = new SolidColorBrush(Color.FromArgb(120, 20, 30, 56)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 120, 170, 255)), BorderThickness = new(1),
+            Child = new ScrollViewer { MaxHeight = 170, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 8)), settings, lab } } } };
+        var top = new StackPanel { Children = { heading, settingsBox } };
         // zoomed out (owner, 14 Oct 2026: "so tight, I can't see the message"): more of the conversation fits
         scroller = new ScrollViewer { Content = transcript, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         transcript.LayoutTransform = new ScaleTransform(.8, .8);

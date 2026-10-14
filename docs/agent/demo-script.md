@@ -2,7 +2,7 @@
 
 ## 0:00–0:40 — explain the pipeline
 
-Open the Studio's Agent XCTL panel. Say: “Live mode sends text to local Qwen, requests JSON, validates actions, and applies permitted PC-mode changes. The app reports what happened independently of the reply.” Expand **Lab / Safety**.
+Open the Studio's Agent XCTL panel. Say: “Live mode sends text to local Qwen, requests JSON, validates actions, and applies permitted PC-mode changes. The app reports what happened independently of the reply.” Open **RB Settings** on the agent controller, then expand **Lab / Safety**.
 
 Show the single model choice, `qwen3.5:9b`, temperature, editable system prompt and **Reset system prompt**. Qwen is the only chat model offered; no model download is needed for this script. Live Qwen output is nondeterministic and is not required for the presentation.
 
@@ -26,7 +26,7 @@ In **Lab / Safety**, show the prefilled bad JSON and click **Validate output**. 
 
 Read the short Safety text. Agent chat and lookup stay local. Qwen can hallucinate; validation proves structure, allowed targets and ranges, not correctness of advice or hardware compatibility. Real paddle writes are unsupported. Live mode can save PC-mode settings, so the canned preview is useful when no device changes are intended.
 
-Uncheck canned demo to return to the previous live/phrasebook choice. Live readiness may still be unavailable; no live result is promised. Collapse **Lab / Safety** to recover conversation space.
+Uncheck canned demo to return to the previous live/phrasebook choice. Live readiness may still be unavailable; no live result is promised. Close **RB Settings** to recover conversation space.
 
 ## Verification boundary
 
