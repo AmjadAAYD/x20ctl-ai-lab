@@ -5,6 +5,16 @@ namespace X20Ctl.Zone.Tests;
 public sealed class AgentOfflineCustomizationTests
 {
     [Theory]
+    [InlineData("What does maximum output at 90 mean?")]
+    [InlineData("Why use a vertical axis ratio of 120?")]
+    public async Task A_numeric_question_does_not_change_settings(string question)
+    {
+        var turn = await new AgentSession(new OfflineAgent(), "x20_pro", "X20 Pro").Ask(question, new());
+        Assert.Empty(turn.Outcome.Changes);
+        Assert.Empty(turn.Verdict.Proposal!.Actions);
+        Assert.NotEmpty(turn.Verdict.Proposal.Recap);
+    }
+    [Theory]
     [InlineData("My aim is twitchy", "stick_curve_points", "RightStick")]
     [InlineData("Slower for aiming please", "stick_curve_points", "RightStick")]
     [InlineData("Make my right stick more precise", "stick_curve_points", "RightStick")]
@@ -13,11 +23,29 @@ public sealed class AgentOfflineCustomizationTests
     [InlineData("Open diagnostics", "open_page", "Page")]
     [InlineData("Show curves", "open_page", "Page")]
     [InlineData("Take me to macros", "open_page", "Page")]
+    [InlineData("Cap right stick output at 90 percent", "stick_max_output", "RightStick")]
+    [InlineData("Set right stick vertical axis ratio to 120 percent", "stick_axis_ratio", "RightStick")]
+    [InlineData("Turn square gate on for the left stick", "stick_square_gate", "LeftStick")]
+    [InlineData("Give my right stick a custom curve through 30,25,70,65", "stick_curve_points", "RightStick")]
     public async Task New_requests_produce_real_valid_actions(string sentence, string action, string target)
     {
         var turn = await new AgentSession(new OfflineAgent(), "x20_pro", "X20 Pro").Ask(sentence, new());
         Assert.True(turn.Verdict.Valid, AgentSession.Problems(turn.Verdict));
         Assert.Contains(turn.Verdict.Applicable, a => a.Action == action && a.Target == target);
+    }
+
+    [Fact]
+    public async Task Slight_adjustment_starts_from_the_current_custom_curve()
+    {
+        var session = new AgentSession(new OfflineAgent(), "x20_pro", "X20 Pro");
+        var current = new PcModeProfile();
+        var first = await session.Ask("Make my right stick slightly slower for aiming", current);
+        Assert.True(first.Verdict.Valid);
+        Assert.NotEmpty(first.Outcome.Changes);
+        var second = await session.Ask("Make my right stick slightly slower for aiming", first.Outcome.Next!);
+        Assert.True(second.Verdict.Valid);
+        Assert.NotEmpty(second.Outcome.Changes);
+        Assert.NotEqual(first.Outcome.Next!.Curves["RightStick"], second.Outcome.Next!.Curves["RightStick"]);
     }
 
     [Fact]

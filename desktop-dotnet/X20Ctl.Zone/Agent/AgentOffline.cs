@@ -61,6 +61,26 @@ public sealed class OfflineAgent : IAgentModel
             if (request != null) sentence = request.Content + " " + sentence;
         }
         var plan = Answer(sentence);
+        if (Regex.IsMatch(sentence, @"\b(slightly|tiny|a (little|bit))\b", RegexOptions.IgnoreCase)
+            && !Regex.IsMatch(sentence, @"\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+")
+            && plan.Actions.Any(a => a.Action is AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints))
+        {
+            string settings = messages.First(m => m.Role == "system").Content.Split("My settings right now:").Last();
+            plan = Plan(Slots(sentence), plan.Actions.Select(a =>
+            {
+                if (a.Action is not (AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints)) return a;
+                CurvePoints.TryParse((string)a.Value, out var desired, out _);
+                var line = Regex.Match(settings, Regex.Escape(AgentApplier.Name(a.Target)) + @" curve: ([^\r\n]+)", RegexOptions.IgnoreCase).Groups[1].Value;
+                var custom = Regex.Match(line, @"custom (\d+)→(\d+), (\d+)→(\d+)");
+                int[] p;
+                if (custom.Success) p = custom.Groups.Cast<Group>().Skip(1).Select(g => int.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray();
+                else if (CurveDraft.Presets.TryGetValue(line, out var preset)) p = [ (int)Math.Round(preset.Item1.Item1 / 2.55), (int)Math.Round(preset.Item1.Item2 / 2.55), (int)Math.Round(preset.Item2.Item1 / 2.55), (int)Math.Round(preset.Item2.Item2 / 2.55) ];
+                else p = [33,33,67,67];
+                p[1] = Math.Clamp(p[1] + (desired.Y1 < desired.X1 ? -2 : 2), 0, 100);
+                p[3] = Math.Clamp(p[3] + (desired.Y2 < desired.X2 ? -2 : 2), 0, 100);
+                return (a.Action, a.Target, (object)string.Join(",", p));
+            }).ToArray());
+        }
         // nothing matched, or a question about something that isn't a setting: the closest doc passage, if one was given
         string? docs = messages.LastOrDefault(m => m.Role == "system" && m.Content.StartsWith("From the X20CTL docs", StringComparison.Ordinal))?.Content;
         if (docs != null && plan.Actions.Count == 0 && (plan.Speech.StartsWith(AgentCharacter.NotUnderstood, StringComparison.Ordinal) || plan.Speech.StartsWith("Ask me about", StringComparison.Ordinal))
@@ -87,6 +107,22 @@ public sealed class OfflineAgent : IAgentModel
         }
         sentence = AgentSpelling.Fix(sentence);
         string lower = sentence.ToLowerInvariant();
+        if (IsQuestion(lower)) return AgentCharacter.OffTopic(sentence) is { } unrelated ? OfflinePlan.Say(AgentCharacter.Silly(unrelated)) : Question(lower);
+        var slots = Slots(sentence);
+        var stickTargets = slots.Sticks.Count > 0 ? slots.Sticks : slots.Implied != null ? [slots.Implied] : AgentVocabulary.Sticks.ToList();
+        var pointText = Regex.Match(sentence, @"\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+");
+        if (pointText.Success && Regex.IsMatch(lower, @"\b(curve|points?|sticks?|triggers?|aim)\b"))
+        {
+            bool trigger = slots.Triggers.Count > 0 || lower.Contains("trigger");
+            var targets = trigger ? slots.Triggers.Count > 0 ? slots.Triggers : AgentVocabulary.Triggers.ToList() : stickTargets;
+            return Plan(slots, targets.Select(t => (trigger ? AgentVocabulary.TriggerCurvePoints : AgentVocabulary.StickCurvePoints, t, (object)pointText.Value)).ToArray());
+        }
+        if (Regex.IsMatch(lower, @"\b(max(?:imum)? output|cap|limit)\b") && lower.Contains("output"))
+            return slots.Numbers.Count > 0 ? Plan(slots, stickTargets.Select(t => (AgentVocabulary.StickMaxOutput, t, (object)slots.Numbers[0])).ToArray()) : OfflinePlan.Say("What maximum output percentage should I use?");
+        if (Regex.IsMatch(lower, @"\b(vertical|axis)\b.*\bratio\b"))
+            return slots.Numbers.Count > 0 ? Plan(slots, stickTargets.Select(t => (AgentVocabulary.StickAxisRatio, t, (object)slots.Numbers[0])).ToArray()) : OfflinePlan.Say("What vertical axis ratio percentage should I use?");
+        if (Regex.IsMatch(lower, @"\bsquare gate\b"))
+            return Plan(slots, stickTargets.Select(t => (AgentVocabulary.StickSquareGate, t, (object)(Regex.IsMatch(lower, @"\b(off|disable|stop)\b") ? "off" : "on"))).ToArray());
         if (Regex.IsMatch(lower, @"\b(turbo|rapid fire)\b") && !IsQuestion(lower) && Slots(sentence).Buttons.Count == 0)
             return OfflinePlan.Say("Which button should get turbo?");
         if (Regex.IsMatch(lower, @"\b(rgb|leds?|lights?|lighting|colou?rs?|vibration|vibrate|rumble|haptics?|battery|firmware|gyro|motion|volume|sound|mic|microphone|bluetooth)\b"))
@@ -296,6 +332,9 @@ public sealed class OfflineAgent : IAgentModel
         AgentVocabulary.Paddle => $"put {value} on {Words(targets)}",
         AgentVocabulary.MeasureDrift => $"measure my {Words(targets.Select(Called))} first, so hands off the controller for a few seconds",
         AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints => $"shape my {Words(targets.Select(Called))} with points {value} (push, output)",
+        AgentVocabulary.StickMaxOutput => $"cap my {Words(targets.Select(Called))} output at {Pct(value)}",
+        AgentVocabulary.StickAxisRatio => $"set my {Words(targets.Select(Called))} vertical ratio to {Pct(value)}",
+        AgentVocabulary.StickSquareGate => $"switch my {Words(targets.Select(Called))} square gate {value}",
         AgentVocabulary.MouseMode => $"switch mouse mode {value}",
         AgentVocabulary.OpenPage => $"open {value}",
         _ => $"switch PC mode {value}",
@@ -343,7 +382,11 @@ public sealed class OfflineAgent : IAgentModel
     {
         bool trigger = Regex.IsMatch(lower, @"\btriggers?\b");
         string? action =
-            Regex.IsMatch(lower, @"hair[\s-]*trigger|full[\s-]*(at|press)") ? AgentVocabulary.TriggerFullAt
+            Regex.IsMatch(lower, @"max(?:imum)? output") ? AgentVocabulary.StickMaxOutput
+            : Regex.IsMatch(lower, @"axis ratio|vertical ratio") ? AgentVocabulary.StickAxisRatio
+            : Regex.IsMatch(lower, @"square gate") ? AgentVocabulary.StickSquareGate
+            : Regex.IsMatch(lower, @"mouse mode") ? AgentVocabulary.MouseMode
+            : Regex.IsMatch(lower, @"hair[\s-]*trigger|full[\s-]*(at|press)") ? AgentVocabulary.TriggerFullAt
             : Regex.IsMatch(lower, @"anti[\s-]*dead") ? AgentVocabulary.StickAntiDeadzone
             : Regex.IsMatch(lower, @"dead[\s-]*zone|deadzone|drift") ? (trigger ? AgentVocabulary.TriggerDeadzone : AgentVocabulary.StickDeadzone)
             : Regex.IsMatch(lower, @"full speed|outer") ? AgentVocabulary.StickFullAt

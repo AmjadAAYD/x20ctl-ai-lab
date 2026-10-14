@@ -66,7 +66,8 @@ public static class AgentCharacter
     {
         // as typed first, then with typos read as meant ("stickss" is still about sticks)
         string lower = sentence.ToLowerInvariant();
-        if (OnTopic.IsMatch(lower) || OnTopic.IsMatch(AgentSpelling.Fix(sentence).ToLowerInvariant())) return null;
+        if (Regex.IsMatch(lower, @"\b(max(?:imum)? output|vertical (axis )?ratio|axis ratio|square gate|mouse mode)\b")
+            || OnTopic.IsMatch(lower) || OnTopic.IsMatch(AgentSpelling.Fix(sentence).ToLowerInvariant())) return null;
         foreach (var (words, thing) in Mistaken) if (words.IsMatch(lower)) return thing;
         // a question about something else entirely
         return Regex.IsMatch(lower, @"^\s*(who|what|where|when|why|how|is|are|can|could|will|do|does)\b.*\?\s*$") ? "a search engine" : null;

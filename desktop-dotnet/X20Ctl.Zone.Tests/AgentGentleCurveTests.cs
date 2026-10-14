@@ -11,6 +11,7 @@ public sealed class AgentGentleCurveTests
         var bad = ProposalValidator.Check(Output("10,5,20,45"), "x20_pro");
         Assert.NotNull(AgentSession.CurveIntentProblem("Make my stick precise for sniping", new(), bad));
         Assert.Null(AgentSession.CurveIntentProblem("Use points 10,5,20,45", new(), bad));
+        Assert.Null(AgentSession.CurveIntentProblem("Slightly adjust it using exactly 10,5,20,45", new(), bad));
     }
     static string Output(string points) => JsonSerializer.Serialize(new { speech = "I'll adjust the right stick slightly.", actions = new[] { new { action = "stick_curve_points", target = "RightStick", value = points, reason = "gentle aim" } }, recap = "Small change.", assumptions = Array.Empty<string>(), sources = Array.Empty<int>(), question = "" });
     [Theory]

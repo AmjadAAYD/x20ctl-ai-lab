@@ -280,9 +280,9 @@ public static class AgentBench
         var s = new StringBuilder();
         s.AppendLine($"# Agent evaluation · {model}");
         s.AppendLine();
-        s.AppendLine($"{runs.Select(r => r.Case).Distinct().Count()} sentences × {repeats} runs × {variants.Count} variants = {runs.Count} turns, run {DateTime.Now.ToString("d MMM yyyy HH:mm", c)}. Each turn goes through the app's real prompt, validator and one repair attempt. \"First\" columns score the model's first reply alone; \"Right answer\" scores the whole turn against what the sentence asked for.");
+        s.AppendLine($"{runs.Select(r => r.Case).Distinct().Count()} sentences × {repeats} runs × {variants.Count} variants = {runs.Count} turns, run {DateTime.Now.ToString("d MMM yyyy HH:mm", c)}. Each turn goes through the app's real prompt, validator, measurement flow and applicable repair attempts. \"First\" columns score the model's first reply alone; \"Right answer\" scores the whole turn against what the sentence asked for. Multi-call includes drift's expected measurement follow-up, not only repairs.");
         s.AppendLine();
-        s.AppendLine("| Variant | First: JSON | First: schema | First: rules | Repaired | Valid after repair | Right answer | Median time | Median tokens out |");
+        s.AppendLine("| Variant | First: JSON | First: schema | First: rules | Multi-call | Final valid | Right answer | Median time | Median tokens out |");
         s.AppendLine("|---|---|---|---|---|---|---|---|---|");
         foreach (var v in variants)
         {
