@@ -55,8 +55,8 @@ public sealed class AgentOfflineTests(ITestOutputHelper output)
             .Select(f => PhrasebookCleaner.Clean(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string[]>>(File.ReadAllText(f))!).Kept)
             .SelectMany(d => d).GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.SelectMany(e => e.Value).Distinct().ToArray());
         await Score("both cleaned", AgentBench.OfflineHeldOut, new OfflineAgent(both));
-        await Score("FINAL examples only", AgentBench.OfflineFinal, new OfflineAgent(null));
-        await Score("FINAL both cleaned", AgentBench.OfflineFinal, new OfflineAgent(both));
+        // OfflineFinal was evaluated once. Its archived results stay in offline-mode.md;
+        // routine regression checks and phrasebook iteration use the development set only.
     }
     static string Repo() { var d = new DirectoryInfo(AppContext.BaseDirectory); while (d != null && !Directory.Exists(Path.Combine(d.FullName, "docs"))) d = d.Parent; return d!.FullName; }
 

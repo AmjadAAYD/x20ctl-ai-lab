@@ -67,6 +67,17 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             verdict = await Answer(messages, attempts, measured, offered.Count, cancel);
         }
         var outcome = AgentApplier.Apply(current, verdict);
+        // Words like "slightly" must agree with the actual response, not just with valid ranges.
+        if (verdict.Valid && CurveIntentProblem(sentence, current, verdict) is { } mismatch)
+        {
+            messages.Add(new("assistant", attempts[^1].Content));
+            messages.Add(new("user", mismatch + " Choose custom points with the requested direction and amount relative to my current curve. Keep your speech exact."));
+            var gentle = await Answer(messages, attempts, measured, offered.Count, cancel);
+            if (gentle.Valid && CurveIntentProblem(sentence, current, gentle) == null)
+            { verdict = gentle; outcome = AgentApplier.Apply(current, gentle); }
+            else
+            { verdict = new(verdict.Proposal, mismatch, verdict.Checks); outcome = AgentApplier.Apply(current, verdict); }
+        }
         // owner, 14 Oct 2026: it said "I'll set smooth" and nothing changed. A reply that promises a change but makes none
         // (no action, or values I already have) gets one more go, told exactly that
         if (verdict.Valid && outcome.Changes.Count == 0 && outcome.Mouse == null && outcome.Page == null && outcome.PcMode == null && measured == null
@@ -117,6 +128,49 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
 
     public void Forget() => history.Clear();
 
+    public static string? CurveIntentProblem(string sentence, PcModeProfile current, AgentVerdict verdict)
+    {
+        // Explicit numeric points take precedence over qualitative wording.
+        if (System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+")) return null;
+        if (GentleCurveProblem(sentence, current, verdict) is { } gentle) return gentle;
+        bool slower = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(snip\w*|precis\w*|twitchy|slower|progressive|too sensitive)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        bool faster = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(faster|quicker|responsive)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (slower == faster) return null;
+        foreach (var a in verdict.Applicable.Where(a => a.Action is AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints))
+        {
+            CurvePoints.TryParse(a.ValueText, out var p, out _);
+            current.Curves.TryGetValue(a.Target, out var old);
+            foreach (double x in new[] { .25, .5, .75 })
+            {
+                double before = old == null ? x : PadProcessor.Through(x, old.X1 / 255d, old.Y1 / 255d, old.X2 / 255d, old.Y2 / 255d);
+                double after = PadProcessor.Through(x, p.X1 / 100d, p.Y1 / 100d, p.X2 / 100d, p.Y2 / 100d);
+                if (slower ? after > before + .01 : after < before - .01)
+                    return $"{a.Target}'s curve makes output {(slower ? "faster" : "slower")} at {x * 100:0}% push, opposite to the requested direction. Nothing applied.";
+            }
+        }
+        return null;
+    }
+
+    /// <summary>For an explicitly small curve adjustment, bound the actual output change at every push.</summary>
+    public static string? GentleCurveProblem(string sentence, PcModeProfile current, AgentVerdict verdict)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(slightly|slight|tiny|a (little|bit))\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return null;
+        foreach (var a in verdict.Applicable.Where(a => a.Action is AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints))
+        {
+            if (!CurvePoints.TryParse(a.ValueText, out var p, out _)) continue;
+            current.Curves.TryGetValue(a.Target, out var old);
+            for (int i = 1; i < 100; i++)
+            {
+                double x = i / 100d;
+                double before = old == null ? x : PadProcessor.Through(x, old.X1 / 255d, old.Y1 / 255d, old.X2 / 255d, old.Y2 / 255d);
+                double after = PadProcessor.Through(x, CurvePoints.ToByte(p.X1) / 255d, CurvePoints.ToByte(p.Y1) / 255d, CurvePoints.ToByte(p.X2) / 255d, CurvePoints.ToByte(p.Y2) / 255d);
+                if (Math.Abs(after - before) > .055)
+                    return $"You requested a small change, but {a.Target}'s curve changes output by more than five percentage points. Nothing applied.";
+            }
+        }
+        return null;
+    }
+
     /// <summary>The speech says it is changing a setting ("I'll set…", "I've made…", "Let me tweak…").</summary>
     public static bool Promises(string speech) => System.Text.RegularExpressions.Regex.IsMatch(speech,
         @"\b(i'll|i will|i've|i have|i'm|i am|let me|let's)\s+(\w+\s+){0,2}(set|setting|change|changing|changed|make|making|made|shape|shaping|switch|turn|tune|dial|lower|raise|adjust|tweak|bump|drop|apply|move|remap|smooth|slow|speed|boost|give)\b|\bis now (set|on|off)\b",
@@ -153,7 +207,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - stick_deadzone: LeftStick or RightStick, percent 0-40. How much of the centre is ignored. Drift or a stick that moves by itself: raise it a little.
             - stick_full_at: LeftStick or RightStick, percent 60-100. Where full speed is reached. Lower is faster.
             - stick_anti_deadzone: LeftStick or RightStick, percent 0-40. Cancels a game's own dead zone so small moves register.
-            - stick_curve_points: LeftStick or RightStick, text "push1,output1,push2,output2" (whole percents 0-100, push1 < push2). A custom curve that runs through these two points. Prefer this over the presets: shape it for what the owner asked and for this controller. Below the diagonal (output < push) is slower and more precise there; above is faster. Example, precise aim that still turns: "35,20,75,62". Keep it gentle: a point more than 25 below the diagonal feels dead.
+            - stick_curve_points: LeftStick or RightStick, text "push1,output1,push2,output2" (whole percents 0-100, push1 < push2). A custom curve that runs through these two points. Prefer this over the presets: shape it for what the owner asked and for this controller. Below the diagonal (output < push) is slower and more precise there; above is faster. Keep it gentle: a point more than 25 below the diagonal feels dead.
             - stick_curve: LeftStick or RightStick, one of: default, quick, slow, smooth, fine. ONLY when the owner says one of these preset words; for anything else (twitchy, slow, fast, precise, smooth aim) use stick_curve_points.
             - stick_max_output: LeftStick or RightStick, percent 60-100. The most the game gets at full push.
             - stick_axis_ratio: LeftStick or RightStick, whole percent 50-150. Vertical speed as a percent of horizontal.
@@ -177,7 +231,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             Drift: when the owner says a stick drifts, moves on its own, or the aim creeps, measure it first: reply with only measure_drift actions (one per stick named, both if they don't say which) and no other actions. The app then sends you what it measured. Answer that with stick_deadzone at least the smallest dead zone it gives for each drifting stick, and explain the numbers in the recap. If it measured no drift worth a dead zone, change nothing and say so.
 
             Reset everything -> one action: reset All, value 0. Turn turbo off -> turbo with value 0.
-            What people mean: precise, slow, sniping -> stick_curve_points under the diagonal (such as "35,22,75,60"). Fast or responsive -> points above the diagonal (such as "25,35,65,80"), or stick_full_at about 85. Steady tracking -> a gentle S ("30,22,70,72"). Diagnose, test or check my controller -> open_page Diagnostics. Also use the advanced settings (max output, vertical ratio, anti-dead zone, square gate) when they fit. Twitchy or too sensitive -> stick_curve_points under the diagonal, plus stick_max_output about 90 when turning is too fast. Triggers that react earlier or faster -> trigger_deadzone 0-3 and trigger_curve_points above the diagonal (such as "15,35,55,80"); trigger_full_at 50-70 only for "hair trigger", never below 50 unless the owner gives a number. Progressive racing triggers -> trigger_curve_points under the diagonal ("35,20,75,65"). Change one step at a time: small, then ask.
+            What people mean: precise, slow, sniping -> stick_curve_points under the diagonal. Fast or responsive -> points above the diagonal, or stick_full_at about 85. Steady tracking -> a gentle S close to the diagonal. Diagnose, test or check my controller -> open_page Diagnostics. Also use the advanced settings (max output, vertical ratio, anti-dead zone, square gate) when they fit. Twitchy or too sensitive -> stick_curve_points under the diagonal, plus stick_max_output about 90 when turning is too fast. Triggers that react earlier or faster -> trigger_deadzone 0-3 and trigger_curve_points above the diagonal; trigger_full_at 50-70 only for "hair trigger", never below 50 unless the owner gives a number. Progressive racing triggers -> trigger_curve_points under the diagonal. Choose points from the CURRENT curve and the requested amount, not from memorized examples. For a slight change keep each output within five percentage points of its current output at the same push. Stronger requests may move further. Do not reuse the last points unchanged when the owner asks for more. Ask only for genuinely missing details.
 
             {AgentKnowledge.Prompt()}
 
@@ -197,8 +251,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     /// <summary>The JSON Schema the model's output is constrained to (Ollama's "format"), built from the vocabulary so the
     /// two can't drift apart.</summary>
     public static readonly string Schema = BuildSchema(false);
-    /// <summary>The same schema with values held tighter: whole numbers 0 to 100, and text only from the known names
-    /// (curve presets and buttons). Measured against <see cref="Schema"/> in the evaluation.</summary>
+    /// <summary>The same schema with values held tighter: whole numbers 0 to 150, and text for custom curve points and named actions. Measured against <see cref="Schema"/> in the evaluation.</summary>
     public static readonly string BoundedSchema = BuildSchema(true);
     /// <summary>The schema this session sends.</summary>
     public string SchemaText { get; set; } = Schema;
@@ -206,7 +259,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     {
         static JsonArray Enum(IEnumerable<string> values) => new(values.Select(v => (JsonNode)JsonValue.Create(v)!).ToArray());
         JsonNode value = bounded
-            ? new JsonObject { ["anyOf"] = new JsonArray(new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 100 }, new JsonObject { ["type"] = "string", ["enum"] = Enum(AgentVocabulary.Curves.Concat(AgentVocabulary.Buttons).Distinct()) }) }
+            ? new JsonObject { ["anyOf"] = new JsonArray(new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 150 }, new JsonObject { ["type"] = "string" }) }
             // whole numbers only: with "number", grammar-constrained sampling wanders into values like 30.000000122 (live run, 12 Oct)
             : new JsonObject { ["type"] = new JsonArray("integer", "string") };
         var action = new JsonObject

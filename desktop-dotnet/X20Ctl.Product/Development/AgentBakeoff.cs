@@ -16,7 +16,7 @@ namespace X20Ctl.Product.Development;
 /// </summary>
 internal static class AgentBakeoff
 {
-    const int Repeats = 3;
+    static int Repeats => AgentBench.EvaluationRepeats;
 
     public static async Task Run(string directory, BenchCase[]? only = null)
     {
@@ -32,7 +32,7 @@ internal static class AgentBakeoff
         using var jsonl = new StreamWriter(Path.Combine(directory, "runs.jsonl"), false, new UTF8Encoding(false));
         bool drift = only != null; // a focused check: one variant (the default settings), with the turn spelled out
         var variants = drift ? AgentBench.Variants[..1] : AgentBench.Variants;
-        var cases = only ?? AgentBench.Cases;
+        var cases = only == AgentBench.M3Cases ? AgentBench.M3Cases.Concat(AgentBench.CustomizationCases).ToArray() : only ?? AgentBench.Cases;
         int total = variants.Length * Repeats * cases.Length, done = 0;
         foreach (var variant in variants)
         {
@@ -42,19 +42,24 @@ internal static class AgentBakeoff
                 {
                     var session = new AgentSession(model, c.ModelId, c.ModelId == "x20" ? "X20" : "X20 Pro") { SchemaText = variant.Bounded ? AgentSession.BoundedSchema : AgentSession.Schema, Meter = new BenchMeter() };
                     BenchRun result;
-                    AgentTurn turn;
+                    AgentTurn? turn = null;
                     try { turn = await session.Ask(c.Sentence, new PcModeProfile()); result = BenchRun.Of(variant, c, run, turn); }
-                    catch (Exception error) when (error is HttpRequestException or TaskCanceledException) { Note($"{variant.Name} · {c.Sentence}: {error.Message}"); continue; }
+                    catch (Exception error) when (error is HttpRequestException or TaskCanceledException)
+                    {
+                        Note($"{variant.Name} · {c.Sentence}: {error.Message}");
+                        result = new(variant, c, run, false, false, false, false, false, 0, 0, 0, 0, error.Message);
+                    }
                     runs.Add(result); done++;
                     jsonl.WriteLine(JsonSerializer.Serialize(new
                     {
                         variant = variant.Name, sentence = c.Sentence, pad = c.ModelId, run, expected = c.Expected,
                         result.FirstJson, result.FirstStructure, result.FirstRules, result.FinalRules, result.Correct, result.Attempts,
                         ms = Math.Round(result.TotalMs), tokensOut = result.OutputTokens, tokensIn = result.PromptTokens, first = result.FirstOutput,
+                        final = turn?.Verdict.Proposal, changes = turn?.Outcome.Changes, measured = turn?.Measured,
                     }));
                     jsonl.Flush();
                     Note($"{done}/{total} {variant.Name} · run {run} · {c.Sentence} · {(result.Correct ? "right" : "wrong")} · {result.TotalMs / 1000:0.0} s"
-                        + (drift ? $" · measured: {(turn.Measured == null ? "no" : "yes")} · did: {string.Join(", ", turn.Verdict.Proposal?.Actions.Select(a => $"{a.Action} {a.Target} {a.ValueText}") ?? [])} · tries {turn.Attempts.Count}" : ""));
+                        + (drift ? $" · measured: {(turn?.Measured == null ? "no" : "yes")} · did: {string.Join(", ", turn?.Verdict.Proposal?.Actions.Select(a => $"{a.Action} {a.Target} {a.ValueText}") ?? [])} · tries {turn?.Attempts.Count ?? 0}" : ""));
                 }
         }
         File.WriteAllText(Path.Combine(directory, "report.md"), AgentBench.Report(runs, model.Name, Repeats));

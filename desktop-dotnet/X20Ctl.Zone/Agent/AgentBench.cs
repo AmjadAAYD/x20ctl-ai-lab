@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using X20Ctl.Zone.PcMode;
 namespace X20Ctl.Zone.Agent;
 
 /// <summary>
@@ -47,6 +48,8 @@ public sealed record BenchRun(BenchVariant Variant, BenchCase Case, int Run, boo
 /// </summary>
 public static class AgentBench
 {
+    /// <summary>A one-pass refresh can be requested without changing the default three-run study.</summary>
+    public static int EvaluationRepeats => int.TryParse(Environment.GetEnvironmentVariable("X20CTL_AGENT_EVAL_REPEATS"), out int n) && n is >= 1 and <= 3 ? n : 3;
     /// <summary>The drift sentences (M3), scored with <see cref="BenchMeter"/>: right means it measured first and the dead zone
     /// covers what was measured (the validator refuses less), on the stick the sentence names, or both when it names neither.</summary>
     public static readonly BenchCase[] DriftCases =
@@ -69,6 +72,20 @@ public static class AgentBench
         new("My settings don't do anything in games", "x20_pro", ["pc_mode:PcMode=on"]),
         new("Switch PC mode off", "x20_pro", ["pc_mode:PcMode=off"]),
         new("Make my sticks smooth and turn PC mode on", "x20_pro", ["pc_mode:PcMode=on"], ["stick_curve:LeftStick=smooth"], ["stick_curve:RightStick=smooth"]),
+    ];
+
+    public static readonly BenchCase[] CustomizationCases =
+    [
+        new("Make my right stick slightly slower for aiming", "x20_pro", ["stick_curve_points:RightStick=gentle_slow"]),
+        new("Give my right stick a custom curve through 30,25,70,65", "x20_pro", ["stick_curve_points:RightStick=30,25,70,65"]),
+        new("Cap right stick output at 90 percent", "x20_pro", ["stick_max_output:RightStick=90"]),
+        new("Set right stick vertical axis ratio to 120 percent", "x20_pro", ["stick_axis_ratio:RightStick=120"]),
+        new("Turn square gate on for the left stick", "x20_pro", ["stick_square_gate:LeftStick=on"]),
+        new("Turn mouse mode on", "x20_pro", ["mouse_mode:Mouse=on"]),
+        new("Switch mouse mode off", "x20_pro", ["mouse_mode:Mouse=off"]),
+        new("Open diagnostics", "x20_pro", ["open_page:Page=Diagnostics"]),
+        new("Show curves", "x20_pro", ["open_page:Page=Curves"]),
+        new("Take me to macros", "x20_pro", ["open_page:Page=Macros"]),
     ];
 
     /// <summary>Offline mode's held-out sentences: never in its seeds, and kept out of the phrasebook Qwen writes, so they measure
@@ -220,6 +237,26 @@ public static class AgentBench
         static bool Fits(string need, AgentAction a)
         {
             var (head, value) = need.Split('=') is [var h, var v] ? (h, v) : (need, null);
+            if (head == a.Action + ":" + a.Target && value == "gentle_slow" && CurvePoints.TryParse(a.ValueText, out var gentle, out _))
+            {
+                double response = PadProcessor.Through(.5, gentle.X1 / 100d, gentle.Y1 / 100d, gentle.X2 / 100d, gentle.Y2 / 100d);
+                return response < .5 && response >= .445;
+            }
+            // Compare the requested response, not a preset name: custom curves are now preferred.
+            // Archived reports used exact preset matching and are not directly comparable.
+            var parts = head.Split(':');
+            if (parts.Length == 2 && parts[1] == a.Target && parts[0] is "stick_curve" or "trigger_curve"
+                && a.Action == parts[0] + "_points" && CurvePoints.TryParse(a.ValueText, out var p, out _))
+            {
+                double Response(double x) => PadProcessor.Through(x, p.X1 / 100d, p.Y1 / 100d, p.X2 / 100d, p.Y2 / 100d);
+                return value switch
+                {
+                    "slow" => Response(.25) < .25 && Response(.5) < .5 && Response(.75) < .75,
+                    "quick" => Response(.25) > .25 && Response(.5) > .5 && Response(.75) > .75,
+                    "smooth" => new[] { .25, .5, .75 }.All(x => Math.Abs(Response(x) - x) <= .15),
+                    _ => false
+                };
+            }
             return head == a.Action + ":" + a.Target && (value == null || string.Equals(value, a.ValueText, StringComparison.OrdinalIgnoreCase));
         }
     }

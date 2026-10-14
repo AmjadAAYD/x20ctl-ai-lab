@@ -13,7 +13,7 @@ namespace X20Ctl.Product.Development;
 /// </summary>
 internal static class AgentDocsBakeoff
 {
-    const int Repeats = 3;
+    static int Repeats => AgentBench.EvaluationRepeats;
 
     public static async Task Run(string directory)
     {

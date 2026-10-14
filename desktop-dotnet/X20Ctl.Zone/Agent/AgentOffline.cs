@@ -52,6 +52,14 @@ public sealed class OfflineAgent : IAgentModel
     {
         var clock = Stopwatch.StartNew();
         string sentence = messages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
+        // Carry only a pending clarification, not arbitrary prior requests, into a short answer.
+        var previous = messages.Take(messages.Count - 1).LastOrDefault(m => m.Role == "assistant");
+        if (previous?.Content.TrimEnd().EndsWith('?') == true && Regex.Matches(sentence, @"\S+").Count <= 4
+            && !Regex.IsMatch(sentence, @"\b(turn|set|make|open|show|switch|reset|stop)\b", RegexOptions.IgnoreCase))
+        {
+            var request = messages.Take(messages.Count - 1).LastOrDefault(m => m.Role == "user");
+            if (request != null) sentence = request.Content + " " + sentence;
+        }
         var plan = Answer(sentence);
         // nothing matched, or a question about something that isn't a setting: the closest doc passage, if one was given
         string? docs = messages.LastOrDefault(m => m.Role == "system" && m.Content.StartsWith("From the X20CTL docs", StringComparison.Ordinal))?.Content;
@@ -79,12 +87,22 @@ public sealed class OfflineAgent : IAgentModel
         }
         sentence = AgentSpelling.Fix(sentence);
         string lower = sentence.ToLowerInvariant();
+        if (Regex.IsMatch(lower, @"\b(turbo|rapid fire)\b") && !IsQuestion(lower) && Slots(sentence).Buttons.Count == 0)
+            return OfflinePlan.Say("Which button should get turbo?");
         if (Regex.IsMatch(lower, @"\b(rgb|leds?|lights?|lighting|colou?rs?|vibration|vibrate|rumble|haptics?|battery|firmware|gyro|motion|volume|sound|mic|microphone|bluetooth)\b"))
             return OfflinePlan.Say("I can't change that yet. I can set sticks, triggers, buttons, turbo, paddles, PC mode, and measure drift.");
         if (Regex.IsMatch(lower, @"^\s*(hi|hello|hey|help|what can you do|who are you)\W*$")) return Intents.First(i => i.Id == "greeting").Build(new OfflineSlots());
+        if (Regex.IsMatch(lower, @"\bmouse\s*mode\b"))
+            return Intents.First(i => i.Id == (Regex.IsMatch(lower, @"\b(off|disable|stop)\b") ? "mouse_mode_off" : "mouse_mode_on")).Build(Slots(sentence));
+        if (Regex.IsMatch(lower, @"\b(open|show|go to|take me to|diagnostics?|diagnose)\b")
+            && AgentVocabulary.Pages.FirstOrDefault(page => Regex.IsMatch(lower, $@"\b{Regex.Escape(page.ToLowerInvariant())}\b") || page == "Diagnostics" && Regex.IsMatch(lower, @"\bdiagnos(tic|e)\b")) is { } page)
+            return Plan(Slots(sentence), (AgentVocabulary.OpenPage, AgentVocabulary.PageTarget, page));
         // not about controllers at all: in character
         if (AgentCharacter.OffTopic(sentence) is { } thing) return OfflinePlan.Say(AgentCharacter.Silly(thing));
         if (IsQuestion(lower)) return Question(lower);
+
+        // A button and a number alone need a pending question; otherwise they aren't a command.
+        if (Regex.IsMatch(lower, @"^\s*(a|b|x|y|lb|rb|lt|rt)\s+(?:at\s+)?\d+\s*$")) return NotUnderstood();
 
         // several requests in one sentence: each part on its own, when each part is clearly a different request
         var parts = Regex.Split(sentence, @"\s*(?:,|;|\band then\b|\bthen\b|\balso\b|\band\b|\bplus\b)\s*", RegexOptions.IgnoreCase).Where(p => p.Trim().Length > 0).ToList();
@@ -114,6 +132,7 @@ public sealed class OfflineAgent : IAgentModel
         bool off = Regex.IsMatch(lower, @"\b(off|stop|disable|kill|remove|no more|get rid|turn it off|without)\b");
         return id =>
             !(id.StartsWith("trigger_") && stick && !trigger) && !(id.StartsWith("stick_") && trigger && !stick)
+            && !(id.StartsWith("mouse_mode") && !lower.Contains("mouse")) && !(id == "open_page" && !AgentVocabulary.Pages.Any(p => lower.Contains(p.ToLowerInvariant())))
             && !(id.EndsWith("_off") && !off) && !(id.EndsWith("_on") && off);
     }
 
@@ -276,6 +295,9 @@ public sealed class OfflineAgent : IAgentModel
         AgentVocabulary.Reset => targets.Contains(AgentVocabulary.All) ? "put everything back to default" : $"put my {Words(targets.Select(Called))} back to default",
         AgentVocabulary.Paddle => $"put {value} on {Words(targets)}",
         AgentVocabulary.MeasureDrift => $"measure my {Words(targets.Select(Called))} first, so hands off the controller for a few seconds",
+        AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints => $"shape my {Words(targets.Select(Called))} with points {value} (push, output)",
+        AgentVocabulary.MouseMode => $"switch mouse mode {value}",
+        AgentVocabulary.OpenPage => $"open {value}",
         _ => $"switch PC mode {value}",
     };
 
@@ -382,17 +404,17 @@ public sealed class OfflineAgent : IAgentModel
         return
         [
             new("stick_sniping", "make a stick (usually the right, aiming one) precise for sniping or long range aim",
-                ["Make my right stick good for sniping", "Make my right stick more precise for sniping", "I need precise aim for sniping", "Set me up for snipers", "Better long range aim", "I play sniper a lot, help my aim", "Make aiming more precise", "precision aiming please"],
-                s => Each(s, AgentVocabulary.StickCurve, Sticks(s, right), "slow")),
+                ["Make my right stick good for sniping", "Make my right stick more precise for sniping", "I need precise aim for sniping", "Set me up for snipers", "Better long range aim", "I play sniper a lot, help my aim", "Make aiming more precise", "precision aiming please", "Slower for aiming please", "Make my right stick more precise"],
+                s => Each(s, AgentVocabulary.StickCurvePoints, Sticks(s, right), "30,23,72,65")),
             new("stick_twitchy", "the aim or camera is too sensitive, twitchy or jumpy",
                 ["My aim feels too twitchy", "My aim is too sensitive", "The camera moves way too fast", "My crosshair is jumpy", "Aim feels shaky", "Small moves make my aim jump too far", "I keep overshooting my targets"],
-                s => Each(s, AgentVocabulary.StickCurve, Sticks(s, right), "slow")),
+                s => Each(s, AgentVocabulary.StickCurvePoints, Sticks(s, right), "30,23,72,65")),
             new("stick_smooth", "make the sticks feel smooth and steady",
                 ["Make my sticks smooth", "Smooth out my sticks", "I want smoother sticks", "Give my sticks a smooth feel", "Make the left stick smooth", "Steadier tracking please", "Make my stick movement less choppy"],
-                s => Each(s, AgentVocabulary.StickCurve, Sticks(s, both), "smooth")),
+                s => Each(s, AgentVocabulary.StickCurvePoints, Sticks(s, both), "30,25,72,73")),
             new("stick_fast", "make the sticks faster or more responsive",
                 ["Make my sticks faster", "I want more responsive sticks", "Faster turning", "My camera turns too slowly", "Make my right stick quicker", "Speed up my sticks", "My aim feels sluggish"],
-                s => Each(s, AgentVocabulary.StickCurve, Sticks(s, both), "quick")),
+                s => Each(s, AgentVocabulary.StickCurvePoints, Sticks(s, both), "25,33,70,79")),
             new("stick_curve_set", "set a stick curve by name: default, quick, slow, smooth or fine",
                 ["Set my right stick curve to slow", "Use the fine curve on my left stick", "Put both sticks on the default curve", "Change the stick curve to quick", "Left stick curve smooth"],
                 s => s.Preset is { } p ? Each(s, AgentVocabulary.StickCurve, Sticks(s, both), p) : OfflinePlan.Say("Which curve? default, quick, slow, smooth or fine.")),
@@ -416,7 +438,7 @@ public sealed class OfflineAgent : IAgentModel
                 s => Plan(s, [.. Triggers(s, rt).SelectMany(t => new[] { (AgentVocabulary.TriggerFullAt, t, (object)40), (AgentVocabulary.TriggerDeadzone, t, (object)0) })])),
             new("trigger_slow", "slow, progressive triggers, for racing throttle and brakes",
                 ["Slow, progressive triggers for racing", "Better throttle control for racing games", "Make my triggers progressive", "I need finer brake control", "Racing setup for my triggers"],
-                s => Each(s, AgentVocabulary.TriggerCurve, Triggers(s, triggersBoth), "slow")),
+                s => Each(s, AgentVocabulary.TriggerCurvePoints, Triggers(s, triggersBoth), "30,23,72,65")),
             new("trigger_curve_set", "set a trigger curve by name: default, quick, slow, smooth or fine",
                 ["Set my right trigger curve to quick", "Left trigger curve smooth", "Put my triggers on the default curve", "Use the fine curve on my triggers"],
                 s => s.Preset is { } p ? Each(s, AgentVocabulary.TriggerCurve, Triggers(s, triggersBoth), p) : OfflinePlan.Say("Which curve? default, quick, slow, smooth or fine.")),
@@ -461,6 +483,16 @@ public sealed class OfflineAgent : IAgentModel
             new("pc_mode_off", "switch PC mode off",
                 ["Switch PC mode off", "Turn off PC mode", "Disable PC mode", "Stop PC mode", "I don't want PC mode"],
                 s => Plan(s, (AgentVocabulary.PcMode, AgentVocabulary.PcModeTarget, "off"))),
+            new("mouse_mode_on", "switch mouse mode on so the controller moves the pointer",
+                ["Turn mouse mode on", "Enable mouse mode", "Use my controller as a mouse"],
+                s => Plan(s, (AgentVocabulary.MouseMode, AgentVocabulary.MouseTarget, "on"))),
+            new("mouse_mode_off", "switch mouse mode off",
+                ["Switch mouse mode off", "Disable mouse mode", "Stop mouse mode"],
+                s => Plan(s, (AgentVocabulary.MouseMode, AgentVocabulary.MouseTarget, "off"))),
+            new("open_page", "open a named controller settings page",
+                ["Open diagnostics", "Show curves", "Take me to macros", "Open buttons", "Show tools"],
+                s => AgentVocabulary.Pages.FirstOrDefault(p => s.Text.Contains(p, StringComparison.OrdinalIgnoreCase)) is { } page
+                    ? Plan(s, (AgentVocabulary.OpenPage, AgentVocabulary.PageTarget, page)) : OfflinePlan.Say("Which page should I open?")),
             new("greeting", "hello, help, or what can you do",
                 ["Hi", "Hello", "What can you do", "Help", "Hey there", "Who are you"],
                 _ => OfflinePlan.Say("I'm Agent XCTL, in offline mode. I can set stick and trigger dead zones and curves, hair triggers, turbo, remaps, paddles, reset, switch PC mode, and measure stick drift. Tell me how you play.")),

@@ -201,13 +201,13 @@ public sealed class AgentTests
     }
 
     [Fact]
-    public void The_bounded_schema_holds_numbers_to_0_100_and_text_to_known_names()
+    public void The_bounded_schema_supports_axis_ratios_and_custom_point_text()
     {
         using var schema = JsonDocument.Parse(AgentSession.BoundedSchema);
         var options = schema.RootElement.GetProperty("properties").GetProperty("actions").GetProperty("items").GetProperty("properties").GetProperty("value").GetProperty("anyOf");
-        Assert.Equal(100, options[0].GetProperty("maximum").GetInt32());
-        var names = options[1].GetProperty("enum").EnumerateArray().Select(e => e.GetString()).ToList();
-        Assert.Contains("slow", names); Assert.Contains("A", names); Assert.DoesNotContain("M5", names);
+        Assert.Equal(150, options[0].GetProperty("maximum").GetInt32());
+        Assert.Equal("string", options[1].GetProperty("type").GetString());
+        Assert.False(options[1].TryGetProperty("enum", out _)); // points, on/off and page names use text
         Assert.Contains("\"recap\"", AgentSession.BoundedSchema);
     }
 

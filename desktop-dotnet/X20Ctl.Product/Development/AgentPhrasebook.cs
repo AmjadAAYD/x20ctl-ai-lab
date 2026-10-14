@@ -15,7 +15,8 @@ namespace X20Ctl.Product.Development;
 /// </summary>
 internal static class AgentPhrasebook
 {
-    const int Rounds = 3, PerRound = 25;
+    static int Rounds => AgentBench.EvaluationRepeats;
+    const int PerRound = 25;
     // what a sentence for an intent has to contain, so the slots the agent lifts out are there
     static string Needs(string id) => id switch
     {
