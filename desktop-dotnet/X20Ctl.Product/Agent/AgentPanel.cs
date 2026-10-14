@@ -737,7 +737,12 @@ public sealed class AgentPanel
         transcript.Children.Add(bubble); Fx.Appear(bubble, .97, 200); scroller.ScrollToEnd(); return bubble;
     }
 
-    void Say(string text, string? detail) { var b = Bubble(text, false); if (detail != null) ((TextBlock)b.Child).Text += "\n" + detail; }
+    void Say(string text, string? detail)
+    {
+        var b = Bubble(text, false);
+        if (detail != null) ((TextBlock)b.Child).Text += "\n" + detail;
+        if (Wiggles(text)) Application.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(Wiggle));
+    }
 
     /// <summary>One answer: the model's words, then what the app did, then the details on request.</summary>
     void Say(AgentTurn turn, PcModeProfile? undo, string? failure = null, string? switched = null, string? mouse = null)

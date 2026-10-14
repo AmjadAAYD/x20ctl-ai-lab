@@ -96,7 +96,7 @@ public partial class App : Application
                 catch (IOException) { } catch (UnauthorizedAccessException) { }
                 failure.Handled = true;
             };
-            var window = new ProductWindow(e.Args.Contains("--reduced-motion"),firstRun:true,nativeEngine:true,fullscreen:true,trayIcon:true);
+            var window = new ProductWindow(e.Args.Contains("--reduced-motion"),firstRun:true,nativeEngine:true,fullscreen:false,trayIcon:true);
             MainWindow = window; window.Show();
             // HidHide's hide list outlives the app (it survives a reboot): every way out un-hides the controller, not only
             // the window closing — Windows signing out or shutting down, and a crash on any thread

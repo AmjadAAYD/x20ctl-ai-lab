@@ -78,7 +78,15 @@ public sealed class ControllerVerifyView : Grid
         runner.Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = accent, BlurRadius = 22, ShadowDepth = 0, Opacity = 1 };
         double pad = GamepadGlyph.Pad;
         var art = new Grid { Width = size.Width + pad * 2, Height = size.Height + pad * 2 };
-        foreach (var layer in new Path[] { rim, runner }) { layer.Margin = new(pad); layer.HorizontalAlignment = HorizontalAlignment.Left; layer.VerticalAlignment = VerticalAlignment.Top; art.Children.Add(layer); }
+        // Padding must be inside the Path's drawing box: a margin cannot protect a
+        // stroke centred on y=0 from the shape's own layout clip.
+        var padded = GamepadGlyph.Outline.Clone();
+        padded.Transform = new TranslateTransform(pad, pad); padded.Freeze();
+        foreach (var layer in new Path[] { rim, runner })
+        {
+            layer.Data = padded; layer.Width = art.Width; layer.Height = art.Height;
+            layer.Stretch = Stretch.None; art.Children.Add(layer);
+        }
         var dotRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, -150, 0, 0) };
         for (int i = 0; i < 3; i++)
         {
