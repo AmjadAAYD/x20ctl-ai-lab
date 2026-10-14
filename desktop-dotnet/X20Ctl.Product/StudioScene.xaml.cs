@@ -234,9 +234,7 @@ public partial class StudioScene : UserControl
                     new TextBlock { Text = "Agent XCTL", FontFamily = DS.Display, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center } } } } };
         agentPill.Click += (_, _) => { if (AgentOpen) CloseAgent(); else OpenAgent(); };
         var agentBorder = (Border)agentPill.Content; agentPill.MouseEnter += (_, _) => agentBorder.BorderBrush = Brushes.White; agentPill.MouseLeave += (_, _) => agentBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(150, 125, 182, 255));
-        // the invitation, in the gap left of the pill, its tail pointing at it (owner request, 14 Oct 2026)
-        var invite = Agent.AgentInvite.Make(() => OpenAgent(), tailRight: true); invite.Margin = new(0, 0, 18, 0); invite.VerticalAlignment = VerticalAlignment.Center; agentInvite = invite;
-        TitlePills.Children.Add(invite); TitlePills.Children.Add(agentPill); TitlePills.Children.Add(support); TitlePills.Children.Add(name);
+        TitlePills.Children.Add(agentPill); TitlePills.Children.Add(support); TitlePills.Children.Add(name);
     }
     /// <summary>The console-design Buttons page replaces the older canvas/inspector/shelf while Buttons is active.</summary>
     private void UpdateButtonsPage()
@@ -535,7 +533,25 @@ public partial class StudioScene : UserControl
     }
     private void CurvesTab(object sender,RoutedEventArgs e)=>ShowCurves(true);
     /// <summary>PC mode's settings, set by the host: the Curves tab's Advanced stick tools write to them.</summary>
-    public PcModeLink? PcMode { get => pcLink; set { pcLink = value; pcSync = value != null && Draft.PcMode ? new(value, Draft, Curves.Draft, macroDraft) : null; SyncPcMode(); } }
+    public PcModeLink? PcMode { get => pcLink; set { pcLink = value; pcSync = value != null && Draft.PcMode ? new(value, Draft, Curves.Draft, macroDraft) : null; WireCurveTuning(); SyncPcMode(); } }
+    /// <summary>The Curves graph reads and edits PC mode's stick settings (dead zone, full at, anti-dead zone, max output), so
+    /// it draws exactly what games get, including what Agent XCTL changed.</summary>
+    private void WireCurveTuning()
+    {
+        if (pcLink is not { } link || !Draft.PcMode) { Curves.Tuning = null; Curves.SaveTuning = null; Curves.Refresh(); return; }
+        Curves.Tuning = channel => link.Store.Get(PcModePage.StoreKey).Sticks.GetValueOrDefault(channel.ToString());
+        Curves.SaveTuning = (channel, tuning) =>
+        {
+            var p = link.Store.Get(PcModePage.StoreKey);
+            if (tuning.IsDefault) p.Sticks.Remove(channel.ToString()); else p.Sticks[channel.ToString()] = tuning;
+            try { p.Validate(); }
+            catch (InvalidDataException error) { return "Not applied: " + error.Message; }
+            if (!p.IsNeutral && !PcModePage.MaySave(link.Preferences)) return "Open the PC mode tab and read the notice to start applying this.";
+            try { link.Store.Save(PcModePage.StoreKey, p); link.Service.Reload(); ChangeCount.Text = "PC mode · Saved · Applies right away"; return null; }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return "Couldn't save: " + error.Message; }
+        };
+        Curves.Refresh();
+    }
     private PcModeLink? pcLink;
     private PcModeSync? pcSync;
     /// <summary>The PC mode tab's switch changed: the host reopens the Studio so the tabs unlock (or lock).</summary>
@@ -685,6 +701,12 @@ public partial class StudioScene : UserControl
     /// <summary>Read-only gameplay input shown on the Buttons artwork. It never navigates or writes.</summary>
     public void ObserveLiveInput(double lx, double ly, double rx, double ry, double lt, double rt)
     {
+        // the Curves graph follows the real stick or trigger whenever a controller is connected; Try it is the keyboard's
+        if (IsCurves && ManagementPage == null)
+        {
+            Curves.ShowLive(Curves.Channel switch { CurveChannel.LeftStick => Math.Sqrt(lx * lx + ly * ly), CurveChannel.RightStick => Math.Sqrt(rx * rx + ry * ry), CurveChannel.LeftTrigger => lt, _ => rt });
+            return;
+        }
         if (!OnButtonsPage || IsTrying) return;
         ActiveLive.SetInput(lx, ly, rx, ry, lt, rt);
     }

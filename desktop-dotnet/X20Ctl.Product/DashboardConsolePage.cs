@@ -60,7 +60,7 @@ public sealed class DashboardConsolePage : Grid
         heroFocus = heroButton;
         // the same framed panel the Buttons page puts its controller in (owner request, 13 Oct 2026)
         // the agent's invitation in the hero's empty top-right corner (owner request, 14 Oct 2026)
-        var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 15.5); invite.HorizontalAlignment = HorizontalAlignment.Right; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 22, 22, 0);
+        var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 14); invite.HorizontalAlignment = HorizontalAlignment.Right; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 10, 10, 0);
         var heroPanel = Kit.Panel(null, null, null, new Grid { Children = { heroButton, invite } }, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
         top.Children.Add(heroPanel);
 
