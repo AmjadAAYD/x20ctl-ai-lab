@@ -1,0 +1,75 @@
+21:44:48 keywords · How do I switch my settings off in the middle of a game? · best 0.32 README.md › Tools › PC mode
+21:44:48 keywords · What drivers does PC mode install? · best 0.23 README.md › Tools › PC mode
+21:44:48 keywords · Can I use four controllers at once? · best 0.15 README.md › Tools › PC mode
+21:44:48 keywords · Can turbo get me banned? · best 0.21 README.md › Tools › PC mode
+21:44:48 keywords · Can I give one game its own settings? · best 0.52 README.md › Tools › PC mode
+21:44:48 keywords · How do I share my settings with a friend? · best 0.21 README.md › Tools › PC mode
+21:44:48 keywords · The tester shows no input, what do I do? · best 0.30 IF-YOUR-CONTROLLER-ISNT-WORKING.md › The tester shows no input
+21:44:48 keywords · I closed the app but it's still running · best 0.54 IF-YOUR-CONTROLLER-ISNT-WORKING.md › I closed the app, but it is still running
+21:44:48 keywords missed: Nothing shows up when I scan for my controller -> README.md › Tools › Controller Check 0.30 | PRIVACY.md › What is sent, and only when you choose to 0.20 | PRIVACY.md › What is sent, and only when you choose to 0.19
+21:44:48 keywords · Nothing shows up when I scan for my controller · best 0.30 README.md › Tools › Controller Check
+21:44:48 keywords · Where are my profiles saved? · best 0.45 IF-YOUR-CONTROLLER-ISNT-WORKING.md › Startup or saved-profile error
+21:44:48 keywords · Does X20CTL send any data about me? · best 0.18 PRIVACY.md › What is sent, and only when you choose to
+21:44:48 keywords · Is the X20 Pro supported? · best 0.17 README.md › Supported controllers
+21:44:48 keywords · What does the Controller Check do? · best 0.29 README.md › Download
+21:44:48 keywords · Do I need to install .NET to run it? · best 0.31 README.md › Download
+21:44:48 keywords · Is the exe signed? · best 0.21 README.md › Download
+21:44:48 keywords · A write failed, what now? · best 0.25 IF-YOUR-CONTROLLER-ISNT-WORKING.md › A write failed
+21:44:48 keywords · What's in the Tools page? · best 0.24 README.md › Every controller gets the full Studio
+21:44:48 keywords · Does it work on Linux? · best 0.25 README.md › Download
+21:44:48 keywords · Does X20CTL flash firmware? · best 0.21 README.md › Local first
+21:44:48 keywords missed: How do I report a bug? -> README.md › Studio › Diagnostics 0.24 | PRIVACY.md › What is sent, and only when you choose to 0.17 | PRIVACY.md › What is sent, and only when you choose to 0.15
+21:44:48 keywords · How do I report a bug? · best 0.24 README.md › Studio › Diagnostics
+21:44:48 keywords · How much does the X20 Pro cost? · best 0.16 README.md › Supported controllers
+21:44:48 keywords · Does X20CTL work on a PlayStation 5? · best 0.19 README.md › Introduction
+21:44:48 keywords · How many hours does the X20's battery last? · best 0.14 README.md › Studio › Device
+21:44:48 embeddings · How do I switch my settings off in the middle of a game? · best 0.74 README.md › Tools › PC mode
+21:44:48 embeddings · What drivers does PC mode install? · best 0.69 README.md › Tools › PC mode
+21:44:48 embeddings · Can I use four controllers at once? · best 0.69 README.md › Tools › PC mode
+21:44:48 embeddings · Can turbo get me banned? · best 0.64 README.md › Tools › PC mode
+21:44:49 embeddings · Can I give one game its own settings? · best 0.66 README.md › Tools › PC mode
+21:44:49 embeddings · How do I share my settings with a friend? · best 0.67 README.md › Tools › PC mode
+21:44:49 embeddings · The tester shows no input, what do I do? · best 0.74 IF-YOUR-CONTROLLER-ISNT-WORKING.md › The tester shows no input
+21:44:49 embeddings · I closed the app but it's still running · best 0.77 IF-YOUR-CONTROLLER-ISNT-WORKING.md › I closed the app, but it is still running
+21:44:49 embeddings · Nothing shows up when I scan for my controller · best 0.74 README.md › Tools › Controller Check
+21:44:49 embeddings · Where are my profiles saved? · best 0.68 IF-YOUR-CONTROLLER-ISNT-WORKING.md › Startup or saved-profile error
+21:44:49 embeddings · Does X20CTL send any data about me? · best 0.79 PRIVACY.md › The short version
+21:44:49 embeddings missed: Is the X20 Pro supported? -> PRIVACY.md › Introduction 0.70 | README.md › Local first 0.69 | PRIVACY.md › The short version 0.67
+21:44:49 embeddings · Is the X20 Pro supported? · best 0.70 PRIVACY.md › Introduction
+21:44:49 embeddings · What does the Controller Check do? · best 0.80 README.md › Tools › Controller Check
+21:44:49 embeddings · Do I need to install .NET to run it? · best 0.66 README.md › Download
+21:44:49 embeddings · Is the exe signed? · best 0.69 README.md › Download
+21:44:49 embeddings · A write failed, what now? · best 0.76 IF-YOUR-CONTROLLER-ISNT-WORKING.md › A write failed
+21:44:49 embeddings · What's in the Tools page? · best 0.74 README.md › Tools
+21:44:49 embeddings · Does it work on Linux? · best 0.66 README.md › Download
+21:44:49 embeddings · Does X20CTL flash firmware? · best 0.76 README.md › Local first
+21:44:49 embeddings · How do I report a bug? · best 0.71 IF-YOUR-CONTROLLER-ISNT-WORKING.md › Reset and reporting
+21:44:49 embeddings · How much does the X20 Pro cost? · best 0.62 PRIVACY.md › Introduction
+21:44:49 embeddings · Does X20CTL work on a PlayStation 5? · best 0.74 README.md › Local first
+21:44:49 embeddings · How many hours does the X20's battery last? · best 0.64 PRIVACY.md › The short version
+21:44:49 Loading qwen3.5:9b…
+21:44:54 qwen3.5:9b ready
+21:45:02 How do I switch my settings off in the middle of a game? · run 1 · right · offered 3 · cited Tools › PC mode ·  · To switch off my settings while playing, hold the View button and the Menu button together for one second. This makes me act like a normal controller again until you do it again to turn me back on.
+21:45:05 What drivers does PC mode install? · run 1 · right · offered 3 · cited Tools › PC mode, Tools › PC mode ·  · According to the documentation, enabling PC mode installs ViGEmBus (for the virtual controller) and HidHide (to hide the real one). These are handled automatically when you switch PC mode on.
+21:45:07 Can I use four controllers at once? · run 1 · wrong · offered 3 · cited  ·  · The documentation doesn't list a maximum number of supported controllers for simultaneous use.
+21:45:09 Can turbo get me banned? · run 1 · right · offered 3 · cited Tools › PC mode ·  · Turbo repeats button presses rapidly, which is useful for mashing but against the rules of many online games. The docs warn that using turbo or macros in online games can lead to bans.
+21:45:11 Can I give one game its own settings? · run 1 · right · offered 3 · cited Tools › PC mode ·  · The app allows per-game settings by switching to the active game's configuration while it is in front. You can hold View + Menu for a second to toggle these settings off mid-game if needed. This ensures each controller gets its own virtual Xbox controller with unique adjustments.
+21:45:14 How do I share my settings with a friend? · run 1 · right · offered 3 · cited Tools › PC mode ·  · To share settings, the docs say to 'Share settings as a file or as a short code to paste in a chat' (source [1]). Since I am a controller and not a file manager, I cannot generate that file myself right now. You can try switching PC mode off and on using View + Menu if you want to test my current state (source [2]), but sharing requires the app's share feature.
+21:45:17 The tester shows no input, what do I do? · run 1 · right · offered 3 · cited The tester shows no input ·  · I enabled PC mode because the docs state that a BLE connection alone does not provide gameplay input and you need an XInput-compatible mode. This ensures your games can see my inputs.
+21:45:19 I closed the app but it's still running · run 1 · right · offered 3 · cited I closed the app, but it is still running ·  · Since you closed the app but it's still running, nothing needs to change on my settings. Just open X20CTL again to see me properly.
+21:45:28 Nothing shows up when I scan for my controller · run 1 · wrong · offered 3 · cited Tools › Controller Check ·  · The owner is experiencing an issue where nothing appears when scanning for their controller. The docs suggest checking Windows Bluetooth, ensuring the controller is awake and nearby, and disconnecting any phone configuration apps that may be holding a BLE connection. Opening the Tools page allows access to the Controller Check feature, which can help diagnose issues.
+21:45:30 Where are my profiles saved? · run 1 · right · offered 3 · cited Startup or saved-profile error ·  · The docs state that profiles are stored locally at %APPDATA%\x20ctl\desktop\profiles.json, while older ones remain in %APPDATA%\x20ctl\profiles. The app preserves a malformed profile to prevent overwriting it.
+21:45:33 Does X20CTL send any data about me? · run 1 · right · offered 3 · cited The short version, What is sent, and only when you choose to, Local first ·  · X20CTL works locally with no account or analytics. Data leaves your PC only when you press a button to send a specific report like a Controller Check, and even then it excludes serial numbers and file paths. Update checks are off by default unless you turn them on yourself.
+21:45:35 Is the X20 Pro supported? · run 1 · wrong · offered 3 · cited Introduction ·  · The docs confirm X20CTL works on your PC and handles local setups without accounts or telemetry, but they don't list specific supported controllers like the X20 Pro. I can only apply settings to a connected controller that the app recognizes.
+21:45:42 What does the Controller Check do? · run 1 · right · offered 3 · cited Tools › Controller Check ·  · This action opens the Diagnostics page in the app, which provides a live, read-only check of the controller including stick drift, button chatter, and report rate.
+21:45:43 Do I need to install .NET to run it? · run 1 · right · offered 3 · cited Download ·  · You don't need to install .NET or anything else; X20CTL bundles everything and just unpacks into your temp folder on first launch.
+21:45:45 Is the exe signed? · run 1 · right · offered 3 · cited Download, Download ·  · The documentation states that releases up to 4.1.0 Preview 2 were under MIT, and since then, the exe is unsigned so Windows SmartScreen may warn you (sources: [1], [2]).
+21:45:48 A write failed, what now? · run 1 · right · offered 3 · cited A write failed ·  · The docs say that a write failure could mean a timeout or mismatch, so earlier categories might have already applied. We need to review the status messages and reread the controller before trying again. Do not repeatedly reset or write blindly.
+21:45:51 What's in the Tools page? · run 1 · right · offered 3 · cited Tools ·  · The Tools page gathers help and extras like PC mode, the Controller Check scan, updates, and support links. It also includes switches for the intro sound and opening intro at launch.
+21:45:52 Does it work on Linux? · run 1 · right · offered 3 · cited Download ·  · The docs say the Studio is Windows-only for now, though a native Linux build is planned.
+21:45:54 Does X20CTL flash firmware? · run 1 · right · offered 3 · cited Local first ·  · X20CTL does not flash firmware; it only sends local drafts to a connected controller and never writes to one it cannot read back.
+21:45:57 How do I report a bug? · run 1 · right · offered 3 · cited Reset and reporting ·  · To report a bug, include the app version, Windows version, exact controller model, firmware if readable, steps to reproduce, and the error shown. Also state separately whether gameplay input and BLE configuration work. Remove addresses, serials, and personal paths from logs.
+21:45:58 How much does the X20 Pro cost? · run 1 · right · offered 3 · cited  ·  · I can't confirm the price from the docs.
+21:45:59 Does X20CTL work on a PlayStation 5? · run 1 · right · offered 3 · cited  ·  · I can't confirm that from the docs.
+21:46:00 How many hours does the X20's battery last? · run 1 · right · offered 3 · cited  ·  · I can't confirm that from the docs.
+21:46:00 done

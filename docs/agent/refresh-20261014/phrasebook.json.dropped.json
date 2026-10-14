@@ -1,0 +1,862 @@
+[
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Exchange the D-pad and Start",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Make View act like A",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Give me swapped A and B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Flip A and B for me",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Exchange A and B buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Swap the two face buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "I want to switch A and B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Exchange Start and View",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Switch my triggers",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Swap A then B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Give me reversed A and B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Switch the shoulder buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Remap A to B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Configure C-Stick Right to trigger X instead",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Replace all instances of Start with View",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Change D-pad Left into an A input",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Configure A to send Y signals",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Let C-Stick Left act like the Right analog stick",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Configuring C-Stick Back to send Y instead of neutral",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Turn D-pad Right into a View input",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset my left paddle back to factory settings.",
+    "Why": "names no control"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Undo any changes made to the up-paddle.",
+    "Why": "names no control"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Undo the mapping on the ZL trigger.",
+    "Why": "names no control"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset my left hand's controller inputs to default.",
+    "Why": "names no control"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Return the front-right paddle to original settings.",
+    "Why": "names no control"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset the touchpad button to its baseline behavior.",
+    "Why": "names no control"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset the home console button on this device.",
+    "Why": "names no control"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "Fix the left trigger stick drifting backward.",
+    "Why": "names a trigger"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Clear the dead zone on the throttle sticks that act as triggers.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "I need the right stick trigger at 5.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure left analog deadzone at 3.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Apply a 2 pixel dead zone to both sticks.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Adjust right stick trigger to 5 units.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right analog trigger dead zone is 5.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left stick trigger set to 3 please.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set left analog button to 3.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Left stick button triggers full at 30 percent.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Configure right analog to full at 45.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Left analog triggers fully at 15.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right stick trigger counts as full at 75.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set right analog stick full activation to 85.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Make left stick fully pressed at 10.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right stick button triggers full at 70.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Left analog full at 65 please.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Left stick full press point is 20.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set right analog button full at 95.",
+    "Why": "names a stick"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Wakey wakey controller",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Start the show",
+    "Why": "closer to open_page"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Ready to rock",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Boot up",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Initialize system",
+    "Why": "closer to reset_all"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Activate protocols",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Go go go",
+    "Why": "closer to open_page"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Lets play",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Switch to non-mouse control",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Make the controller ignore the mouse",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Cancel the mouse function",
+    "Why": "closer to remap_to"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Turn the pointer off",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Disable cursor input on controller",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Turn off the mouse link",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Activate mouse tracking on my controller",
+    "Why": "closer to mouse_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Make the cursor follow my analog sticks",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Start mouse mode now",
+    "Why": "closer to mouse_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Enable pointer functionality",
+    "Why": "closer to mouse_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Activate trackpad style control with sticks",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Turn cursor linking on",
+    "Why": "closer to mouse_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Allow the thumbstick to move the cursor",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Turn on the pointing stick feature",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Enable cursor tracking via analog input",
+    "Why": "closer to mouse_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Switch my pad to mouse emulation",
+    "Why": "closer to mouse_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Make the left stick control the pointer",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Turn on pointer sync",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Activate the pointing device overlay",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "open_page",
+    "Sentence": "My Stick settings please",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Remove PC mode from here",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Make it so PC mode is not on",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Deactivate PC mode for me",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "Get PC mode enabled please",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "Turn the PC setting on",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "I want PC mode active",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "Replace LB functions with RB in my setup",
+    "Why": "closer to remap_swap"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "Make my controller behave like it did out of the box.",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "Reset my joystick mappings and button configs to standard.",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "Return my entire setup to the default factory state.",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset my left bumper to default.",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Return my right thumbstick to home position.",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Undo the calibration on the L2 trigger.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Make the start button act like new again.",
+    "Why": "closer to remap_to"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Restore default function for the R3 pressure button.",
+    "Why": "closer to reset_all"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Fix my front-left analog stick, please.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset both triggers on the right side immediately.",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset the share button to factory defaults.",
+    "Why": "closer to reset_all"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Make my right stick respond like it did out of the box.",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Fix the drift on my right analog stick by resetting.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "My left aim needs the default setting",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Left analog stick quick please",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Set the right stick to default mode",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Use smooth on both sticks immediately",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Left stick smooth curve activated",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Disable the stick dead zone feature",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "I need to remove the stick dead zone please",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "My left stick needs a dead zone removed",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Stop ignoring small stick inputs by removing dead zone",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Set dead zone to zero on all sticks please",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Dead zone on right stick is 6 now",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "Please fix the self-movement of my left analog axis.",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "Stop the left stick from sliding to the right edge.",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Boost the responsiveness of both sticks please",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Make the dualshock camera snap around more quickly",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "I want instant camera rotation when I move the left stick",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Fix the slow turning on my PS5 controller sticks",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "I need snappier camera movement from the controllers",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Get rid of the delay when moving the sticks in Fortnite",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "My right stick is not fast enough for competitive play",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Set my analog sticks to maximum responsiveness now",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "I need sharper turns on my right stick for racing games",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "Make the camera respond to fine stick adjustments",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Soothe my controls for steady movement.",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Fix the jittery motion on my sticks.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Add some flow to my analog stick inputs.",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Make the controller feel like ice on sticks.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Adjust the stick response for perfect smoothness.",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Make the crosshair move with silky sticks.",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Let's get those sticks moving like butter.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "Help me lock down targets with the right stick",
+    "Why": "closer to greeting"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "Enhance the right stick response for range engagements",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "Stabilize my aiming at a distance on the right stick",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Fix my right stick responsiveness to sniping",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Make the camera movement smoother and less jerky",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Reduce the sensitivity on my joystick for stable tracking",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "I need less jitter on my aiming stick in Apex Legends",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Please tune the right analog stick for steady long-range shots",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "My character aim is shaking uncontrollably in Overwatch",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Fix the twitchy movement on my controller sticks",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Slow down the camera sway when I rotate my view",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Set my aim stick to a precise sniping mode right away",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "My in-game aim is unstable and hard to control today",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Please smooth out the camera rotation for tactical plays",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "I want a steady right stick for headshot practice now",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Make the camera follow my head movement more smoothly",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Stop the aim from hopping back and forth in Valorant",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Tune the controller so small hand movements don't fly across screen",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Switch my throttle curve to slow",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Make right trigger responsive with quick setting",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Set my shooting trigger to hair-trigger quick mode",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Change right trigger dead zone to zero is not allowed, set it to fine curve instead",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Switch throttle to slow for racing lines",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "I want zero dead zone on the analog triggers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set my gamepad triggers to register immediately with no lag.",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Get rid of the trigger dead zone, please.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Activate instant firing on all trigger pedals.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Eliminate the dead zone on the front firing levers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "My right trigger has too much dead zone; remove it.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Turn off the dead zone setting for all analog triggers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set left bumper trigger to 3.",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Shorten the travel distance on both triggers",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "My triggers are too slow, fix them instantly",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Want rapid trigger resets for competitive play",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Make the analog buttons feel instant when pulling back",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Give me the fastest possible trigger settings",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Increase trigger reaction rate on both axes",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Turn on instant trigger activation mode",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "My R2 button feels sluggish, make it quick",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Smooth out the trigger response for heavy braking in sims",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "I want a slow ramp profile on both side triggers now",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Configure my triggers for gradual pedal movement in games",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Add a gentle curve to the left triggers for braking",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Tweak the left triggers to offer slower progression on entry",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "Cancel turbo on right bumper.",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Activate turbo on the left bumper",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Turn on turbo for face button 4",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Auto trigger on the right analog click",
+    "Why": "closer to turbo_off"
+  }
+]

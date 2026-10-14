@@ -1,0 +1,77 @@
+[
+  {
+    "name": "shipped",
+    "set": "development",
+    "correct": 51,
+    "total": 60,
+    "misses": [
+      "make RB do what LB does",
+      "reset my left stick",
+      "my changes aren\u0027t showing up in game",
+      "i keep missing my shots at range in warzone",
+      "i want butter smooth analogs",
+      "ghost inputs on my right analog",
+      "make my right trigger super sensitive",
+      "spam A for me",
+      "switch around A and X"
+    ]
+  },
+  {
+    "name": "shipped",
+    "set": "customization",
+    "correct": 10,
+    "total": 10,
+    "misses": []
+  },
+  {
+    "name": "generated",
+    "set": "development",
+    "correct": 49,
+    "total": 60,
+    "misses": [
+      "can u make my right analog better for long shots",
+      "set up my triggers for forza",
+      "make RB do what LB does",
+      "my changes aren\u0027t showing up in game",
+      "i keep missing my shots at range in warzone",
+      "my guy keeps walking forward on his own",
+      "gas pedal feels on off, make it gradual",
+      "spam A for me",
+      "switch around A and X",
+      "wipe every setting",
+      "set the right stick full speed to 40"
+    ]
+  },
+  {
+    "name": "generated",
+    "set": "customization",
+    "correct": 10,
+    "total": 10,
+    "misses": []
+  },
+  {
+    "name": "merged",
+    "set": "development",
+    "correct": 50,
+    "total": 60,
+    "misses": [
+      "set up my triggers for forza",
+      "make RB do what LB does",
+      "reset my left stick",
+      "my changes aren\u0027t showing up in game",
+      "i keep missing my shots at range in warzone",
+      "ghost inputs on my right analog",
+      "make my right trigger super sensitive",
+      "spam A for me",
+      "switch around A and X",
+      "reset the right trigger to normal"
+    ]
+  },
+  {
+    "name": "merged",
+    "set": "customization",
+    "correct": 10,
+    "total": 10,
+    "misses": []
+  }
+]

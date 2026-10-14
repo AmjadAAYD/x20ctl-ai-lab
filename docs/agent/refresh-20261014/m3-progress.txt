@@ -1,0 +1,21 @@
+21:16:18 Loading qwen3.5:9b…
+21:16:25 qwen3.5:9b ready
+21:16:38 1/18 T 0.2 · schema · run 1 · Reset everything · right · 12.3 s · measured: no · did: reset All 0 · tries 2
+21:16:43 2/18 T 0.2 · schema · run 1 · Put all my settings back to default · right · 5.1 s · measured: no · did: reset All 0 · tries 2
+21:16:48 3/18 T 0.2 · schema · run 1 · Turn off turbo on X · right · 5.5 s · measured: no · did: turbo X 0 · tries 2
+21:16:53 4/18 T 0.2 · schema · run 1 · Stop the turbo on RB · right · 4.9 s · measured: no · did: turbo RB 0 · tries 2
+21:16:56 5/18 T 0.2 · schema · run 1 · Turn on PC mode · right · 2.9 s · measured: no · did: pc_mode PcMode on · tries 1
+21:17:00 6/18 T 0.2 · schema · run 1 · My settings don't do anything in games · right · 3.7 s · measured: no · did: pc_mode PcMode on · tries 1
+21:17:03 7/18 T 0.2 · schema · run 1 · Switch PC mode off · right · 3.4 s · measured: no · did: pc_mode PcMode off · tries 1
+21:17:08 8/18 T 0.2 · schema · run 1 · Make my sticks smooth and turn PC mode on · right · 5.2 s · measured: no · did: stick_curve LeftStick smooth, stick_curve RightStick smooth, pc_mode PcMode on · tries 1
+21:17:15 9/18 T 0.2 · schema · run 1 · Make my right stick slightly slower for aiming · wrong · 6.5 s · measured: no · did: stick_curve_points RightStick 50,50,75,60 · tries 2
+21:17:19 10/18 T 0.2 · schema · run 1 · Give my right stick a custom curve through 30,25,70,65 · right · 4.0 s · measured: no · did: stick_curve_points RightStick 30,25,70,65 · tries 1
+21:17:22 11/18 T 0.2 · schema · run 1 · Cap right stick output at 90 percent · right · 3.3 s · measured: no · did: stick_max_output RightStick 90 · tries 1
+21:17:25 12/18 T 0.2 · schema · run 1 · Set right stick vertical axis ratio to 120 percent · right · 3.0 s · measured: no · did: stick_axis_ratio RightStick 120 · tries 1
+21:17:28 13/18 T 0.2 · schema · run 1 · Turn square gate on for the left stick · right · 2.8 s · measured: no · did: stick_square_gate LeftStick on · tries 1
+21:17:31 14/18 T 0.2 · schema · run 1 · Turn mouse mode on · right · 2.5 s · measured: no · did: mouse_mode Mouse on · tries 1
+21:17:33 15/18 T 0.2 · schema · run 1 · Switch mouse mode off · right · 2.6 s · measured: no · did: mouse_mode Mouse off · tries 1
+21:17:38 16/18 T 0.2 · schema · run 1 · Open diagnostics · right · 5.0 s · measured: no · did: open_page Page Diagnostics · tries 2
+21:17:41 17/18 T 0.2 · schema · run 1 · Show curves · right · 2.8 s · measured: no · did: open_page Page Curves · tries 1
+21:17:44 18/18 T 0.2 · schema · run 1 · Take me to macros · right · 2.6 s · measured: no · did: open_page Page Macros · tries 1
+21:17:44 done

@@ -1,0 +1,8 @@
+21:15:30 Loading qwen3.5:9b…
+21:15:37 qwen3.5:9b ready
+21:15:51 1/5 T 0.2 · schema · run 1 · My right stick drifts a little · right · 13.8 s · measured: yes · did: stick_deadzone RightStick 8 · tries 2
+21:15:56 2/5 T 0.2 · schema · run 1 · My left stick moves on its own · right · 5.8 s · measured: yes · did: stick_deadzone LeftStick 6 · tries 2
+21:16:04 3/5 T 0.2 · schema · run 1 · Fix my stick drift · right · 7.4 s · measured: yes · did: stick_deadzone LeftStick 6, stick_deadzone RightStick 8 · tries 2
+21:16:10 4/5 T 0.2 · schema · run 1 · My camera keeps slowly turning by itself · right · 6.0 s · measured: yes · did: stick_deadzone RightStick 8 · tries 2
+21:16:18 5/5 T 0.2 · schema · run 1 · Check my sticks for drift · right · 7.9 s · measured: yes · did: stick_deadzone LeftStick 6, stick_deadzone RightStick 8 · tries 2
+21:16:18 done

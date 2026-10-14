@@ -22,6 +22,10 @@ Remap buttons, shape sticks and triggers, build back-paddle macros, set vibratio
 
 ### Agent XCTL — teacher guide (IA Générative Textuelle)
 
+This class project is the private `AmjadAAYD/x20ctl-ai-lab` repository, branch `ai-agent`; the public X20CTL download above does not include these class-project changes. Repository access must be granted to the teacher. For a source build, install the .NET 10 SDK, clone this private repository and run `dotnet build desktop-dotnet/X20Ctl.Product -c Release`. Start `desktop-dotnet/X20Ctl.Product/bin/Release/net10.0-windows/X20Ctl.exe`.
+
+Live inference needs Ollama and the owner's existing `qwen3.5:9b` model. Document embeddings additionally use `nomic-embed-text`. No API key or hosted service is used. The app never downloads models. A controller and drivers are unnecessary for the canned preview; actual gameplay transformations need a real XInput source and PC mode. X20 Pro firmware configuration and independent M-paddle actions remain unsupported.
+
 Open Agent XCTL from the Studio, then expand **Lab / Safety**. The local chat model picker contains only **qwen3.5:9b**. Temperature affects Qwen requests; edit the system prompt to experiment, or use **Reset system prompt** to restore the default. Controller facts and current settings remain appended. Prompt edits and temperature do not affect canned replies.
 
 Enable **Canned demo · deterministic · preview only** for a repeatable presentation without Ollama. Send `demo aim`, `demo trigger`, `demo bad output`, then `demo reset`. Fixed JSON replies use the real validator and applier, but change only an in-memory preview. They do not save profiles, switch PC/mouse mode, read hardware, rumble or navigate. The app labels the status, replies and output details as canned; token/timing metrics are not model measurements. Unscripted input returns canned help. **Offline** is the existing phrasebook, a separate mode.
