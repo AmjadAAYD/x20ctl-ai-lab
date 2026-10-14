@@ -139,7 +139,9 @@ public sealed class AgentPanel
         settingsBox = new Border { Visibility = Visibility.Collapsed, Margin = new(0, 0, 0, 8), Padding = new(14, 10, 14, 6), CornerRadius = new(12), Background = new SolidColorBrush(Color.FromArgb(120, 20, 30, 56)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 120, 170, 255)), BorderThickness = new(1),
             Child = new ScrollViewer { MaxHeight = 170, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 8)), settings } } } };
         var top = new StackPanel { Children = { heading, settingsBox } };
+        // zoomed out (owner, 14 Oct 2026: "so tight, I can't see the message"): more of the conversation fits
         scroller = new ScrollViewer { Content = transcript, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        transcript.LayoutTransform = new ScaleTransform(.8, .8);
         var chat = new DockPanel(); DockPanel.SetDock(top, Dock.Top); chat.Children.Add(top); chat.Children.Add(scroller);
 
         // ---- the screen, left: ideas, narrowed by what's typed ----
@@ -754,7 +756,6 @@ public sealed class AgentPanel
         if (v.Proposal?.Question is { Length: > 0 } question)
             stack.Children.Add(new Border { CornerRadius = new(10), Background = new SolidColorBrush(Color.FromArgb(60, 70, 150, 255)), Padding = new(12, 8, 12, 8), Margin = new(0, 10, 0, 0), Child = Wrap(question, 14, "DS.Text").Also(t => t.FontWeight = FontWeights.SemiBold) });
         // where the answer came from: the doc passages it cites, each opening to its full text
-        foreach (var hit in turn.Cited) stack.Children.Add(Source(hit));
         foreach (var skipped in v.Checks.Where(c => c.State == CheckState.Unavailable))
             stack.Children.Add(Wrap($"{skipped.Action.Target}: {skipped.Message}", 14, "DS.Warn", 6));
         // the app's own line: the truth about what happened, whatever the model said

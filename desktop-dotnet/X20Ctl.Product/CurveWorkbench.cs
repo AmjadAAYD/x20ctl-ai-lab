@@ -29,8 +29,8 @@ public sealed class CurveWorkbench
     public int? SelectedPoint { get; private set; }
     public string PresetDescription => summary.Text;
     public TextBlock OutputAxisLabel { get; } = new() { Text="OUTPUT %",FontSize=12,Foreground=Brushes.LightSteelBlue };
-    const string Hint="Drag a point, the dead zone, full-at or the limits. The line is what games get.";
-    public TextBlock PreviewNotice { get; } = new() { Text=Hint,FontSize=14,Foreground=Brushes.LightSteelBlue,TextWrapping=TextWrapping.Wrap };
+    const string Hint="";
+    public TextBlock PreviewNotice { get; } = new() { Text=Hint,FontSize=12.5,Foreground=Brushes.LightSteelBlue,TextWrapping=TextWrapping.Wrap };
     public TextBlock ActivePointReadout { get; } = new() { FontSize=14,FontWeight=FontWeights.SemiBold,TextWrapping=TextWrapping.Wrap };
     /// <summary>PC mode's stick settings for a stick (null: none saved, or PC mode isn't reachable). Set by the Studio.</summary>
     public Func<CurveChannel,StickTuning?>? Tuning { get; set; }
@@ -69,7 +69,7 @@ public sealed class CurveWorkbench
     public CurveWorkbench(CurveDraft draft,FrameworkElement resources,bool animations=true)
     {
         Draft=draft;AnimationsEnabled=animations;
-        Inspector.RowDefinitions.Add(new(){Height=new GridLength(62)});Inspector.RowDefinitions.Add(new());Inspector.RowDefinitions.Add(new(){Height=new GridLength(84)});
+        Inspector.RowDefinitions.Add(new(){Height=new GridLength(62)});Inspector.RowDefinitions.Add(new());Inspector.RowDefinitions.Add(new(){Height=new GridLength(48)});
         var heading=new StackPanel();heading.Children.Add(title);heading.Children.Add(summary);Inspector.Children.Add(heading);
         var view=new Viewbox { Child=chart,Stretch=Stretch.Uniform };Grid.SetRow(view,1);Inspector.Children.Add(view);
         var note=new StackPanel();note.Children.Add(coordinates);note.Children.Add(ActivePointReadout);PreviewNotice.Margin=new(0,6,0,0);note.Children.Add(PreviewNotice);Grid.SetRow(note,2);Inspector.Children.Add(note);
@@ -111,7 +111,12 @@ public sealed class CurveWorkbench
         foreach(var (thumb,tag,name) in new[]{(deadHandle,deadTag,"Dead zone"),(fullHandle,fullTag,"Full at"),(floorHandle,floorTag,"Anti-dead zone"),(ceilingHandle,ceilingTag,"Max output")})
         {
             bool across=thumb==deadHandle||thumb==fullHandle;
-            thumb.Width=across?10:22;thumb.Height=across?22:10;thumb.Focusable=true;thumb.FocusVisualStyle=null;thumb.Cursor=across?Cursors.SizeWE:Cursors.SizeNS;thumb.ToolTip=name;
+            thumb.Width=across?8:16;thumb.Height=across?16:8;
+            // the value shows only while the handle is pointed at, focused or dragged (owner: too many words)
+            var said=tag;said.Visibility=Visibility.Collapsed;
+            void Say(bool on)=>said.Visibility=on||thumb.IsDragging||thumb.IsKeyboardFocused||thumb.IsMouseOver?Visibility.Visible:Visibility.Collapsed;
+            thumb.MouseEnter+=(_,_)=>Say(true);thumb.MouseLeave+=(_,_)=>Say(false);thumb.GotKeyboardFocus+=(_,_)=>Say(true);thumb.LostKeyboardFocus+=(_,_)=>Say(false);
+            thumb.DragStarted+=(_,_)=>Say(true);thumb.DragCompleted+=(_,_)=>Say(false);thumb.Focusable=true;thumb.FocusVisualStyle=null;thumb.Cursor=across?Cursors.SizeWE:Cursors.SizeNS;thumb.ToolTip=name;
             thumb.Template=Knob(new SolidColorBrush(thumb==deadHandle?Color.FromRgb(232,54,79):thumb==fullHandle?Color.FromRgb(61,214,140):Color.FromRgb(255,196,92)),false);
             System.Windows.Automation.AutomationProperties.SetName(thumb,name+", arrow keys adjust");
             var me=thumb;
@@ -256,23 +261,26 @@ public sealed class CurveWorkbench
         bool limits=TuningOwnsZones;
         Inner.Maximum=limits?StickTuning.MaxInner:99;Outer.Minimum=limits?StickTuning.MinOuter:1;
         floorPanel.Visibility=ceilingPanel.Visibility=limits?Visibility.Visible:Visibility.Collapsed;
-        floorHandle.Visibility=ceilingHandle.Visibility=floorTag.Visibility=ceilingTag.Visibility=floorLine.Visibility=ceilingLine.Visibility=limits?Visibility.Visible:Visibility.Collapsed;
+        floorHandle.Visibility=ceilingHandle.Visibility=limits?Visibility.Visible:Visibility.Collapsed;
+        if(!limits)floorTag.Visibility=ceilingTag.Visibility=Visibility.Collapsed;
+        // a limit's line only when it limits something
+        floorLine.Visibility=limits&&z.Floor>0?Visibility.Visible:Visibility.Collapsed;ceilingLine.Visibility=limits&&z.Ceiling<100?Visibility.Visible:Visibility.Collapsed;
         foreach(var c in new UIElement[]{deadHandle,fullHandle,floorHandle,ceilingHandle,first,second,Inner,Outer,Floor,Ceiling})c.IsEnabled=Draft.CanEdit;
 
         innerBand.Width=z.Inner/100*PW;Canvas.SetLeft(innerBand,L);outerBand.Width=(100-z.Outer)/100*PW;Canvas.SetLeft(outerBand,X(z.Outer));
-        Place(deadHandle,X(z.Inner),T+PH);Place(fullHandle,X(z.Outer),T);
-        Label(deadTag,$"Dead zone {z.Inner:0.#}%",X(z.Inner)+8,T+PH-30);Label(fullTag,$"Full at {z.Outer:0.#}%",Math.Min(X(z.Outer)+8,L+PW-90),T+8);
+        Place(deadHandle,X(z.Inner),T+PH);Place(fullHandle,X(z.Outer),T+PH);
+        Label(deadTag,$"Dead zone {z.Inner:0.#}%",Math.Max(L,X(z.Inner)-30),T+PH-30);Label(fullTag,$"Full at {z.Outer:0.#}%",Math.Min(X(z.Outer)-40,L+PW-90),T+PH-30);
         floorLine.X1=X(z.Inner);floorLine.X2=X(z.Outer);floorLine.Y1=floorLine.Y2=Y(z.Floor);
         ceilingLine.X1=X(z.Inner);ceilingLine.X2=X(z.Outer);ceilingLine.Y1=ceilingLine.Y2=Y(z.Ceiling);
-        Place(floorHandle,X(z.Inner)+14,Y(z.Floor));Place(ceilingHandle,X(z.Outer)-14,Y(z.Ceiling));
-        Label(floorTag,$"Anti {z.Floor:0.#}%",X(z.Inner)+28,Y(z.Floor)-22);Label(ceilingTag,$"Max {z.Ceiling:0.#}%",X(z.Outer)-80,Y(z.Ceiling)+8);
+        Place(floorHandle,L+PW+14,Y(z.Floor));Place(ceilingHandle,L+PW+14,Y(z.Ceiling));
+        Label(floorTag,$"Anti-dead zone {z.Floor:0.#}%",L+PW-130,Y(z.Floor)-24);Label(ceilingTag,$"Max output {z.Ceiling:0.#}%",L+PW-120,Y(z.Ceiling)+6);
 
         var previous=response.Points.Clone();response.BeginAnimation(Polyline.PointsProperty,null);
         var line=new PointCollection(Enumerable.Range(0,201).Select(i=>new Point(X(i/2d),Y(Output(i/200d)*100))));
         response.Points=line;area.Points=new PointCollection(line.Append(new Point(L+PW,T+PH)).Append(new Point(L,T+PH)));
         bool morph=AnimationsEnabled && !Dragging;
         if(morph && previous.Count==line.Count) response.BeginAnimation(Polyline.PointsProperty,new CurvePointMorph(previous,line));
-        double half=Output(.5)*100;Canvas.SetLeft(halfDot,X(50)-5);Canvas.SetTop(halfDot,Y(half)-5);Label(halfTag,$"half a push → {half:0}%",X(50)+10,Y(half)-24);
+        halfDot.Visibility=halfTag.Visibility=Visibility.Collapsed;
         // each point sits on the line: its push mapped between dead zone and full-at, its output between the limits
         foreach(var (thumb,p) in new[]{(first,setting.Point1),(second,setting.Point2)})
         {
@@ -282,8 +290,7 @@ public sealed class CurveWorkbench
             if(morph && double.IsFinite(previousX)) {thumb.BeginAnimation(Canvas.LeftProperty,new DoubleAnimation(previousX,x,TimeSpan.FromMilliseconds(160)){FillBehavior=FillBehavior.Stop});thumb.BeginAnimation(Canvas.TopProperty,new DoubleAnimation(previousY,y,TimeSpan.FromMilliseconds(160)){FillBehavior=FillBehavior.Stop});}
         }
         if(liveAt>=0){double keep=liveAt;liveAt=-1;ShowLive(keep);}
-        coordinates.Text=$"Point 1 — Input {setting.Point1.X/2.55:0}% · Output {setting.Point1.Y/2.55:0}%    Point 2 — Input {setting.Point2.X/2.55:0}% · Output {setting.Point2.Y/2.55:0}%\n"
-            +$"Dead zone {z.Inner:0.#}% · Full at {z.Outer:0.#}%"+(limits?$" · Anti-dead zone {z.Floor:0.#}% · Max output {z.Ceiling:0.#}%":"")+(tuning is {AxisRatio:not 100} r?$" · Vertical {r.AxisRatio}%":"")+(tuning?.SquareGate==true?" · Square gate":"");
+        coordinates.Text=$"Points  {setting.Point1.X/2.55:0} → {setting.Point1.Y/2.55:0}%   ·   {setting.Point2.X/2.55:0} → {setting.Point2.Y/2.55:0}%"+(tuning is {AxisRatio:not 100} r?$"   ·   Vertical {r.AxisRatio}%":"")+(tuning?.SquareGate==true?"   ·   Square gate":"");
         coordinates.ToolTip=$"Stored point 1: {setting.Point1.X}/255, {setting.Point1.Y}/255. Point 2: {setting.Point2.X}/255, {setting.Point2.Y}/255.";
         coordinates.TextWrapping=TextWrapping.Wrap;RefreshPointReadout();
         foreach(var button in channelButtons)button.Background=(CurveChannel)button.Tag==Channel?new SolidColorBrush(Color.FromRgb(38,120,237)):new SolidColorBrush(Color.FromArgb(117,24,35,55));
@@ -298,7 +305,7 @@ public sealed class CurveWorkbench
         bool active=SelectedPoint.HasValue;
         coordinates.Visibility=active?Visibility.Collapsed:Visibility.Visible;
         ActivePointReadout.Visibility=active?Visibility.Visible:Visibility.Collapsed;
-        Inspector.RowDefinitions[^1].Height=new(!active && Inspector.ActualWidth>0 && Inspector.ActualWidth<400?100:84);
+        Inspector.RowDefinitions[^1].Height=new(!active && Inspector.ActualWidth>0 && Inspector.ActualWidth<400?64:48);
         editHint.Text=active?$"POINT {SelectedPoint+1}    ← / → Input    ↑ / ↓ Output":"← / →  1% steps · Shift  5% steps";
         if(active)
         {
