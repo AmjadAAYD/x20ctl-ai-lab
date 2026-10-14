@@ -102,6 +102,8 @@ public sealed class AgentPanel
     readonly ScaleTransform pop = new(1, 1);
     PcModeProfile preview = new(); // the settings when PC mode isn't reachable from this window
     bool busy;
+    bool demoChosen;
+    PcModeProfile demoPreview = new();
     readonly int player;
     readonly Border offlineCap; readonly TextBlock offlineLabel;
     readonly Border[] leds = new Border[4];
@@ -138,7 +140,13 @@ public sealed class AgentPanel
         heading.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Text("Agent XCTL", 15, "DS.Text", FontWeights.SemiBold), statusDot, status } });
         settingsBox = new Border { Visibility = Visibility.Collapsed, Margin = new(0, 0, 0, 8), Padding = new(14, 10, 14, 6), CornerRadius = new(12), Background = new SolidColorBrush(Color.FromArgb(120, 20, 30, 56)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 120, 170, 255)), BorderThickness = new(1),
             Child = new ScrollViewer { MaxHeight = 170, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 8)), settings } } } };
-        var top = new StackPanel { Children = { heading, settingsBox } };
+        var lab = AgentLab.Create(session, model, modelId, name, on =>
+        {
+            demoChosen = on; session.Forget();
+            ShowState(); ShowSettings(new HashSet<string>());
+            Say(on ? AgentDemo.Label : "Canned demo off", null);
+        }, () => busy);
+        var top = new StackPanel { Children = { heading, lab, settingsBox } };
         // zoomed out (owner, 14 Oct 2026: "so tight, I can't see the message"): more of the conversation fits
         scroller = new ScrollViewer { Content = transcript, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         transcript.LayoutTransform = new ScaleTransform(.8, .8);
@@ -182,7 +190,7 @@ public sealed class AgentPanel
         var pad = new Canvas { Width = DesignWidth, Height = DesignHeight, RenderTransform = shake };
         // the bumpers, behind the shell's top edge: LB is Offline, RB the settings now
         (offlineSwitch, offlineCap, offlineLabel) = Bumper("LB", "Offline", 70, new CornerRadius(26, 18, 6, 6));
-        offlineSwitch.Click += (_, _) => { offlineChosen = !offlineChosen; StateChanged?.Invoke(); };
+        offlineSwitch.Click += (_, _) => { if (busy || demoChosen) return; offlineChosen = !offlineChosen; StateChanged?.Invoke(); };
         var (settingsButton, _, _) = Bumper("RB", "Settings", DesignWidth - 70 - 220, new CornerRadius(18, 26, 6, 6));
         settingsButton.Click += (_, _) => { settingsBox.Visibility = settingsBox.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; ShowSettings(new HashSet<string>()); };
         register(offlineSwitch); register(settingsButton);
@@ -619,20 +627,22 @@ public sealed class AgentPanel
         session.Forget(); transcript.Children.Clear(); Input.Text = ""; announced = ""; Search.Text = ""; settle.Stop(); Say(greeting, null); Input.Focus();
     }
 
-    PcModeProfile Current => link == null ? preview : link.Store.Get(PcModePage.StoreKey);
+    PcModeProfile Current => demoChosen ? demoPreview : link == null ? preview : link.Store.Get(PcModePage.StoreKey);
 
     void Store(PcModeProfile next)
     {
+        if (demoChosen) { demoPreview = next; return; }
         if (link == null) { preview = next; return; }
         link.Store.Save(PcModePage.StoreKey, next); link.Service.Reload(); PcModePage.Replaced();
     }
 
     void ShowState()
     {
-        status.Text = Offline ? (offlineChosen ? "Offline · phrasebook" : "Offline · phrasebook (the model isn't available)") : state == ModelState.Starting && stateText.Length == 0 ? "Starting…" : stateText;
+        status.Text = demoChosen ? AgentDemo.Label : Offline ? (offlineChosen ? "Offline · phrasebook" : "Offline · phrasebook (the model isn't available)") : state == ModelState.Starting && stateText.Length == 0 ? "Starting…" : stateText;
         statusDot.Background = DS.Brush(Offline ? "DS.AccentHi" : state switch { ModelState.Ready => "DS.Success", ModelState.Starting or ModelState.Loading => "DS.Warn", _ => "DS.Danger" });
         if (!lightsOn) for (int i = 0; i < 4; i++) leds[i].Background = i == Math.Clamp(player, 0, 3) || busy ? statusDot.Background : new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
-        send.IsEnabled = !busy && (Offline || state == ModelState.Ready);
+        send.IsEnabled = !busy && (demoChosen || Offline || state == ModelState.Ready);
+        offlineSwitch.IsEnabled = !busy && !demoChosen;
         offlineCap.Background = offlineChosen ? new LinearGradientBrush(Color.FromRgb(52, 104, 196), Color.FromRgb(28, 62, 132), 90) : new LinearGradientBrush(CapLight, CapDark, 90);
         offlineLabel.Foreground = DS.Brush(offlineChosen ? "DS.Text" : "DS.TextSoft");
         offlineSwitch.ToolTip = offlineChosen ? "Back to the model (Qwen)" : "Offline: answers from a phrasebook, no model";
@@ -647,16 +657,16 @@ public sealed class AgentPanel
     {
         if (busy) return null;
         // the help list is the app's own answer: instant, the same online and offline
-        if (AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say(AgentVariety.Pick("help", ["Here's everything I can do, on the left. Pick one, or search it. *proudly clicks every button*", "Ta-da! My whole skill list, on the left. Pick one.", "On the left: everything I'm good at. It's a long list. *ahem*"]), null); _ = Lights(AgentMood.Good); return null; }
+        if (!demoChosen && AgentHelp.Asks(sentence)) { Bubble(sentence, mine: true); announced = ""; Search.Text = ""; settle.Stop(); ShowIdeas("", everything: true); Searching(false); Look(Gaze.Ideas); Say(AgentVariety.Pick("help", ["Here's everything I can do, on the left. Pick one, or search it. *proudly clicks every button*", "Ta-da! My whole skill list, on the left. Pick one.", "On the left: everything I'm good at. It's a long list. *ahem*"]), null); _ = Lights(AgentMood.Good); return null; }
         // a topic alone is a search: the ideas narrow to it, and the app answers itself
         // the app's own commands: the controller's name, the battery, another controller, a star, a donation
-        if (AgentCommands.Parse(sentence) is var command and not AgentCommand.None) { Bubble(sentence, mine: true); await Do(command); return null; }
-        if (AgentIdeas.Topic(sentence) is { } topic)
+        if (!demoChosen && AgentCommands.Parse(sentence) is var command and not AgentCommand.None) { Bubble(sentence, mine: true); await Do(command); return null; }
+        if (!demoChosen && AgentIdeas.Topic(sentence) is { } topic)
         {
             Bubble(sentence, mine: true); announced = topic; Search.Text = topic; settle.Stop();
             Look(Gaze.Ideas); Say(AgentIdeas.TopicReply(topic), null); _ = Lights(AgentMood.Good); return null;
         }
-        if (!Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); _ = Lights(AgentMood.Failed); return null; }
+        if (!demoChosen && !Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); _ = Lights(AgentMood.Failed); return null; }
         busy = true; settle.Stop(); Searching(true); ShowState(); Thinking?.Invoke(true); Circling(true);
         Bubble(sentence, mine: true);
         var thinking = Bubble("…", mine: false);
@@ -664,7 +674,7 @@ public sealed class AgentPanel
         AgentMood? mood = null;
         try
         {
-            var turn = await session.Ask(sentence, before);
+            var turn = demoChosen ? AgentDemo.Run(sentence, modelId, before) : await session.Ask(sentence, before);
             mood = AgentCharacter.Mood(turn);
             transcript.Children.Remove(thinking);
             // PC mode on or off, when asked: the switch itself, not a setting
@@ -672,10 +682,10 @@ public sealed class AgentPanel
             string? mouse = turn.Outcome.Mouse is { } mouseOn ? (MouseSwitch == null ? "Mouse mode isn't reachable from this window." : MouseSwitch(mouseOn) ?? "") : null;
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
-                try { Store(next); Applied(); }
+                try { Store(next); if (!demoChosen) Applied(); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
-                if (Walkthrough != null) await Walkthrough(before, next, turn.Measured);
+                if (!demoChosen && Walkthrough != null) await Walkthrough(before, next, turn.Measured);
                 Say(turn, before, switched: switched, mouse: mouse); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
             else { Say(turn, null, switched: switched, mouse: mouse); if (switched != null) ShowSettings(new HashSet<string>()); }
@@ -734,6 +744,7 @@ public sealed class AgentPanel
     {
         var stack = new StackPanel();
         var v = turn.Verdict;
+        if (demoChosen) stack.Children.Add(Wrap(AgentDemo.Label, 13, "DS.Warn"));
         stack.Children.Add(Wrap(v.Proposal?.Speech is { Length: > 0 } speech ? speech : "I didn't give a usable answer.", 14, "DS.Text"));
         // what the app itself measured, before what the model made of it
         if (turn.Measured is { } m)
@@ -762,7 +773,7 @@ public sealed class AgentPanel
         string verdict = failure ?? (turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && switched == "" ? "Applied · PC mode switched " + (turn.Outcome.PcMode == true ? "on" : "off")
             : turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && mouse == "" ? "Applied · Mouse mode " + (turn.Outcome.Mouse == true ? "on" : "off")
             : v.Valid && turn.Outcome.Changes.Count == 0 && turn.Outcome.Page is { } goTo ? "Opening " + goTo
-            : turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(link == null ? " · preview only" : "")}"
+            : turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(demoChosen || link == null ? " · preview only" : "")}"
             : !v.Valid ? "Rejected · nothing changed · " + AgentSession.Problems(v)
             : turn.Outcome.Error != null ? "Rejected · " + turn.Outcome.Error : "No changes");
         stack.Children.Add(Wrap(verdict, 14, failure != null || !v.Valid || turn.Outcome.Error != null ? "DS.Danger" : turn.Outcome.Changes.Count > 0 ? "DS.Success" : "DS.TextMuted", 10).Also(t => t.FontWeight = FontWeights.SemiBold));
@@ -776,19 +787,21 @@ public sealed class AgentPanel
         foreach (var a in v.Proposal?.Assumptions ?? []) details.Children.Add(Wrap("Assumed: " + a, 13.5, "DS.TextSoft", 4));
         for (int i = 0; i < turn.Attempts.Count; i++)
         {
-            details.Children.Add(Kit.Text(turn.Attempts.Count > 1 ? $"MODEL OUTPUT · ATTEMPT {i + 1}" : "MODEL OUTPUT", 12, "DS.TextMuted", FontWeights.SemiBold).Also(t => t.Margin = new(0, 10, 0, 4)));
+            details.Children.Add(Kit.Text(demoChosen ? "CANNED OUTPUT" : turn.Attempts.Count > 1 ? $"MODEL OUTPUT · ATTEMPT {i + 1}" : "MODEL OUTPUT", 12, "DS.TextMuted", FontWeights.SemiBold).Also(t => t.Margin = new(0, 10, 0, 4)));
             details.Children.Add(new TextBox { Text = turn.Attempts[i].Content, IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, MaxHeight = 220, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new(10) });
         }
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 10, 0, 0) };
-        actions.Children.Add(Kit.Text(AgentSession.Stats(turn), 13, "DS.TextMuted").Also(t => t.Margin = new(0, 0, 14, 0)));
+        actions.Children.Add(Kit.Text(demoChosen ? "Canned reply · no model metrics" : AgentSession.Stats(turn), 13, "DS.TextMuted").Also(t => t.Margin = new(0, 0, 14, 0)));
         var more = Small("Details"); more.Click += (_, _) => { bool show = details.Visibility != Visibility.Visible; details.Visibility = show ? Visibility.Visible : Visibility.Collapsed; ((TextBlock)more.Content).Text = show ? "Hide details" : "Details"; };
         actions.Children.Add(more);
         if (undo != null)
         {
+            bool demoUndo = demoChosen;
             var back = Small("Undo"); back.Margin = new(8, 0, 0, 0);
             back.Click += (_, _) =>
             {
+                if (busy || demoUndo != demoChosen) return;
                 try { var now = Current; Store(undo); back.IsEnabled = false; ((TextBlock)back.Content).Text = "Undone"; ShowSettings(AgentApplier.Diff(now, undo).Select(c => c.What).ToHashSet()); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { ((TextBlock)back.Content).Text = "Couldn't undo"; }
             };
@@ -801,7 +814,7 @@ public sealed class AgentPanel
     // ---- the settings panel ----
     void ShowSettings(IReadOnlySet<string> changed)
     {
-        target.Text = link == null ? "Preview · PC mode isn't available in this window"
+        target.Text = demoChosen ? AgentDemo.Label : link == null ? "Preview · PC mode isn't available in this window"
             : $"PC mode · Player {PcModePage.Player + 1}, {(PcModePage.ProfileKey == PcModeStore.DefaultKey ? "every game" : PcModePage.ProfileKey[PcModeStore.GamePrefix.Length..])}{(link.Service.Enabled ? "" : " · PC mode is off, so games don't see these yet")}";
         settings.Children.Clear();
         var rows = AgentApplier.Diff(new PcModeProfile(), Current);

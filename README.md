@@ -20,6 +20,21 @@ Remap buttons, shape sticks and triggers, build back-paddle macros, set vibratio
 
 ## What's new
 
+### Agent XCTL — teacher guide (IA Générative Textuelle)
+
+Open Agent XCTL from the Studio, then expand **Lab / Safety**. The local chat model picker contains only **qwen3.5:9b**. Temperature affects Qwen requests; edit the system prompt to experiment, or use **Reset system prompt** to restore the default. Controller facts and current settings remain appended. Prompt edits and temperature do not affect canned replies.
+
+Enable **Canned demo · deterministic · preview only** for a repeatable presentation without Ollama. Send `demo aim`, `demo trigger`, `demo bad output`, then `demo reset`. Fixed JSON replies use the real validator and applier, but change only an in-memory preview. They do not save profiles, switch PC/mouse mode, read hardware, rumble or navigate. The app labels the status, replies and output details as canned; token/timing metrics are not model measurements. Unscripted input returns canned help. **Offline** is the existing phrasebook, a separate mode.
+
+The bad-output playground accepts editable JSON and runs the real validator for the selected controller. **Validate output** never applies anything. Local agent requests and document lookup stay on this PC. Qwen may hallucinate: valid structure and ranges do not prove that advice is correct. Live mode can save PC-mode settings; Undo restores settings. Hardware paddle writes remain unsupported.
+
+See the [3–5 minute demo script](docs/agent/demo-script.md). Build and focused checks:
+
+```powershell
+dotnet build desktop-dotnet/X20Ctl.Product --no-restore
+dotnet test desktop-dotnet/X20Ctl.Zone.Tests --no-restore --filter FullyQualifiedName~AgentDemoTests
+```
+
 X20CTL is now a **native Windows app**, rebuilt from scratch in WPF on .NET 10. It no longer uses a web page inside a window, and it no longer needs WebView2. Up to four players each pick their own controller. Every model opens the same Studio, and every page can be driven with a gamepad, like a console's big-picture mode.
 
 **4.1.0 Preview 3 is a pre-release.** The EasySMX X20 is the only verified controller. The other seven models open as read-only previews. Their layouts, sticks and triggers are drawn and animated, but nothing is written to them. See [Supported controllers](#supported-controllers).
