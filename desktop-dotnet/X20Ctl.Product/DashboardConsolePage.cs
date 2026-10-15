@@ -64,7 +64,13 @@ public sealed class DashboardConsolePage : Grid
         // the same framed panel the Buttons page puts its controller in (owner request, 13 Oct 2026)
         // the agent's invitation in the hero's empty top-right corner (owner request, 14 Oct 2026)
         var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 14); invite.HorizontalAlignment = HorizontalAlignment.Right; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 10, 10, 0);
-        var heroPanel = Kit.Panel(null, null, null, new Grid { Children = { heroButton, invite } }, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
+        var heroContent = new Grid();
+        heroContent.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
+        heroContent.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        invite.Margin = new(18, 16, 12, 0);
+        Grid.SetColumn(invite, 1);
+        heroContent.Children.Add(heroButton); heroContent.Children.Add(invite);
+        var heroPanel = Kit.Panel(null, null, null, heroContent, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
         top.Children.Add(heroPanel);
 
         var status = new StackPanel { Width = 560 };
@@ -199,11 +205,12 @@ public sealed class DashboardConsolePage : Grid
             var image = Bitmap(game.Cover) ?? Bitmap(game.Hero);
             var at = source.TranslatePoint(new Point(0, 0), overlay);
             double w = Math.Max(1, source.ActualWidth), h = Math.Max(1, source.ActualHeight), pageW = overlay.ActualWidth, pageH = overlay.ActualHeight;
-            Brush fill = image != null ? new ImageBrush(image) { Stretch = Stretch.UniformToFill } : new LinearGradientBrush(Color.FromRgb(28, 52, 110), Color.FromRgb(10, 18, 44), 90);
+            Brush fill = image != null ? new ImageBrush(image) { Stretch = Stretch.Uniform } : new LinearGradientBrush(Color.FromRgb(28, 52, 110), Color.FromRgb(10, 18, 44), 90);
             zoom = new Border { Background = fill, CornerRadius = new(14), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new(at.X, at.Y, 0, 0), Width = w, Height = h, ClipToBounds = true };
             var dim = new Border { Background = new SolidColorBrush(Color.FromArgb(150, 2, 6, 18)) };
             var label = Kit.Text("Starting " + game.Name, 30, "DS.Text", FontWeights.SemiBold); label.HorizontalAlignment = HorizontalAlignment.Center; label.VerticalAlignment = VerticalAlignment.Center; label.Opacity = 0;
             zoom.Child = new Grid { Children = { dim, label } };
+            // Letterbox the complete artwork rather than cropping it to the screen ratio.
             Grid.SetRowSpan(zoom, 5); Panel.SetZIndex(zoom, 50); overlay.Children.Add(zoom);
             int ms = animate ? 380 : 0;
             if (ms > 0)

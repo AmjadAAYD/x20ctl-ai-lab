@@ -83,11 +83,6 @@ public sealed class OfflineAgent : IAgentModel
                 return (a.Action, a.Target, (object)string.Join(",", p));
             }).ToArray());
         }
-        // nothing matched, or a question about something that isn't a setting: the closest doc passage, if one was given
-        string? docs = messages.LastOrDefault(m => m.Role == "system" && m.Content.StartsWith("From the X20CTL docs", StringComparison.Ordinal))?.Content;
-        if (docs != null && plan.Actions.Count == 0 && (plan.Speech.StartsWith(AgentCharacter.NotUnderstood, StringComparison.Ordinal) || plan.Speech.StartsWith("Ask me about", StringComparison.Ordinal))
-            && Regex.Match(docs, @"^\[1\] (.+?): (.+)$", RegexOptions.Multiline) is { Success: true } top)
-            plan = OfflinePlan.Say($"Here's what the docs say, from {top.Groups[1].Value}.", Sentences(top.Groups[2].Value, 3)) with { Sources = [1] };
         return Task.FromResult(new ModelReply(Json(plan), 0, 0, 0, clock.Elapsed.TotalMilliseconds));
     }
 

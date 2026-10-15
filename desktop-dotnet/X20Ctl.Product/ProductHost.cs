@@ -1,4 +1,4 @@
-using System.Windows.Media.Animation;
+﻿using System.Windows.Media.Animation;
 ﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -110,7 +110,7 @@ public sealed class ProductHost : Grid
             var result = await ControllerVerify.Run(model.Id);
             var wait = TimeSpan.FromMilliseconds(1900) - (DateTime.UtcNow - started); if (wait > TimeSpan.Zero) await Task.Delay(wait); // long enough to read what it is doing
             if (token != verifyToken || verifyLayer != layer) return;
-            void Enter() { Close(); EnterStudio(player); }
+            void Enter() { Close(); Children.Remove(layer); Zone.UpdateLayout(); EnterStudio(player); }
             view.ShowResult(result, model.Name, result.DetectedName, Enter,
                 id => { var other = Catalog.Find(id); Close(); if (other != null) { AssignSelection(other); EnterStudio(player); } },
                 () => _ = Scan());
@@ -154,10 +154,12 @@ public sealed class ProductHost : Grid
     private void EnterWithController(StudioScene entering, ControllerModel model, Rect source)
     {
         if(Studio!=entering)return;
+        // Resolve the destination after the newly added Studio has been measured.
+        entering.UpdateLayout();
         var hero=entering.Dashboard?.ControllerArtwork;
         if(hero==null || source.IsEmpty || hero.ActualWidth<=0)
         {
-            entering.IsHitTestVisible=true;Fx.Appear(entering,1.025,420,()=>{if(Studio==entering)Zone.Visibility=Visibility.Collapsed;});return;
+            entering.IsHitTestVisible=true;Fx.Appear(entering,1,420,()=>{if(Studio==entering)Zone.Visibility=Visibility.Collapsed;});return;
         }
         var destination=hero.TransformToAncestor(this).TransformBounds(new Rect(hero.RenderSize));
         if(destination.Width<1 || destination.Height<1){entering.Opacity=1;entering.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;return;}
