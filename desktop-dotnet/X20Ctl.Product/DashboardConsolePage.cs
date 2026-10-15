@@ -58,7 +58,7 @@ public sealed class DashboardConsolePage : Grid
         animate = !reducedMotion && DS.Motion;
         ClipToBounds = true; // in a short window nothing may spill under the Studio footer
         RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star), MinHeight = FullTop }); RowDefinitions.Add(new() { Height = new(12) });
-        RowDefinitions.Add(new() { Height = new(FullFeatured) }); RowDefinitions.Add(new() { Height = new(12) }); RowDefinitions.Add(new() { Height = new(FullCover + 64) });
+        RowDefinitions.Add(new() { Height = new(FullFeatured) }); RowDefinitions.Add(new() { Height = new(12) }); RowDefinitions.Add(new() { Height = new(FullCover + 80) });
 
         // ---- top: controller hero (left) + status block (right) ----
         var top = new Grid(); top.ColumnDefinitions.Add(new() { Width = new(.95, GridUnitType.Star) }); top.ColumnDefinitions.Add(new() { Width = new(1.05, GridUnitType.Star) }); Children.Add(top);
@@ -120,8 +120,16 @@ public sealed class DashboardConsolePage : Grid
         Grid.SetRow(shelfPanel, 4); Children.Add(shelfPanel);
         Feature(null);
         Loaded += async (_, _) => { if (!EntryTransitionPending) await Populate(); };
-        SizeChanged += (_, e) => Fit(e.NewSize.Height);
+
         PreviewKeyDown += OnKey;
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        // Fit before Grid measures its children. Waiting for SizeChanged lets the old minimum
+        // heights expand this page beyond the viewport, so the footer clips the game shelf.
+        if (double.IsFinite(availableSize.Height)) Fit(availableSize.Height);
+        return base.MeasureOverride(availableSize);
     }
 
     /// <summary>Fit the page to its height. Full size needs about 730 px; below that the featured banner gives way first,
@@ -129,7 +137,7 @@ public sealed class DashboardConsolePage : Grid
     private void Fit(double height)
     {
         if (height <= 0) return;
-        double Shelf(double cover) => cover + 64; // "Your games", padding, cover and its title
+        double Shelf(double cover) => cover + 80; // "Your games", padding, cover and its title
         double deficit = Math.Max(0, FullTop + 12 + FullFeatured + 12 + Shelf(FullCover) - height);
         double featured = FullFeatured - Math.Min(76, deficit); deficit -= FullFeatured - featured;
         double cover = FullCover - Math.Min(88, deficit); deficit -= FullCover - cover;
