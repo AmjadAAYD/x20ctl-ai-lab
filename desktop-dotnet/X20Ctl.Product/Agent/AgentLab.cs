@@ -42,7 +42,7 @@ internal static class AgentLab
                 + string.Concat(verdict.Checks.Select(c => $"\n{c.State} · {c.Action.Action} · {c.Message}"));
         };
         controls.Children.Add(output); controls.Children.Add(validate); controls.Children.Add(result);
-        controls.Children.Add(Text("Agent prompts, replies and document lookup stay on this PC. Qwen can hallucinate. Validation checks structure, targets and ranges; it does not prove advice is correct. Live mode can save PC-mode settings; Undo restores settings. Hardware paddle writes are unsupported. Offline is a phrasebook; canned demo is a separate preview with no model or measurements."));
+        controls.Children.Add(Text("Agent prompts, replies and document lookup stay on this PC. Qwen can hallucinate. Validation checks structure, targets and ranges; it does not prove advice is correct. Live mode can save PC-mode settings. Hardware paddle writes are unsupported. Offline is a phrasebook; canned demo is a separate preview with no model or measurements."));
         return new Expander { Header = "Lab / Safety", Foreground = DS.Brush("DS.Text"), IsExpanded = false, Margin = new(0, 0, 0, 6),
             Content = new ScrollViewer { MaxHeight = 200, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = controls } };
     }

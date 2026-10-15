@@ -32,6 +32,9 @@ public sealed class DiagnosticsWorkbench
 
     public Grid Body { get; } = new();
     readonly int preferredSlot;
+    double[]? keyboardPreview;
+    public void PreviewKeyboard(double lx, double ly, double rx, double ry, double leftTrigger, double rightTrigger)
+        => keyboardPreview = [lx, ly, rx, ry, leftTrigger, rightTrigger];
     readonly object gate = new();
     readonly StickStats left = new(), right = new();
     readonly TriggerStats lt = new(), rt = new();
@@ -53,7 +56,7 @@ public sealed class DiagnosticsWorkbench
     readonly Dictionary<StickStats, (string Key, Button Use, TextBlock Said)> apply = new();
     readonly Dictionary<StickStats, double> suggested = new();
 
-    public DiagnosticsWorkbench(int player, Action<Button> register, PcModeLink? link = null)
+    public DiagnosticsWorkbench(int player, Action<Button> register, PcModeLink? link = null, bool compact = false)
     {
         preferredSlot = player; this.link = link;
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -76,7 +79,7 @@ public sealed class DiagnosticsWorkbench
         source = Wrap("", 14, "DS.TextMuted", 8); page.Children.Add(source);
 
         var top = new Grid { Margin = new(0, 18, 0, 0) };
-        for (int i = 0; i < 4; i++) top.ColumnDefinitions.Add(new() { Width = new GridLength(i < 2 ? 1.15 : 1, GridUnitType.Star) });
+        for (int i = 0; i < (compact ? 3 : 4); i++) top.ColumnDefinitions.Add(new() { Width = new GridLength(i < 2 ? 1.15 : 1, GridUnitType.Star) });
         leftView = StickCard(top, 0, "Left stick", left, "LeftStick", register); rightView = StickCard(top, 1, "Right stick", right, "RightStick", register);
         var triggers = new Grid(); triggers.ColumnDefinitions.Add(new()); triggers.ColumnDefinitions.Add(new());
         ltView = TriggerColumn(triggers, 0, "LT"); rtView = TriggerColumn(triggers, 1, "RT");
@@ -101,6 +104,12 @@ public sealed class DiagnosticsWorkbench
 
         timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
         timer.Tick += (_, _) => Refresh();
+        if (compact)
+        {
+            head.Visibility = Visibility.Collapsed;
+            buttonsCard.Visibility = Visibility.Collapsed;
+            foreach (FrameworkElement card in top.Children) if (Grid.GetColumn(card) == 3) card.Visibility = Visibility.Collapsed;
+        }
         Refresh();
     }
 
@@ -184,6 +193,15 @@ public sealed class DiagnosticsWorkbench
                 : $"Reading XInput slot {s + 1}{(PcModeService.IsVirtual(s) ? " (PC mode's virtual pad: this shows PC mode's output, not the controller)" : "")} · {reads.Current(now)} reads a second";
             DrawStick(leftView, left); DrawStick(rightView, right);
             DrawTrigger(ltView, lt); DrawTrigger(rtView, rt);
+            if (s < 0 && keyboardPreview is { } keys)
+            {
+                source.Text = "Keyboard preview · WASD / arrows · Q / E triggers. Connect a controller for measured circularity error.";
+                Canvas.SetLeft(leftView.Dot, Plot / 2 + keys[0] * Unit - 6); Canvas.SetTop(leftView.Dot, Plot / 2 - keys[1] * Unit - 6);
+                Canvas.SetLeft(rightView.Dot, Plot / 2 + keys[2] * Unit - 6); Canvas.SetTop(rightView.Dot, Plot / 2 - keys[3] * Unit - 6);
+                leftView.Stats.Text = rightView.Stats.Text = "Keyboard preview · hardware error not measured";
+                ltView.Bar.Height = keys[4] * 150; rtView.Bar.Height = keys[5] * 150;
+                ltView.Stats.Text = $"{keys[4] * 100:0}% preview"; rtView.Stats.Text = $"{keys[5] * 100:0}% preview";
+            }
             foreach (var (_, mask) in Buttons)
             {
                 var b = presses[mask]; var (cell, count) = cells[mask];
@@ -237,7 +255,7 @@ public sealed class DiagnosticsWorkbench
         if (rest is { } at) { Canvas.SetLeft(view.Resting, Plot / 2 + at.X / 100 * Unit - 4); Canvas.SetTop(view.Resting, Plot / 2 - at.Y / 100 * Unit - 4); }
         var lines = new List<string>();
         double? round = stats.CircularityError;
-        lines.Add(round is { } e ? $"Roundness: {e:0.0}% off a circle{(e > 8 ? " (uneven edge)" : "")}" : $"Roundness: roll it around the edge ({stats.Covered * 100 / StickStats.Sectors}% done)");
+        lines.Add(round is { } e ? $"Circularity error: {e:0.0}% off a circle{(e > 8 ? " (uneven edge)" : "")}" : $"Roundness: roll it around the edge ({stats.Covered * 100 / StickStats.Sectors}% done)");
         if (rest is { } d)
         {
             double drift = Math.Sqrt(d.X * d.X + d.Y * d.Y);

@@ -223,7 +223,7 @@ public sealed class ProductHost : Grid
     }
     private void CompleteIntro()
     {
-        if(Intro!=null){Children.Remove(Intro);Intro=null;}Zone.Opacity=1;Zone.IsEnabled=true;if(updateText!=null)ShowUpdatePopup();
+        if(Intro!=null){Children.Remove(Intro);Intro=null;}Zone.Opacity=1;Zone.IsEnabled=true;if(updateText!=null)ShowUpdateNotice();
         if(preferencesHealthy)try{preferences.MarkIntroSeen();}catch(Exception error) when(error is IOException or InvalidOperationException){Zone.FeedbackText.Text="Startup preference could not be saved; original file preserved. "+error.Message;}
     }
     private void OpenSupport(){try{support(ProductLinks.Support);}catch(Exception error){Zone.FeedbackText.Text="Could not open your browser. Support X20CTL: "+ProductLinks.Support+" · "+error.Message;}}
@@ -240,43 +240,39 @@ public sealed class ProductHost : Grid
     public void OpenWriteScan()=>OpenWriteScan(null);
     public void OpenWriteScan(Scanner.ReadReport? read){if(WriteScan!=null)return;WriteScan=new(CloseWriteScan,read);Children.Add(WriteScan);Panel.SetZIndex(WriteScan,40);Fx.Appear(WriteScan,1.06,360);}
     public void CloseWriteScan(){if(WriteScan==null){RemoveOrphans();return;}if(!WriteScan.TryClose())return;var closing=WriteScan;WriteScan=null;closing.Shutdown();Fx.Leave(closing,()=>Children.Remove(closing),1.05,240);Settings?.WriteScan.Focus();}
-    private string? updateText;private bool updateShown;private Grid? updateLayer;
+    private string? updateText;private bool updateShown;
     private async Task CheckUpdatesAtLaunch(bool install)
     {
         await Task.Delay(4000);
         try{if(install)await Updater.AutoRun();else Updater.Ready=await Updater.Latest();}catch(Exception){return;}
         if(Updater.Ready is not {} release)return;
         updateText=Updater.Installed is {} installed?$"Version {installed} is installed. It starts the next time you open X20CTL.":$"{release.Title} is out. You have {Updater.Current}.";
-        if(Intro==null)ShowUpdatePopup();
+        if(Intro==null)ShowUpdateNotice();
     }
-    /// <summary>The one popup: shown after the intro, once, and only when a newer version exists.</summary>
-    private void ShowUpdatePopup()
+    /// <summary>Non-modal header notice, after the intro and only for a newer release.</summary>
+    private void ShowUpdateNotice()
     {
         if(updateShown||updateText==null||Updater.Ready is not {} release)return;updateShown=true;
-        var message=Kit.Text(updateText,15,"DS.Text");message.TextWrapping=TextWrapping.Wrap;message.MaxWidth=420;
-        var go=new Button{Style=DS.Style("DS.ActionPrimary"),Height=42,MinHeight=0,Padding=new(22,0,22,0),Margin=new(0,0,10,0),Content=Updater.Installed!=null?"OK":Updater.CanInstall?"Update now":"Get it on GitHub"};
-        var later=new Button{Style=DS.Style("DS.ActionSecondary"),Height=42,MinHeight=0,Padding=new(22,0,22,0),Content="Later"};
-        var card=new Border{CornerRadius=new(16),Padding=new(26),Background=new SolidColorBrush(Color.FromRgb(14,24,50)),BorderBrush=new SolidColorBrush(Color.FromArgb(120,125,182,255)),BorderThickness=new(1),HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,
-            Child=new StackPanel{Children={Kit.Text("New version",20,"DS.Text",FontWeights.SemiBold),new Border{Height=10},message,new Border{Height=20},new StackPanel{Orientation=Orientation.Horizontal,Children={go,later}}}}};
-        var layer=new Grid{Background=new SolidColorBrush(Color.FromArgb(150,2,6,18)),Children={card}};
-        updateLayer=layer;bool finished=Updater.Installed!=null;
-        void Close(){Children.Remove(layer);updateLayer=null;}
-        later.Click+=(_,_)=>Close();
+        var label=Kit.Text(Updater.Installed!=null ? "Update installed · restart to finish" : release.Title+" available  ↓",14,"DS.Text",FontWeights.SemiBold);
+        label.TextTrimming=TextTrimming.CharacterEllipsis;
+        var go=new Button { Style=DS.Style("DS.ActionSecondary"), MinHeight=38, Padding=new(18,6,18,6), Content=label, ToolTip=updateText };
+        var shine=new LinearGradientBrush(); shine.StartPoint=new(0,0); shine.EndPoint=new(0,1);
+        shine.GradientStops.Add(new(Color.FromArgb(105,174,218,255),0));
+        shine.GradientStops.Add(new(Color.FromArgb(55,63,125,201),.48));
+        shine.GradientStops.Add(new(Color.FromArgb(105,15,44,88),.5));
+        shine.GradientStops.Add(new(Color.FromArgb(95,47,103,174),1));
+        go.Background=Brushes.Transparent; go.BorderThickness=new(0);
+        var glass=new Border { CornerRadius=new(19), Background=shine, BorderThickness=new(1), BorderBrush=new SolidColorBrush(Color.FromArgb(140,163,209,255)), Child=go, MaxWidth=460 };
+        Zone.UpdateNotice.Content=glass;
         go.Click+=async(_,_)=>
         {
-            if(finished){Close();return;}
-            if(Updater.CanInstall)
-            {
-                layer.IsEnabled=false;go.IsEnabled=later.IsEnabled=false;go.Content="Updating";
-                try{var(_,text)=await Updater.Install(release);message.Text=text;}
-                catch(Exception error) when(error is System.Net.Http.HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException){message.Text="Couldn't update: "+error.Message;}
-                finally{finished=true;go.Content="OK";go.IsEnabled=later.IsEnabled=true;layer.IsEnabled=true;}
-                return;
-            }
-            try{if(!ReviewSandbox.Active)System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Updater.ReleasesPage){UseShellExecute=true});}catch(Exception){}
-            Close();
+            if(Updater.Installed!=null)return;
+            if(!Updater.CanInstall) { if(!ReviewSandbox.Active)System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Updater.ReleasesPage){UseShellExecute=true});return; }
+            go.IsEnabled=false;label.Text="Downloading update…";
+            try { var(_,text)=await Updater.Install(release); label.Text=text; }
+            catch(Exception error) when(error is System.Net.Http.HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException) { label.Text="Update failed · click to retry";go.ToolTip=error.Message; }
+            finally { go.IsEnabled=true; }
         };
-        Panel.SetZIndex(layer,35);Children.Add(layer);go.Focus();
     }
     public void CloseSettings(){if(Settings!=null){var leaving=Settings;Settings=null;Fx.Leave(leaving,()=>Children.Remove(leaving),1.03,220);}Zone.IsEnabled=true;}
     public void ResetTransientInput(){nativeArmed=false;Zone.SuspendNavigation();Studio?.Tester?.ClearKeyboardKeys();Studio?.ReleaseTransientInput();}
@@ -285,14 +281,6 @@ public sealed class ProductHost : Grid
     public void OnKeyDown(object sender, KeyEventArgs e)
     {
         var key=e.Key==Key.System?e.SystemKey:e.Key;
-        if(updateLayer!=null)
-        {
-            if(!updateLayer.IsEnabled){e.Handled=true;return;}
-            if(key is Key.Escape or Key.B && updateLayer.IsEnabled){var dismiss=updateLayer;Children.Remove(dismiss);updateLayer=null;}
-            else if(key is Key.A or Key.Enter && Keyboard.FocusedElement is Button choice && choice.IsEnabled){if(!e.IsRepeat)choice.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));}
-            else if(key is Key.Up or Key.Down or Key.Left or Key.Right && Keyboard.FocusedElement is UIElement focus)focus.MoveFocus(new(key is Key.Up or Key.Left?FocusNavigationDirection.Previous:FocusNavigationDirection.Next));
-            e.Handled=true;return;
-        }
         // the identity scan popup: Esc / B backs out, A / Enter presses the focused button, nothing behind it moves
         if(verifyLayer!=null){if(e.Key is Key.Escape or Key.B){verifyLayer.Children.OfType<ControllerVerifyView>().FirstOrDefault()?.RaiseCancel();}else if(e.Key is Key.A or Key.Enter&&Keyboard.FocusedElement is Button pressed&&!e.IsRepeat)pressed.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));e.Handled=true;return;}
         // the Controller Check is testing the controller: its presses are never navigation; the keyboard's Esc leaves
@@ -315,5 +303,5 @@ public sealed class ProductHost : Grid
         }
         if (Studio != null) Studio.OnKeyDown(sender, e); else Zone.OnKeyDown(sender, e);
     }
-    public void OnKeyUp(object sender, KeyEventArgs e) { if(updateLayer!=null||Intro!=null||Settings!=null||Check!=null||WriteScan!=null)return;if(Studio!=null)Studio.OnKeyUp(sender,e);else if (Selector == null) Zone.OnKeyUp(sender, e); }
+    public void OnKeyUp(object sender, KeyEventArgs e) { if(Intro!=null||Settings!=null||Check!=null||WriteScan!=null)return;if(Studio!=null)Studio.OnKeyUp(sender,e);else if (Selector == null) Zone.OnKeyUp(sender, e); }
 }

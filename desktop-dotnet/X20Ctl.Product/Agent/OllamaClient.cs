@@ -44,7 +44,7 @@ public sealed class OllamaClient : IAgentModel
         try
         {
             // an empty chat loads the model into memory and keeps it there, so the first real answer is quick
-            using var warm = await http.PostAsync("api/chat", Json(new JsonObject { ["model"] = Name, ["messages"] = new JsonArray(), ["keep_alive"] = "30m" }), cancel);
+            using var warm = await http.PostAsync("api/chat", Json(new JsonObject { ["model"] = Name, ["messages"] = new JsonArray(), ["keep_alive"] = "30m", ["options"] = new JsonObject { ["num_ctx"] = Context } }), cancel);
             warm.EnsureSuccessStatusCode();
         }
         catch (HttpRequestException) { report(ModelState.Failed, $"{Name} couldn't load"); return ModelState.Failed; }

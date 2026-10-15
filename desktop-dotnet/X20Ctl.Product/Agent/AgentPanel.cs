@@ -45,7 +45,7 @@ public sealed class AgentPanel
         public double Enough => Now.Enough;
         public async Task<IReadOnlyList<DocHit>> Search(string question, int count, CancellationToken cancel)
         {
-            if (Offline || fellBack) return await keywords.Value.Search(question, count, cancel);
+            if (Offline || fellBack || System.Text.RegularExpressions.Regex.IsMatch(question, @"^(please\s+)?(make|set|turn|switch|enable|disable|swap|remap|reset|give|put|measure)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return await keywords.Value.Search(question, count, cancel);
             try { return await meanings.Value.Search(question, count, cancel); }
             catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { fellBack = true; return await keywords.Value.Search(question, count, cancel); }
         }
@@ -669,7 +669,11 @@ public sealed class AgentPanel
         if (!demoChosen && !Offline && state != ModelState.Ready) { Bubble(sentence, mine: true); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); _ = Lights(AgentMood.Failed); return null; }
         busy = true; settle.Stop(); Searching(true); ShowState(); Thinking?.Invoke(true); Circling(true);
         Bubble(sentence, mine: true);
-        var thinking = Bubble("…", mine: false);
+        var thinking = Bubble("Working on your request…", mine: false);
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+        var waitTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        waitTimer.Tick += (_, _) => { if (thinking.Child is TextBlock label) label.Text = $"Working on your request · {elapsed.Elapsed.TotalSeconds:0}s"; };
+        waitTimer.Start();
         var before = Current;
         AgentMood? mood = null;
         try
@@ -685,8 +689,13 @@ public sealed class AgentPanel
                 try { Store(next); if (!demoChosen) Applied(); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
-                if (!demoChosen && Walkthrough != null) await Walkthrough(before, next, turn.Measured);
                 Say(turn, before, switched: switched, mouse: mouse); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
+                if (!demoChosen && Walkthrough != null)
+                {
+                    var tourButton = Small("Show change");
+                    tourButton.Click += async (_, _) => { if (busy) return; tourButton.IsEnabled = false; try { await Walkthrough(before, next, turn.Measured); } finally { tourButton.IsEnabled = true; } };
+                    if (transcript.Children.OfType<Border>().LastOrDefault()?.Child is StackPanel answer) answer.Children.Add(tourButton);
+                }
             }
             else { Say(turn, null, switched: switched, mouse: mouse); if (switched != null) ShowSettings(new HashSet<string>()); }
             Circling(false);
@@ -702,7 +711,7 @@ public sealed class AgentPanel
             Say(error is TaskCanceledException ? AgentCharacter.Dozed : "My brain isn't answering: " + error.Message, null);
             mood = AgentMood.Failed; return null;
         }
-        finally { busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
+        finally { waitTimer.Stop(); busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
     }
 
     // ---- the drift reading: a countdown while the sticks are read ----
@@ -802,36 +811,7 @@ public sealed class AgentPanel
             : turn.Outcome.Error != null ? "Rejected · " + turn.Outcome.Error : "No changes");
         stack.Children.Add(Wrap(verdict, 14, failure != null || !v.Valid || turn.Outcome.Error != null ? "DS.Danger" : turn.Outcome.Changes.Count > 0 ? "DS.Success" : "DS.TextMuted", 10).Also(t => t.FontWeight = FontWeights.SemiBold));
 
-        var details = new StackPanel { Visibility = Visibility.Collapsed, Margin = new(0, 10, 0, 0) };
-        details.Children.Add(Kit.Text("VALIDATION", 12, "DS.TextMuted", FontWeights.SemiBold));
-        if (v.StructureError != null) details.Children.Add(Wrap("✕ " + v.StructureError, 13.5, "DS.Danger", 4));
-        foreach (var c in v.Checks)
-            details.Children.Add(Wrap($"{(c.State == CheckState.Ok ? "✓" : c.State == CheckState.Rejected ? "✕" : "–")} {c.Action.Action} · {c.Action.Target} · {c.Action.ValueText} — {c.Message}", 13.5, c.State == CheckState.Ok ? "DS.TextSoft" : c.State == CheckState.Rejected ? "DS.Danger" : "DS.Warn", 4));
-        if (v.StructureError == null && v.Checks.Count == 0) details.Children.Add(Wrap("No actions proposed.", 13.5, "DS.TextSoft", 4));
-        foreach (var a in v.Proposal?.Assumptions ?? []) details.Children.Add(Wrap("Assumed: " + a, 13.5, "DS.TextSoft", 4));
-        for (int i = 0; i < turn.Attempts.Count; i++)
-        {
-            details.Children.Add(Kit.Text(demoChosen ? "CANNED OUTPUT" : turn.Resolver.Length > 0 ? "APP CLARIFICATION" : turn.Attempts.Count > 1 ? $"MODEL OUTPUT · ATTEMPT {i + 1}" : "MODEL OUTPUT", 12, "DS.TextMuted", FontWeights.SemiBold).Also(t => t.Margin = new(0, 10, 0, 4)));
-            details.Children.Add(new TextBox { Text = turn.Attempts[i].Content, IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, MaxHeight = 220, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new(10) });
-        }
-
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 10, 0, 0) };
-        actions.Children.Add(Kit.Text(demoChosen ? "Canned reply · no model metrics" : AgentSession.Stats(turn), 13, "DS.TextMuted").Also(t => t.Margin = new(0, 0, 14, 0)));
-        var more = Small("Details"); more.Click += (_, _) => { bool show = details.Visibility != Visibility.Visible; details.Visibility = show ? Visibility.Visible : Visibility.Collapsed; ((TextBlock)more.Content).Text = show ? "Hide details" : "Details"; };
-        actions.Children.Add(more);
-        if (undo != null)
-        {
-            bool demoUndo = demoChosen;
-            var back = Small("Undo"); back.Margin = new(8, 0, 0, 0);
-            back.Click += (_, _) =>
-            {
-                if (busy || demoUndo != demoChosen) return;
-                try { var now = Current; Store(undo); back.IsEnabled = false; ((TextBlock)back.Content).Text = "Undone"; ShowSettings(AgentApplier.Diff(now, undo).Select(c => c.What).ToHashSet()); }
-                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { ((TextBlock)back.Content).Text = "Couldn't undo"; }
-            };
-            actions.Children.Add(back);
-        }
-        stack.Children.Add(actions); stack.Children.Add(details);
+        stack.Children.Add(Kit.Text(demoChosen ? "Canned reply · no model metrics" : AgentSession.Stats(turn), 12, "DS.TextMuted").Also(t => t.Margin = new(0, 8, 0, 0)));
         var bubble = Bubble("", false); bubble.Child = stack; scroller.ScrollToEnd();
     }
 

@@ -26,7 +26,7 @@ public partial class StudioScene : UserControl
     public DeviceWorkbench? Device {get;private set;}
     public TesterWorkbench? Tester {get;private set;}
     public SetupsWorkbench? Setups {get;private set;}
-    public InputOwner InputContext=>ManagementPage is "Tester" or "Diagnostics"?InputOwner.TesterCapture:InputOwner.UiNavigation;
+    public InputOwner InputContext=>(tryLayer != null || ManagementPage is "Tester" or "Diagnostics")?InputOwner.TesterCapture:InputOwner.UiNavigation;
     /// <summary>The Diagnostics tab, built on first open; it only listens while shown.</summary>
     public Diagnostics.DiagnosticsWorkbench? Diagnostics { get; private set; }
     /// <summary>Controller as mouse: the service lives in the host; the tab is built on first open.</summary>
@@ -62,7 +62,7 @@ public partial class StudioScene : UserControl
     {
         InitializeComponent(); Player = player; Model = model; Draft = draft;
         setupStore=setups??new(Path.Combine(Path.GetTempPath(),"x20ctl-render-setup-"+Guid.NewGuid().ToString("N")+".json"));legacySources=legacy??Array.Empty<string>();activeSetup=activeId;
-        Unloaded+=(_,_)=>{Tester?.ExitCapture();Diagnostics?.Stop();};
+        Unloaded+=(_,_)=>{StopTry();Tester?.ExitCapture();Diagnostics?.Stop();};
         macroDraft=macros ?? new MacroDraft(model.Id);vibrationDraft=vibration??new(model.Id);
         animate = !reducedMotion && SystemParameters.ClientAreaAnimation;
         ControllerContext.Text = $"{model.Name} · Player {player + 1}";
@@ -665,6 +665,8 @@ public partial class StudioScene : UserControl
 
     // ---- Buttons-page "Try it": keyboard-driven preview of the real stick caps and triggers ----
     private KeyboardSimulation? trial;
+    private Grid? tryLayer;
+    private Diagnostics.DiagnosticsWorkbench? tryDiagnostics;
     public bool IsTrying => trial?.Enabled == true;
     private bool OnButtonsPage => ManagementPage == null && !IsCurves && !IsMacros && !IsVibration;
     private static bool IsOnboardFunction(string key) => key is "CAPTURE" or "TURBO";
@@ -672,13 +674,24 @@ public partial class StudioScene : UserControl
     public void StartTry()
     {
         if (!OnButtonsPage) return;
-        trial = new KeyboardSimulation(Model.Id); trial.Enable(); buttonsPage?.SetTrying(true); UpdateHints();
+        tryDiagnostics = new Diagnostics.DiagnosticsWorkbench(Player, _ => {}, compact: true);
+        var close = new Button { Content = "Close test", Style = DS.Style("DS.ActionSecondary"), HorizontalAlignment = HorizontalAlignment.Right, Margin = new(16) };
+        close.Click += (_, _) => StopTry();
+        var content = new Grid(); content.RowDefinitions.Add(new() { Height = GridLength.Auto }); content.RowDefinitions.Add(new());
+        var heading = new DockPanel(); DockPanel.SetDock(close, Dock.Right); heading.Children.Add(close);
+        heading.Children.Add(new StackPanel { Margin = new(24,16,0,8), Children = { Kit.Text("Try your controller", 24, "DS.Text", FontWeights.SemiBold), Kit.Text("Roll both sticks around their edge · error measures deviation from a circle, not measurement uncertainty", 13, "DS.TextSoft") } });
+        content.Children.Add(heading); Grid.SetRow(tryDiagnostics.Body, 1); content.Children.Add(tryDiagnostics.Body);
+        tryLayer = new Grid { Background = new SolidColorBrush(Color.FromArgb(210, 3, 6, 16)), Children = { new Border { Background = new SolidColorBrush(Color.FromRgb(10,18,38)), BorderBrush = DS.Brush("DS.AccentHi"), BorderThickness = new(1), CornerRadius = new(22), Margin = new(40,100,40,110), Child = content } } };
+        StudioShell.Children.Add(tryLayer); Panel.SetZIndex(tryLayer, 48); tryDiagnostics.Start(); InputContextChanged?.Invoke();
+        trial = new KeyboardSimulation(Model.Id); trial.Enable(); PushTrialFrame(); buttonsPage?.SetTrying(true); UpdateHints();
         TryChoice.Content = "Stop"; TryChoice.Background = (Brush)FindResource("Blue");
         TryHint.Visibility = Visibility.Visible; HardwareShortcuts.Visibility = Visibility.Collapsed;
         StatusNote.Text = "Keyboard preview · No controller output";
     }
     public void StopTry()
     {
+        tryDiagnostics?.Stop(); tryDiagnostics = null;
+        if (tryLayer != null) { StudioShell.Children.Remove(tryLayer); tryLayer = null; InputContextChanged?.Invoke(); }
         if (trial == null) return;
         trial.Disable(); trial = null; ActiveLive.Release(); buttonsPage?.SetTrying(false); UpdateHints(); IlluminatePressed(0, 0);
         TryChoice.Content = "Try it"; TryChoice.ClearValue(BackgroundProperty);
@@ -692,6 +705,7 @@ public partial class StudioScene : UserControl
     {
         if (trial == null) return; var f = trial.Frame();
         ActiveLive.SetInput(f.LeftX, f.LeftY, f.RightX, f.RightY, f.LT, f.RT); IlluminatePressed(f.LT, f.RT);
+        tryDiagnostics?.PreviewKeyboard(f.LeftX, f.LeftY, f.RightX, f.RightY, f.LT, f.RT);
     }
     private void IlluminatePressed(double lt, double rt)
     {
