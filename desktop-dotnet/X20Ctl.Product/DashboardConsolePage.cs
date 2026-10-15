@@ -51,14 +51,14 @@ public sealed class DashboardConsolePage : Grid
     private readonly List<(Border art, TextBlock title)> covers = new();
     private double coverHeight = FullCover;
     // tuned for the fixed 1600 x 900 design: hero 250, featured 168, a shelf of 190-pixel square games
-    private const double FullCover = 190, FullFeatured = 168, FullTop = 250;
+    private const double FullCover = 190, FullFeatured = 168, FullTop = 400;
 
     public DashboardConsolePage(ControllerModel model, int player, int draftChanges, int savedSetups, bool reducedMotion)
     {
         animate = !reducedMotion && DS.Motion;
         ClipToBounds = true; // in a short window nothing may spill under the Studio footer
         RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star), MinHeight = FullTop }); RowDefinitions.Add(new() { Height = new(12) });
-        RowDefinitions.Add(new() { Height = new(FullFeatured) }); RowDefinitions.Add(new() { Height = new(12) }); RowDefinitions.Add(new() { Height = GridLength.Auto });
+        RowDefinitions.Add(new() { Height = new(FullFeatured) }); RowDefinitions.Add(new() { Height = new(12) }); RowDefinitions.Add(new() { Height = new(FullCover + 64) });
 
         // ---- top: controller hero (left) + status block (right) ----
         var top = new Grid(); top.ColumnDefinitions.Add(new() { Width = new(.95, GridUnitType.Star) }); top.ColumnDefinitions.Add(new() { Width = new(1.05, GridUnitType.Star) }); Children.Add(top);
@@ -72,16 +72,14 @@ public sealed class DashboardConsolePage : Grid
         // the same framed panel the Buttons page puts its controller in (owner request, 13 Oct 2026)
         // the agent's invitation in the hero's empty top-right corner (owner request, 14 Oct 2026)
         var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 14); invite.HorizontalAlignment = HorizontalAlignment.Left; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 10, 10, 0);
-        var heroContent = new Grid();
-        heroContent.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
-        heroContent.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        invite.Margin = new(-22, 16, 12, 0);
-        Grid.SetColumn(invite, 1);
-        heroContent.Children.Add(heroButton); heroContent.Children.Add(invite);
-        var heroPanel = Kit.Panel(null, null, null, heroContent, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
+        var heroPanel = Kit.Panel(null, null, null, heroButton, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
         top.Children.Add(heroPanel);
+        // One square art panel. The neighbouring help card cannot cover the controller.
+        top.SizeChanged += (_, e) => top.ColumnDefinitions[0].Width = new(Math.Min(e.NewSize.Height, e.NewSize.Width * .55) + 14);
 
         var status = new StackPanel { Width = 560 };
+        invite.Margin = new(0, 0, 0, 14);
+        status.Children.Add(invite);
         status.Children.Add(connectionChip);
         status.Children.Add(new TextBlock { Text = "Ready to play", Style = DS.Style("DS.Display"), FontWeight = FontWeights.Light, FontSize = 48, Margin = new(0, 10, 0, 8) });
         var pill = new Border { CornerRadius = new(17), Height = 34, Padding = new(14, 0, 16, 0), Background = new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left,
@@ -94,7 +92,7 @@ public sealed class DashboardConsolePage : Grid
         tiles.Children.Add(new StatTile("", savedSetups.ToString(), "Setups") { Margin = new(0, 0, 12, 0) });
         status.Children.Add(tiles);
         // the status block keeps its proportions and scales down when the window is short or narrow, rather than being cut off
-        var statusBox = new Viewbox { Child = status, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new(30, 6, 0, 6) };
+        var statusBox = new Viewbox { Child = status, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new(6, 6, 0, 6) };
         Grid.SetColumn(statusBox, 1); top.Children.Add(statusBox);
 
         // ---- middle: featured game banner ----
@@ -132,8 +130,10 @@ public sealed class DashboardConsolePage : Grid
         double deficit = Math.Max(0, FullTop + 12 + FullFeatured + 12 + Shelf(FullCover) - height);
         double featured = FullFeatured - Math.Min(76, deficit); deficit -= FullFeatured - featured;
         double cover = FullCover - Math.Min(88, deficit); deficit -= FullCover - cover;
-        double top = FullTop - Math.Min(100, deficit);
+        double top = Math.Max(120, height - featured - Shelf(cover) - 24);
         RowDefinitions[0].MinHeight = top; RowDefinitions[2].Height = new(featured);
+        // The asynchronous game scan must never resize the controller's destination after its flight.
+        RowDefinitions[4].Height = new(Shelf(cover));
         if (Math.Abs(cover - coverHeight) > .5) { coverHeight = cover; foreach (var (art, title) in covers) SizeCover(art, title); }
     }
     private void SizeCover(Border art, TextBlock title)
