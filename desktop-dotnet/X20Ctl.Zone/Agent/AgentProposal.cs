@@ -24,13 +24,8 @@ public static class AgentVocabulary
     public const int MaxTriggerDeadzone = 40, MinTriggerFullAt = 10, MaxActions = 8;
 
     /// <summary>The rear paddles a model has, from x20ctl/controllers/catalog.json (macroSlots).</summary>
-    public static string[] Paddles(string modelId) => modelId switch
-    {
-        "x20_pro" => AllPaddles,
-        "x20" or "dune" => AllPaddles[..4],
-        "x05_pro" or "x10" or "d10" or "x15" => AllPaddles[..2],
-        _ => [],
-    };
+    public static string[] Paddles(string modelId) => MacroDraft.PhysicalSlotsFor(modelId);
+
 }
 
 public sealed record AgentAction(string Action, string Target, JsonElement Value, string Reason)

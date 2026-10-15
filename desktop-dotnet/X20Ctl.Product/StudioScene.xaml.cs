@@ -783,8 +783,8 @@ public partial class StudioScene : UserControl
                 var all = Enum.GetValues<CurveChannel>(); int i = Array.IndexOf(all, Curves.Channel);
                 Curves.SelectChannel(all[(i + step + all.Length) % all.Length]); return true;
             case "Macros":
-                if (Macros == null) return false; int s = Array.IndexOf(MacroDraft.Slots, Macros.Slot);
-                Macros.SelectSlot(MacroDraft.Slots[(s + step + MacroDraft.Slots.Length) % MacroDraft.Slots.Length]); return true;
+                if (Macros == null) return false; int s = Array.IndexOf(macroDraft.SlotNames, Macros.Slot);
+                Macros.SelectSlot(macroDraft.SlotNames[(s + step + macroDraft.SlotNames.Length) % macroDraft.SlotNames.Length]); return true;
             case "Vibration": if (Vibration == null || !vibrationDraft.CanEdit) return false; Vibration.Set(Math.Clamp(vibrationDraft.Strength + step * 5, 0, 100)); return true;
             default: return false;
         }
@@ -810,7 +810,7 @@ public partial class StudioScene : UserControl
     /// <summary>Rear paddles are programmable macro slots, not independent buttons: open the slot in Macros.</summary>
     private bool OpenMacroSlot(string key)
     {
-        if (!MacroDraft.Slots.Contains(key)) return false;
+        if (!macroDraft.SlotNames.Contains(key)) return false;
         StopTry(); ShowMacros(true); Macros?.SelectSlot(key); return Macros != null;
     }
     private void DeviceTab(object sender,RoutedEventArgs e)=>ShowManagement("Device");private void TesterTab(object sender,RoutedEventArgs e)=>ShowManagement("Tester");private void DiagnosticsTab(object sender,RoutedEventArgs e)=>ShowManagement("Diagnostics");private void MouseTab(object sender,RoutedEventArgs e)=>ShowManagement("Mouse");private void SetupsTab(object sender,RoutedEventArgs e)=>ShowManagement("Setups");

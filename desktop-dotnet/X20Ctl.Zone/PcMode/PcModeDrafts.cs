@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 namespace X20Ctl.Zone.PcMode;
 
 /// <summary>
@@ -23,13 +23,13 @@ public static class PcModeDrafts
             else curves.Reset(channel);
         }
 
-        foreach (var slot in MacroDraft.Slots) { macros.Clear(slot); macros.SetTrigger(slot, null); }
+        foreach (var slot in macros.SlotNames) { macros.Clear(slot); macros.SetTrigger(slot, null); }
         int next = 0;
         foreach (var (trigger, steps) in p.Macros)
         {
-            if (next >= MacroDraft.Slots.Length) break;
+            if (next >= macros.SlotNames.Length) break;
             if (!MacroDraft.TriggerInputs.Contains(trigger)) continue;
-            string slot = MacroDraft.Slots[next++];
+            string slot = macros.SlotNames[next++];
             macros.SetTrigger(slot, trigger);
             foreach (var s in steps)
             {
@@ -65,7 +65,7 @@ public static class PcModeDrafts
         }
 
         p.Macros = new();
-        foreach (var slot in MacroDraft.Slots)
+        foreach (var slot in macros.SlotNames)
             if (macros.Trigger(slot) is { } trigger && macros[slot].Count > 0)
                 p.Macros[trigger] = macros[slot].Select(e => new SetupMacro(e.Id, e.Buttons.ToArray(), e.Left, e.Right, Math.Min(e.HoldMs, 10000), Math.Min(e.PauseMs, 10000))).ToArray();
         return p;
