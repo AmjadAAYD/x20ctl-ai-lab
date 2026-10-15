@@ -1,3 +1,4 @@
+using System.Windows.Media.Animation;
 ﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -138,12 +139,44 @@ public sealed class ProductHost : Grid
         Studio.NativeEngineStatus=NativeEngineStatus;
         Studio.InputContextChanged+=()=>_=UpdateNativeContext();
         if(Engine!=null)_=RefreshNativeCapabilities(model.Id);
-        // fwoosh into the Studio: it zooms in over the Zone, which sinks back, and only then is the Zone put away
-        Children.Add(Studio); var entering = Studio;
-        Fx.Appear(Studio, 1.07, 380, () => { if (Studio == entering) Zone.Visibility = Visibility.Collapsed; });
-        if (SystemParameters.ClientAreaAnimation) Fx.Leave(Zone, () => { Zone.BeginAnimation(OpacityProperty, null); Zone.Opacity = 1; Zone.IsHitTestVisible = true; if (Studio != null) Zone.Visibility = Visibility.Collapsed; Zone.RenderTransform = null; }, .94, 380);
-        else Zone.Visibility = Visibility.Collapsed;
+        // Carry the selected controller into its Dashboard rather than replacing one screen with a zoom.
+        Rect source=Rect.Empty;
+        if (Zone.Visibility==Visibility.Visible && player<Zone.Docks.Count)
+        {
+            var art=Zone.Docks[player].ControllerArtwork;
+            if(art.ActualWidth>0 && art.ActualHeight>0) source=art.TransformToAncestor(this).TransformBounds(new Rect(art.RenderSize));
+        }
+        Children.Add(Studio); var entering=Studio;
+        if (Zone.ReducedMotion || !DS.Motion) { Zone.Visibility=Visibility.Collapsed; return; }
+        entering.Opacity=0; entering.IsHitTestVisible=false; Zone.IsHitTestVisible=false;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded,new Action(()=>EnterWithController(entering,model,source)));
     }
+    private void EnterWithController(StudioScene entering, ControllerModel model, Rect source)
+    {
+        if(Studio!=entering)return;
+        var hero=entering.Dashboard?.ControllerArtwork;
+        if(hero==null || source.IsEmpty || hero.ActualWidth<=0)
+        {
+            entering.IsHitTestVisible=true;Fx.Appear(entering,1.025,420,()=>{if(Studio==entering)Zone.Visibility=Visibility.Collapsed;});return;
+        }
+        var destination=hero.TransformToAncestor(this).TransformBounds(new Rect(hero.RenderSize));
+        if(destination.Width<1 || destination.Height<1){entering.Opacity=1;entering.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;return;}
+        var flight=new Viewbox { Width=source.Width,Height=source.Height,Child=new PhotoController(model.Id),IsHitTestVisible=false };
+        var layer=new Canvas { IsHitTestVisible=false };layer.Children.Add(flight);Children.Add(layer);Panel.SetZIndex(layer,37);
+        Canvas.SetLeft(flight,source.Left);Canvas.SetTop(flight,source.Top);hero.Opacity=0;
+        var origin=Zone.Docks[entering.Player].ControllerArtwork; origin.Opacity=0;
+        var ease=new QuinticEase { EasingMode=EasingMode.EaseInOut };var duration=TimeSpan.FromMilliseconds(680);
+        flight.BeginAnimation(Canvas.LeftProperty,new DoubleAnimation(source.Left,destination.Left,duration){EasingFunction=ease});
+        flight.BeginAnimation(Canvas.TopProperty,new DoubleAnimation(source.Top,destination.Top,duration){EasingFunction=ease});
+        flight.BeginAnimation(WidthProperty,new DoubleAnimation(source.Width,destination.Width,duration){EasingFunction=ease});
+        var arrive=new DoubleAnimation(source.Height,destination.Height,duration){EasingFunction=ease};
+        arrive.Completed+=(_,_)=>{Children.Remove(layer);origin.Opacity=1;hero.Opacity=1;entering.IsHitTestVisible=true;if(Studio==entering){Zone.Visibility=Visibility.Collapsed;Zone.Opacity=1;}};
+        flight.BeginAnimation(HeightProperty,arrive);
+        var fade=new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(420)){BeginTime=TimeSpan.FromMilliseconds(110),EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}};
+        entering.BeginAnimation(OpacityProperty,fade);
+        Zone.BeginAnimation(OpacityProperty,new DoubleAnimation(1,0,TimeSpan.FromMilliseconds(360)));
+    }
+
     public void ReturnToZone()
     {
         bool back = Studio != null;

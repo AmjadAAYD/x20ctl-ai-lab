@@ -26,6 +26,16 @@ public static class AgentHelp
         new("You're used to a Nintendo layout", "Swap A and B"),
         new("Your settings do nothing in games", "Turn on PC mode"),
         new("You changed too much and want to start over", "Reset everything"),
+        new("You want a custom response rather than a preset", "Set right stick curve points to 30,24,75,68"),
+        new("Turning reaches too much speed", "Set right stick maximum output to 90"),
+        new("Vertical movement needs a different speed", "Set right stick axis ratio to 85"),
+        new("You want to control the mouse pointer", "Turn mouse mode on"),
+        new("You want to check stick range and roundness", "Open Diagnostics"),
+        new("You want default responses without changing buttons", "Reset curves"),
+        new("Your controller is not detected", "My controller is not detected"),
+        new("The game sees two controllers", "Why do I get double input?"),
+        new("You want to understand offline mode", "Does offline mode need internet?"),
+        new("You need to build a timed combo", "How do I create a macro?"),
         new("You want to know what a setting does", "What's good and bad about hair triggers?"),
     ];
 

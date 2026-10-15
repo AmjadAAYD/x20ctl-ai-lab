@@ -34,7 +34,7 @@ public sealed record OfflinePlan(IReadOnlyList<(string Action, string Target, ob
 /// written ahead of time by Qwen from the hand-written examples here (--agent-phrasebook), is matched against the
 /// sentence by TF-IDF cosine similarity over words and word pairs, after the sticks, buttons, paddles and numbers are
 /// lifted out as slots. The closest example's intent builds the reply in the same JSON the model writes, so the
-/// validator, the drift reading, the walk-through and Undo work exactly as they do online. It answers in milliseconds,
+/// validator, the drift reading and the walk-through work exactly as they do online. It answers in milliseconds,
 /// says plainly when it didn't understand, and never invents a setting.
 /// </summary>
 public sealed class OfflineAgent : IAgentModel
@@ -61,6 +61,7 @@ public sealed class OfflineAgent : IAgentModel
             var request = messages.Take(messages.Count - 1).LastOrDefault(m => m.Role == "user");
             if (request != null) sentence = request.Content + " " + sentence;
         }
+        sentence = OfflineSupport.FollowUp(messages, sentence);
         var plan = Answer(sentence);
         if (Regex.IsMatch(sentence, @"\b(slightly|tiny|a (little|bit))\b", RegexOptions.IgnoreCase)
             && !Regex.IsMatch(sentence, @"\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+")
@@ -106,6 +107,8 @@ public sealed class OfflineAgent : IAgentModel
             string why = Regex.Match(sentence, @"nothing changed: (.*?) Answer again", RegexOptions.Singleline) is { Success: true } m ? m.Groups[1].Value : "";
             return OfflinePlan.Say("I can't do that, so I changed nothing. " + why.Trim());
         }
+        sentence = OfflineSupport.Normalize(sentence);
+        if (OfflineSupport.Explain(sentence) is { } explanation) return explanation;
         sentence = AgentSpelling.Fix(sentence);
         string lower = sentence.ToLowerInvariant();
         if (IsQuestion(lower)) return AgentCharacter.OffTopic(sentence) is { } unrelated ? OfflinePlan.Say(AgentCharacter.Silly(unrelated)) : Question(lower);
@@ -118,6 +121,15 @@ public sealed class OfflineAgent : IAgentModel
             var targets = trigger ? slots.Triggers.Count > 0 ? slots.Triggers : AgentVocabulary.Triggers.ToList() : stickTargets;
             return Plan(slots, targets.Select(t => (trigger ? AgentVocabulary.TriggerCurvePoints : AgentVocabulary.StickCurvePoints, t, (object)pointText.Value)).ToArray());
         }
+        var clauses = Regex.Split(sentence, @"\s+(?:and(?: then)?|also|then)\s+(?=(?:set|make|turn|switch|enable|disable|remap|swap|reset)\b)", RegexOptions.IgnoreCase);
+        if (clauses.Length > 1)
+        {
+            var plans = clauses.Select(Answer).ToList();
+            if (plans.All(p => p.Actions.Count > 0 && p.Question.Length == 0)) return Merge(plans);
+            return new([],"I need the missing detail before combining those requests.","Try one complete command per setting.",[]) { Question = plans.FirstOrDefault(p => p.Question.Length > 0)?.Question ?? "Which control and value should each change use?" };
+        }
+        if (slots.Numbers.Count > 1 && slots.Sticks.Count + slots.Triggers.Count + slots.Buttons.Count > 1)
+            return new([],"Those controls have multiple values, so I won't guess which goes where.","",[]) { Question="Please name each setting and value, for example: set left stick dead zone to 5 and set right stick dead zone to 8." };
         if (Regex.IsMatch(lower, @"\b(max(?:imum)? output|cap|limit)\b") && lower.Contains("output"))
             return slots.Numbers.Count > 0 ? Plan(slots, stickTargets.Select(t => (AgentVocabulary.StickMaxOutput, t, (object)slots.Numbers[0])).ToArray()) : OfflinePlan.Say("What maximum output percentage should I use?");
         if (Regex.IsMatch(lower, @"\b(vertical|axis)\b.*\bratio\b"))
@@ -152,7 +164,7 @@ public sealed class OfflineAgent : IAgentModel
                 return Merge(found.Select(f => f.Hit.Intent!.Build(Slots(f.Part))).ToList());
         }
         var (intent, _) = Classify(sentence);
-        return intent == null ? NotUnderstood() : intent.Build(Slots(sentence));
+        return intent == null ? NotUnderstood(sentence) : intent.Build(Slots(sentence));
     }
 
     static string Sentences(string text, int count) => string.Join(" ", Regex.Split(text.Trim(), @"(?<=[.!?])\s+").Take(count));
@@ -177,7 +189,13 @@ public sealed class OfflineAgent : IAgentModel
     public static bool IsQuestion(string lower) =>
         Regex.IsMatch(lower, @"^\s*(what|why|explain|tell me about|is it|does|do i need|should i|which)\b|^\s*how (does|do|is|would)\b(?!.*\b(make|set|change|get|fix|turn)\b)");
 
-    static OfflinePlan NotUnderstood() => OfflinePlan.Say(AgentCharacter.NotUnderstood + " Offline I understand things like \"make my sticks smooth\", \"hair triggers\", \"turbo on X at 12\", \"swap A and B\", \"my right stick drifts\" or \"turn PC mode on\".");
+    static OfflinePlan NotUnderstood(string sentence = "")
+    {
+        var suggestions = AgentIdeas.Search(sentence,3);
+        string examples = suggestions.Count > 0 ? "Try: " + string.Join(" · ",suggestions.Select(s => "\"" + s.Say + "\""))
+            : "Try \"make my sticks smooth\", \"hair triggers\" or \"turbo on X at 12\".";
+        return OfflinePlan.Say(AgentCharacter.NotUnderstood + " " + examples, "Say HELP for situations and example commands. Nothing was changed.");
+    }
 
     static OfflinePlan Merge(IReadOnlyList<OfflinePlan> plans) => new(
         plans.SelectMany(p => p.Actions).GroupBy(a => (a.Action, a.Target)).Select(g => g.Last()).ToList(),
@@ -194,7 +212,7 @@ public sealed class OfflineAgent : IAgentModel
         (@"\bstart button\b|\bmenu button\b|\bstart\b(?! over| again)|\bmenu\b", "START"), (@"\b(select|view button|back button|share button)\b", "SELECT"),
         (@"\b(home|guide|xbox) button\b", "HOME"),
         // a single letter: B, X and Y as written; "a" only where it can't be the article
-        (@"(?<![\w'])[bxy](?![\w'])", ""), (@"(?<![\w'])a(?= button\b)|(?<=\b(?:swap|on|to|as|onto|with|and|press)\s)a(?=\s*(?:$|[,.?!]|\band\b|\bbutton\b|\bwith\b|\bto\b|\bat\b|\d))", "A"),
+        (@"(?<![\w'])[bxy](?![\w'])", ""), (@"(?<![\w'])a(?= button\b)|(?<=\b(?:swap|remap|map|replace|make|on|to|as|onto|with|and|press|like)\s)a(?=\s*(?:$|[,.?!]|\band\b|\bbutton\b|\bwith\b|\bto\b|\bonto\b|\bsend\b|\bact\b|\bat\b|\d))", "A"),
     ];
 
     public static OfflineSlots Slots(string sentence)
@@ -222,7 +240,7 @@ public sealed class OfflineAgent : IAgentModel
         s.Buttons.AddRange(buttons.OrderBy(b => b.At).Select(b => b.Button).Distinct());
 
         foreach (Match m in Regex.Matches(text, @"(?:\b(?:m|p|paddle\s*|back paddle\s*))([1-6])\b")) s.Paddles.Add("M" + m.Groups[1].Value);
-        foreach (Match m in Regex.Matches(text, @"(?<![a-z\d.])(\d+(?:\.\d+)?)(?![\d])")) s.Numbers.Add(double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture));
+        foreach (Match m in Regex.Matches(text, @"(?<![a-z\d.])(-?\d+(?:\.\d+)?)(?![\d])")) s.Numbers.Add(double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture));
         s.Preset = Regex.Match(text, @"\b(smooth|smoother|quick|quicker|fast|faster|responsive|snappy|slow|slower|precise|precision|fine|default|normal|linear)\b") is { Success: true } p
             ? p.Value switch { "smooth" or "smoother" => "smooth", "quick" or "quicker" or "fast" or "faster" or "responsive" or "snappy" => "quick", "slow" or "slower" or "precise" or "precision" => "slow", "fine" => "fine", _ => "default" } : null;
         return s;

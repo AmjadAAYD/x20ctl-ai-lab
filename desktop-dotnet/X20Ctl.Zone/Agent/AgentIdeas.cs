@@ -20,7 +20,7 @@ public static class AgentIdeas
     {
         var offline = new OfflineAgent();
         var ideas = new List<AgentIdea>();
-        foreach (var s in AgentHelp.Situations) ideas.Add(new(s.Have, s.Say, offline.Classify(s.Say).Intent?.Id ?? ""));
+        foreach (var s in AgentHelp.Situations) ideas.Add(new(s.Have, s.Say, OfflineSupport.Explain(s.Say) != null ? "help_explain" : offline.Classify(s.Say).Intent?.Id ?? "help_explain"));
         foreach (var intent in OfflineAgent.Intents)
             if (intent.Id != "greeting" && ideas.All(i => i.Intent != intent.Id) && intent.Seeds.Length > 0)
                 ideas.Add(new(char.ToUpperInvariant(intent.Meaning[0]) + intent.Meaning[1..], intent.Seeds[0], intent.Id));

@@ -94,7 +94,11 @@
     "Yo what's up",
     "Gimme a greeting",
     "Hello world",
-    "Hi there"
+    "Hi there",
+    "Hello Agent XCTL",
+    "What commands do you support",
+    "Show me how to get started",
+    "Tell me what controller settings you handle"
   ],
   "paddle_set": [
     "Jump on M1 please",
@@ -300,7 +304,11 @@
     "Turn down PC mode usage",
     "Stop routing through PC mode",
     "Disable PC pass-through now",
-    "End the PC session instantly"
+    "End the PC session instantly",
+    "Stop the PC mode virtual output",
+    "Disable PC mode for now",
+    "Turn PC mode off again",
+    "Leave PC mode disabled"
   ],
   "pc_mode_on": [
     "Switch to PC mode please",
@@ -422,7 +430,11 @@
     "Switch controller to PC right now",
     "Make PC mode the current state",
     "Turn on PC for game configs",
-    "Enable PC profile for my games"
+    "Enable PC profile for my games",
+    "Apply these changes on this PC through PC mode",
+    "Enable the virtual controller using PC mode",
+    "My settings should affect games with PC mode",
+    "Switch on PC mode for these settings"
   ],
   "remap_swap": [
     "Can you exchange bumper L2 with bumper R2?",
@@ -430,7 +442,11 @@
     "Can you swap my bumpers? Left to right.",
     "Interchange X with Y",
     "Exchange the triggers LT and RT",
-    "Give me the controller with X and Y swapped"
+    "Give me the controller with X and Y swapped",
+    "Exchange my A and B buttons",
+    "Switch the functions of X and Y",
+    "Swap LB with RB",
+    "Trade the A button with B"
   ],
   "remap_to": [
     "Have RB behave exactly like LB",
@@ -692,7 +708,11 @@
     "Make both joysticks run with the quick curve preset",
     "Set my left stick curve to smooth for better tracking",
     "Apply the default stick curve to the primary controller stick",
-    "Configure the right stick with the fine curve option"
+    "Configure the right stick with the fine curve option",
+    "Use the quick preset for my right stick curve",
+    "Select the default stick response preset",
+    "Apply slow curve to my left stick",
+    "Fine preset on the right stick"
   ],
   "stick_deadzone_remove": [
     "Kill the dead zone on my left joystick.",
@@ -794,7 +814,11 @@
     "Turn off the stick dead zone for both sticks",
     "Eliminate the dead zone on my game pad sticks",
     "No dead zone area on my left or right stick",
-    "Disable dead zone completely for my sticks"
+    "Disable dead zone completely for my sticks",
+    "Clear the dead zone from both sticks",
+    "Set my stick centre dead zone to zero",
+    "No centre dead zone on my aiming stick",
+    "Remove my left stick dead zone"
   ],
   "stick_deadzone_set": [
     "Left analog deadzone to 6",
@@ -921,7 +945,11 @@
     "Give me a 7 dead zone for the L controller stick.",
     "Adjust right analog stick dead zone to 4 percent.",
     "Set my left stick deadzone number to 6.",
-    "Right thumbstick needs a 9 unit dead zone adjustment."
+    "Right thumbstick needs a 9 unit dead zone adjustment.",
+    "Dead zone for the right stick should be 7 percent",
+    "Use a dead zone of 6 on my left stick",
+    "Change both stick dead zones to 9",
+    "I want 4 percent dead zone on the right stick"
   ],
   "stick_drift": [
     "My controller is sliding left when I stop touching it.",
@@ -1051,7 +1079,11 @@
     "Aim creep happens every time I let go in Overwatch",
     "My controller's left stick drifts constantly",
     "Stop the right analog from drifting while playing",
-    "Fix my camera turning by itself during gameplay"
+    "Fix my camera turning by itself during gameplay",
+    "The reticle slides while my hands are off the pad",
+    "My character wanders when I let go of the left stick",
+    "Check whether the right stick returns to centre",
+    "Camera rotates while the stick is untouched"
   ],
   "stick_fast": [
     "Speed up my movement controls",
@@ -1157,7 +1189,11 @@
     "Need snappier response from my analogs",
     "Up my stick turning speed immediately",
     "Right stick needs more punch and speed",
-    "Left stick feels like it's dragging"
+    "Left stick feels like it's dragging",
+    "Speed up my camera stick",
+    "I need to turn around faster with the right stick",
+    "My camera stick feels sluggish",
+    "Give my sticks quicker turning response"
   ],
   "stick_full_at_set": [
     "Set outer dead zone to 85.",
@@ -1283,7 +1319,11 @@
     "Set left stick max range value to 80 please.",
     "Full speed on my right stick should be 87.",
     "Adjust both controller sticks outer zone to 69.",
-    "Left hand stick full reach point is 94."
+    "Left hand stick full reach point is 94.",
+    "My right stick should hit full speed at 90 percent",
+    "Set left stick outer threshold to 85",
+    "Both sticks full output at 95 percent push",
+    "Use 80 percent as the right stick full speed point"
   ],
   "stick_small_moves": [
     "tiny controller moves not registering in game",
@@ -1400,7 +1440,11 @@
     "Tiny movements on the stick cause no response during aiming.",
     "Please enable anti-dead zone for small stick inputs immediately.",
     "Game ignores small aim adjustments made with the right stick.",
-    "My small corrections don't register when moving the camera."
+    "My small corrections don't register when moving the camera.",
+    "The game swallows gentle stick nudges",
+    "Fine corrections disappear inside the game dead zone",
+    "Compensate for the games dead zone on my right stick",
+    "Use 5 percent anti dead zone for my aim stick"
   ],
   "stick_smooth": [
     "Smooth out my left analog stick",
@@ -1508,7 +1552,11 @@
     "Smooth out the tracking on both analogs.",
     "Give the left stick a steady feel now.",
     "Make the right stick glide without lag.",
-    "Fix the choppy rotation of my character."
+    "Fix the choppy rotation of my character.",
+    "Give my stick motion a steadier feel",
+    "Smooth the transition through the middle of my stick",
+    "Stick movement feels jerky",
+    "I want more consistent tracking with my right stick"
   ],
   "stick_sniping": [
     "Make my right stick perfect for sniping",
@@ -1632,7 +1680,11 @@
     "Right controller needs precise scope aim",
     "Need more grip on right stick for long shots",
     "Adjust right side for precision sniping please",
-    "Make camera steady for distant targets now"
+    "Make camera steady for distant targets now",
+    "Help me line up distant headshots",
+    "Precision for scoped aiming on the right stick",
+    "Aim adjustments for long distance shots",
+    "I need finer crosshair placement"
   ],
   "stick_twitchy": [
     "My right stick is way too twitchy.",
@@ -1727,7 +1779,11 @@
     "Camera moves excessively fast on minor stick input",
     "My crosshair jumps too far for small finger nudges",
     "Stop the camera from being so jittery during gameplay",
-    "Right stick feels overly responsive causing aim errors"
+    "Right stick feels overly responsive causing aim errors",
+    "My crosshair overshoots whenever I nudge it",
+    "The camera snaps too far with tiny stick nudges",
+    "Aiming is too touchy for me",
+    "Dial down the twitchiness of my right stick"
   ],
   "trigger_curve_set": [
     "Right trigger curve to quick please",
@@ -1836,7 +1892,11 @@
     "Switch my left trigger back to the default response.",
     "Set the right trigger input to the quick profile.",
     "Make my shooting throttle use the smooth curve.",
-    "Give the left brake trigger the slow sensitivity."
+    "Give the left brake trigger the slow sensitivity.",
+    "Use slow preset for the left trigger curve",
+    "Set right trigger response to quick preset",
+    "Default response preset on both triggers",
+    "Choose smooth trigger response"
   ],
   "trigger_deadzone_remove": [
     "Kill the dead zone on both triggers please",
@@ -1919,7 +1979,11 @@
     "Get rid of that dead zone on my triggers.",
     "Turn the trigger dead zone off right away.",
     "Just remove the dead zone on the triggers.",
-    "Zero out the dead zone for shooting."
+    "Zero out the dead zone for shooting.",
+    "Remove initial slack on both triggers",
+    "Set trigger dead zone to zero",
+    "Clear the left trigger dead zone",
+    "No dead zone on RT"
   ],
   "trigger_deadzone_set": [
     "Add a dead zone of 4 to the right side.",
@@ -1981,7 +2045,11 @@
     "Make my right face button dead zone 4.",
     "Left bumper dead zone set to 11 now.",
     "Make the right paddle threshold exactly 14.",
-    "Set left face button dead zone to 7 please."
+    "Set left face button dead zone to 7 please.",
+    "Right trigger should ignore the first 3 percent",
+    "Use 4 percent dead zone on the left trigger",
+    "Set both trigger dead zones at 2",
+    "Trigger dead zone of 6 percent please"
   ],
   "trigger_fast": [
     "Need hair trigger sensitivity on shooter guns",
@@ -2043,7 +2111,11 @@
     "Instant fire needed for my tactical shooter title.",
     "Shorten the actuation point on every trigger immediately.",
     "Get me zero latency firing for Call of Duty MW.",
-    "I require zero pull distance on all inputs."
+    "I require zero pull distance on all inputs.",
+    "Make RT activate with a shorter pull",
+    "I need my firing trigger to react sooner",
+    "Short travel on my right trigger for shooting",
+    "Shoot with less right trigger movement"
   ],
   "trigger_full_at_set": [
     "Set the right trigger full press at 45.",
@@ -2153,7 +2225,11 @@
     "Configure thumbstick right complete at 40.",
     "Make paddle A full press 55 now.",
     "Set right bumper full count to 85.",
-    "Trigger C full point at 72 please."
+    "Trigger C full point at 72 please.",
+    "RT should count as fully pressed at 65 percent",
+    "Make LT reach full output at 90",
+    "Fully pressed at 70 percent for both triggers",
+    "Use 80 as the right trigger full activation point"
   ],
   "trigger_slow": [
     "Need slower trigger response for racing",
@@ -2252,7 +2328,11 @@
     "Tweak the foot pedals for a gentle braking feel in Project Cars.",
     "I need gradual activation on these analog inputs for karting.",
     "Slow the ramp down on my throttle button for better drift control.",
-    "Make these triggers act more slowly for precise stopping."
+    "Make these triggers act more slowly for precise stopping.",
+    "Give me finer control of the accelerator trigger",
+    "I need gradual brake pressure on my left trigger",
+    "Progressive throttle response for driving",
+    "Make both triggers gentler for racing"
   ],
   "turbo_off": [
     "kill turbo",
@@ -2383,7 +2463,11 @@
     "Disable quick fire on LT.",
     "Stop rapid fire on X.",
     "No turbo on my index finger pad.",
-    "Turn off turbo on number two."
+    "Turn off turbo on number two.",
+    "Stop repeated presses on X",
+    "Disable rapid fire for B",
+    "Clear turbo from my A button",
+    "Do not repeat X any more"
   ],
   "turbo_on": [
     "Turbo LS at 20",
@@ -2508,6 +2592,10 @@
     "Rapid fire L2 at 10pps",
     "Quick click on R3 please",
     "Enable auto fire on AB",
-    "Fast fire the home button"
+    "Fast fire the home button",
+    "Repeated presses on X at 12 per second",
+    "Enable rapid fire for B at 8",
+    "Repeat A ten times a second",
+    "Hold X to repeat presses with turbo"
   ]
 }

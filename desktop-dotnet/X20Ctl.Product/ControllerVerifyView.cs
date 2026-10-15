@@ -129,7 +129,10 @@ public sealed class ControllerVerifyView : Grid
         title.TextAlignment = status.TextAlignment = TextAlignment.Center;
         var left = new Grid { Margin = new(0, 0, 26, 0) };
         left.RowDefinitions.Add(new() { Height = GridLength.Auto }); left.RowDefinitions.Add(new()); left.RowDefinitions.Add(new() { Height = GridLength.Auto }); left.RowDefinitions.Add(new() { Height = GridLength.Auto });
-        left.Children.Add(title); Grid.SetRow(stage, 1); left.Children.Add(stage); Grid.SetRow(status, 2); left.Children.Add(status); Grid.SetRow(buttons, 3); left.Children.Add(buttons);
+        var scanHeading=new StackPanel { HorizontalAlignment=HorizontalAlignment.Center };
+        scanHeading.Children.Add(Kit.Text("CONTROLLER CHECK",10,"DS.TextMuted",FontWeights.SemiBold).Also(t=>{t.HorizontalAlignment=HorizontalAlignment.Center;t.Margin=new(0,0,0,8);}));
+        scanHeading.Children.Add(title);
+        left.Children.Add(scanHeading); Grid.SetRow(stage, 1); left.Children.Add(stage); Grid.SetRow(status, 2); left.Children.Add(status); Grid.SetRow(buttons, 3); left.Children.Add(buttons);
         var right = new DockPanel { Margin = new(26, 0, 0, 0) };
         var listHead = new DockPanel { Margin = new(0, 0, 0, 18) }; DockPanel.SetDock(deviceCount, Dock.Right); listHead.Children.Add(deviceCount); listHead.Children.Add(Kit.Text("Connected controllers", 22, "DS.Text", FontWeights.SemiBold));
         DockPanel.SetDock(listHead, Dock.Top); right.Children.Add(listHead);
@@ -214,9 +217,24 @@ public sealed class ControllerVerifyView : Grid
         deviceCount.Text = found.Count == 1 ? "1 found" : $"{found.Count} found";
         if (found.Count == 0)
         {
-            var empty = new StackPanel { Margin = new(12, 32, 12, 0) };
-            empty.Children.Add(Kit.Text("No connected controllers", 18, "DS.Text", FontWeights.SemiBold));
-            var hint = Kit.Text("Connect by USB, receiver or Bluetooth, then choose Scan again.", 14, "DS.TextMuted"); hint.TextWrapping = TextWrapping.Wrap; hint.Margin = new(0, 10, 0, 0); empty.Children.Add(hint); deviceList.Children.Add(empty);
+            var empty = new StackPanel { Margin = new(0, 10, 0, 0) };
+            empty.Children.Add(Kit.Text("Let's get you connected",20,"DS.Text",FontWeights.SemiBold));
+            var hint = Kit.Text("Choose the connection your controller supports, then scan again.",13,"DS.TextMuted");hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new(0,7,0,16);empty.Children.Add(hint);
+            foreach(var (glyph,label,detail) in new[]{("usb","USB cable","Use a data-capable cable, not a charge-only cable."),("receiver","Wireless receiver","Plug the controller's receiver into a USB port."),("bluetooth","Bluetooth","Pair the controller in Windows Bluetooth settings.")})
+            {
+                var text=new StackPanel { VerticalAlignment=VerticalAlignment.Center };
+                text.Children.Add(Kit.Text(label,15,"DS.Text",FontWeights.SemiBold));
+                text.Children.Add(Kit.Text(detail,12,"DS.TextMuted").Also(t=>{t.TextWrapping=TextWrapping.Wrap;t.Margin=new(0,5,0,0);}));
+                var vector=new Path { Data=Geometry.Parse(glyph switch {
+                    "usb"=>"M 8,4 L 16,4 L 16,12 L 8,12 Z M 10,1 L 10,4 M 14,1 L 14,4 M 12,12 L 12,17 Q 12,22 7,22 L 3,22",
+                    "receiver"=>"M 8,12 L 16,12 L 16,23 L 8,23 Z M 10,8 L 14,8 L 14,12 M 8,6 Q 12,2 16,6 M 5,3 Q 12,-3 19,3",
+                    _=>"M 12,1 L 18,6 L 6,17 M 6,6 L 18,17 L 12,23 L 12,1" }),Stroke=new SolidColorBrush(Color.FromRgb(166,211,255)),StrokeThickness=1.6,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round,StrokeLineJoin=PenLineJoin.Round };
+                var iconArt=new Canvas { Width=24,Height=24,Children={vector} };
+                var icon=new Border { Width=42,Height=42,CornerRadius=new(12),VerticalAlignment=VerticalAlignment.Center,HorizontalAlignment=HorizontalAlignment.Left,Background=new LinearGradientBrush(Color.FromArgb(120,55,103,157),Color.FromArgb(70,22,48,82),90),BorderBrush=new SolidColorBrush(Color.FromArgb(65,140,190,245)),BorderThickness=new(1),Child=new Viewbox { Width=22,Height=22,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Child=iconArt } };
+                var content=new Grid();content.ColumnDefinitions.Add(new(){Width=new GridLength(58)});content.ColumnDefinitions.Add(new());content.Children.Add(icon);Grid.SetColumn(text,1);content.Children.Add(text);
+                empty.Children.Add(new Border { MinHeight=76,Padding=new(16,12,16,12),Margin=new(0,0,0,10),CornerRadius=new(14),Background=new LinearGradientBrush(Color.FromArgb(70,55,82,120),Color.FromArgb(35,24,39,65),90),BorderBrush=new SolidColorBrush(Color.FromArgb(50,150,190,240)),BorderThickness=new(1),Child=content });
+            }
+            deviceList.Children.Add(empty);
         }
         foreach (var device in found)
         {

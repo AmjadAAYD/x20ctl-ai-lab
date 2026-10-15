@@ -9,6 +9,7 @@ namespace X20Ctl.Product;
 public partial class DockView : UserControl
 {
     public int Index { get; }
+    public FrameworkElement ControllerArtwork => Art;
     public PlayerDock Player { get; private set; }
     private bool isHero, isSecondary;
     // The controller art glides to where its role puts it (owner report 10 Oct 2026: during a swap the art "tweaked",
