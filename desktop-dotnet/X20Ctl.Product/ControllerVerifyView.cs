@@ -3,7 +3,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
-using System.Windows.Threading;
 using X20Ctl.Product.Scanner;
 
 namespace X20Ctl.Product;
@@ -11,7 +10,8 @@ namespace X20Ctl.Product;
 public enum VerifyOutcome { Match, Mismatch, Unconfirmed, NoController }
 
 /// <summary>What the scan on entering a controller found. Detected is a model id when Windows named the pad as one.</summary>
-public sealed record VerifyResult(VerifyOutcome Outcome, string? DetectedId, string? DetectedName, string Detail);
+public sealed record DetectedController(string Name, string? ModelId, string Detail);
+public sealed record VerifyResult(VerifyOutcome Outcome, string? DetectedId, string? DetectedName, string Detail, IReadOnlyList<DetectedController>? Controllers = null);
 
 public static class ControllerVerify
 {
@@ -31,15 +31,36 @@ public static class ControllerVerify
         try { inventory = await Inventory.Bound(Task.Run(() => WindowsInventory.Read(false)), 8000); }
         catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception or System.IO.IOException)
         { return new(VerifyOutcome.NoController, null, null, "Windows would not list devices."); }
+        var found = Describe(inventory);
+        VerifyResult Result(VerifyOutcome outcome, string? id, string? name, string detail) => new(outcome, id, name, detail, found);
         string? id = null, name = null;
         if (ScanFlow.DetectModel(inventory) is { } named && ByName.TryGetValue(named.Model, out var byName)) { id = byName; name = named.Name; }
         else foreach (var i in inventory.interfaces) if (ById.TryGetValue((i.vid, i.pid), out var byId)) { id = byId; name = $"{i.vid:X4}:{i.pid:X4}"; break; }
-        if (id == modelId) return new(VerifyOutcome.Match, id, name, name ?? "");
-        if (id != null) return new(VerifyOutcome.Mismatch, id, name, name ?? "");
-        bool pad = inventory.interfaces.Any(i => (i.kind == "HID" && i.usagePage == 1 && i.usage is 4 or 5) || i.vid == 0x045E);
-        return pad ? new(VerifyOutcome.Unconfirmed, null, null, "A gamepad is connected but doesn't name its model.")
-                   : new(VerifyOutcome.NoController, null, null, "No gamepad was listed.");
+        if (id == modelId) return Result(VerifyOutcome.Match, id, name, name ?? "");
+        if (id != null) return Result(VerifyOutcome.Mismatch, id, name, name ?? "");
+        bool pad = found.Count > 0;
+        return pad ? Result(VerifyOutcome.Unconfirmed, null, null, "A gamepad is connected but doesn't name its model.")
+                   : Result(VerifyOutcome.NoController, null, null, "No gamepad was listed.");
     }
+    public static IReadOnlyList<DetectedController> Describe(Inventory inventory)
+    {
+        var found = new List<DetectedController>();
+        foreach (var group in Inventory.Group(inventory.interfaces))
+        {
+            var subset = new Inventory { interfaces = group };
+            var named = ScanFlow.DetectModel(subset);
+            var pad = group.FirstOrDefault(i => i.kind == "HID" && i.usagePage == 1 && i.usage is 4 or 5);
+            var known = group.FirstOrDefault(i => ById.ContainsKey((i.vid, i.pid)));
+            pad ??= group.FirstOrDefault(i => i.vid == 0x045E && (i.product.Contains("Xbox", StringComparison.OrdinalIgnoreCase) || i.product.Contains("Controller", StringComparison.OrdinalIgnoreCase)));
+            if (pad == null && known == null && named == null) continue;
+            var device = pad ?? known ?? group[0];
+            string? id = named is { } n && ByName.TryGetValue(n.Model, out var mapped) ? mapped : known != null ? ById[(known.vid, known.pid)] : null;
+            string name = named?.Name ?? (!string.IsNullOrWhiteSpace(device.product) ? device.product : "Windows gamepad");
+            found.Add(new(name, id, $"{device.kind} · {device.vid:X4}:{device.pid:X4}" + (id == null ? " · model unconfirmed" : " · reported identity")));
+        }
+        return found;
+    }
+
 }
 
 /// <summary>The popup shown when a controller is opened: a glowing gamepad outline that a light runs round while Windows is
@@ -48,7 +69,7 @@ public sealed class ControllerVerifyView : Grid
 {
     private readonly TextBlock status = Kit.Text("", 15, "DS.TextMuted");
     private readonly TextBlock title = Kit.Text("", 20, "DS.Text", FontWeights.SemiBold);
-    private readonly StackPanel buttons = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 20, 0, 0) };
+    private readonly WrapPanel buttons = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 20, 0, 0) };
     private readonly Path rim = new() { Data = GamepadGlyph.Outline, StrokeThickness = 8.5, StrokeLineJoin = PenLineJoin.Round, Stroke = new SolidColorBrush(Color.FromRgb(240, 245, 255)) };
     private readonly Path runner = new() { Data = GamepadGlyph.Outline, StrokeThickness = 8.5, StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
     private readonly SolidColorBrush runnerBrush = new(Color.FromRgb(120, 215, 255));
@@ -56,16 +77,19 @@ public sealed class ControllerVerifyView : Grid
     private readonly Ellipse[] dots = new Ellipse[3];
     private readonly TextBlock verdict = new() { FontFamily = DS.Display, FontSize = 54, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Opacity = 0 };
     private readonly Border card = new();
-    private readonly DispatcherTimer steps = new() { Interval = TimeSpan.FromMilliseconds(750) };
-    private readonly string[] lines;
-    private int step;
+    private readonly StackPanel deviceList = new();
+    private readonly TextBlock deviceCount = Kit.Text("Scanning", 13, "DS.TextMuted");
+    private readonly TranslateTransform scanMove = new();
+    private readonly Rectangle scanBeam = new() { Height = 24, VerticalAlignment = VerticalAlignment.Top, IsHitTestVisible = false };
+    private readonly bool animate;
+    private readonly string selectedName;
 
     public event Action? Cancelled;
     public void RaiseCancel() => Cancelled?.Invoke();
 
     public ControllerVerifyView(string modelId, string modelName, bool animate)
     {
-        lines = ["Listening for the controller…", "Reading its identity…", $"Comparing with the {modelName}…"];
+        this.animate = animate; selectedName = modelName;
         Background = new SolidColorBrush(Color.FromArgb(170, 2, 6, 18));
         var accent = Color.FromRgb(86, 190, 255);
         var size = GamepadGlyph.Size;
@@ -94,26 +118,63 @@ public sealed class ControllerVerifyView : Grid
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = Colors.White, BlurRadius = 10, ShadowDepth = 0, Opacity = 1 } };
             dotRow.Children.Add(dots[i]);
         }
-        art.Children.Add(dotRow); art.Children.Add(verdict);
-        var stage = new Viewbox { Width = 400, Height = 300, Child = art, Margin = new(0, 6, 0, 6) };
-        title.Text = $"Checking this is a {modelName}";
+        var scanClip = padded.Clone();
+        var scanSurface = new Grid { Clip = scanClip, IsHitTestVisible = false };
+        scanBeam.Fill = new LinearGradientBrush(Color.FromArgb(0, 70, 170, 255), Color.FromArgb(190, 110, 220, 255), 90);
+        scanBeam.RenderTransform = scanMove; scanSurface.Children.Add(scanBeam);
+        art.Children.Add(scanSurface); art.Children.Add(dotRow); art.Children.Add(verdict);
+        var stage = new Viewbox { MaxHeight = 300, Stretch = Stretch.Uniform, Child = art, Margin = new(0, 22, 0, 14) };
+        title.TextWrapping = status.TextWrapping = TextWrapping.Wrap;
         title.HorizontalAlignment = status.HorizontalAlignment = HorizontalAlignment.Center;
-        card.CornerRadius = new(18); card.Padding = new(34, 28, 34, 26); card.MinWidth = 500;
-        card.Background = new SolidColorBrush(Color.FromRgb(12, 21, 46));
+        title.TextAlignment = status.TextAlignment = TextAlignment.Center;
+        var left = new Grid { Margin = new(0, 0, 26, 0) };
+        left.RowDefinitions.Add(new() { Height = GridLength.Auto }); left.RowDefinitions.Add(new()); left.RowDefinitions.Add(new() { Height = GridLength.Auto }); left.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        left.Children.Add(title); Grid.SetRow(stage, 1); left.Children.Add(stage); Grid.SetRow(status, 2); left.Children.Add(status); Grid.SetRow(buttons, 3); left.Children.Add(buttons);
+        var right = new DockPanel { Margin = new(26, 0, 0, 0) };
+        var listHead = new DockPanel { Margin = new(0, 0, 0, 18) }; DockPanel.SetDock(deviceCount, Dock.Right); listHead.Children.Add(deviceCount); listHead.Children.Add(Kit.Text("Connected controllers", 22, "DS.Text", FontWeights.SemiBold));
+        DockPanel.SetDock(listHead, Dock.Top); right.Children.Add(listHead);
+        var note = Kit.Text("Windows-reported devices · an unknown model stays unconfirmed.", 12, "DS.TextMuted"); note.TextWrapping = TextWrapping.Wrap; note.Margin = new(0, 14, 0, 0); DockPanel.SetDock(note, Dock.Bottom); right.Children.Add(note);
+        right.Children.Add(new ScrollViewer { Content = deviceList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        var columns = new Grid(); columns.ColumnDefinitions.Add(new() { Width = new GridLength(1.2, GridUnitType.Star) }); columns.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        columns.Children.Add(left); Grid.SetColumn(right, 1); columns.Children.Add(right);
+        var divider = new Border { Width = 1, Background = new SolidColorBrush(Color.FromArgb(45, 140, 190, 255)), HorizontalAlignment = HorizontalAlignment.Left }; Grid.SetColumn(divider, 1); columns.Children.Add(divider);
+        card.CornerRadius = new(24); card.Padding = new(30); card.MaxWidth = 1500; card.Height = 540; card.Margin = new(28);
+        card.Background = new LinearGradientBrush(Color.FromRgb(17, 29, 54), Color.FromRgb(7, 14, 32), 90);
         card.BorderBrush = new SolidColorBrush(Color.FromArgb(130, accent.R, accent.G, accent.B)); card.BorderThickness = new(1);
-        card.HorizontalAlignment = HorizontalAlignment.Center; card.VerticalAlignment = VerticalAlignment.Center;
-        card.Child = new StackPanel { Children = { title, stage, status, buttons } };
-        Children.Add(card);
-        status.Text = lines[0];
+        card.HorizontalAlignment = HorizontalAlignment.Stretch; card.VerticalAlignment = VerticalAlignment.Center;
+        card.Child = columns; Children.Add(card);
+        SizeChanged += (_, _) => card.Height = Math.Clamp(ActualHeight - 48, 300, 540);
+        BeginScan();
+        Unloaded += (_, _) => StopAnimation();
+    }
+
+    public void BeginScan()
+    {
+        StopAnimation(); title.Text = "Finding your controller";
+        card.BorderBrush = new SolidColorBrush(Color.FromArgb(130, 86, 190, 255));
+        rimGlow.Color = Colors.White; scanMove.Y = 0;
+        status.Text = $"Reading Windows gamepad inventory · selected {selectedName}";
+        deviceCount.Text = "Scanning"; deviceList.Children.Clear();
+        foreach (var width in new[] { 220.0, 170.0, 200.0 })
+            deviceList.Children.Add(new Border { Height = 64, Margin = new(0, 0, 0, 12), Padding = new(18), CornerRadius = new(12), Background = new SolidColorBrush(Color.FromArgb(50, 100, 145, 205)), Child = new Border { Width = width, MaxWidth = width, Height = 9, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, CornerRadius = new(4), Background = new SolidColorBrush(Color.FromArgb(70, 165, 200, 245)) } });
+        buttons.Children.Clear(); buttons.Children.Add(Action("Cancel scan", false, RaiseCancel));
+        runner.Visibility = scanBeam.Visibility = Visibility.Visible; verdict.Opacity = 0;
+        rim.Stroke = new SolidColorBrush(Color.FromRgb(230, 240, 255));
+        foreach (var d in dots) { d.Visibility = Visibility.Visible; d.Opacity = .35; }
         if (animate) Start();
-        steps.Tick += (_, _) => { if (step < lines.Length - 1) status.Text = lines[++step]; };
-        steps.Start();
-        Unloaded += (_, _) => steps.Stop();
+    }
+    void StopAnimation()
+    {
+        scanMove.BeginAnimation(TranslateTransform.YProperty, null);
+        runner.BeginAnimation(Shape.StrokeDashOffsetProperty, null); runnerBrush.BeginAnimation(SolidColorBrush.ColorProperty, null);
+        rimGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
+        foreach (var d in dots) if (d != null) d.BeginAnimation(OpacityProperty, null);
     }
 
     private void Start()
     {
         var forever = RepeatBehavior.Forever;
+        scanMove.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 310, TimeSpan.FromSeconds(1.7)) { AutoReverse = true, RepeatBehavior = forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
         // the light runs the whole way round: the dash and its gap add up to one lap
         double lap = GamepadGlyph.Length / runner.StrokeThickness;
         runner.BeginAnimation(Shape.StrokeDashOffsetProperty, new DoubleAnimation(0, -lap, TimeSpan.FromSeconds(2.4)) { RepeatBehavior = forever });
@@ -136,7 +197,7 @@ public sealed class ControllerVerifyView : Grid
     /// <summary>Shows the verdict. enter = go on into the Studio, switchTo = open it as the model Windows named, rescan = ask again.</summary>
     public void ShowResult(VerifyResult r, string modelName, string? detectedName, Action enter, Action<string> switchTo, Action rescan)
     {
-        steps.Stop();
+        StopAnimation(); scanBeam.Visibility = Visibility.Collapsed;
         runner.BeginAnimation(Shape.StrokeDashOffsetProperty, null); runnerBrush.BeginAnimation(SolidColorBrush.ColorProperty, null);
         rimGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
         foreach (var d in dots) { d.BeginAnimation(OpacityProperty, null); d.Visibility = Visibility.Collapsed; }
@@ -148,11 +209,27 @@ public sealed class ControllerVerifyView : Grid
         verdict.Text = r.Outcome switch { VerifyOutcome.Match => "✓", VerifyOutcome.Mismatch => "✕", VerifyOutcome.Unconfirmed => "?", _ => "…" };
         verdict.Foreground = new SolidColorBrush(tone); verdict.Margin = new(0, -150, 0, 0); verdict.Opacity = 1;
         card.BorderBrush = new SolidColorBrush(Color.FromArgb(190, tone.R, tone.G, tone.B));
+        deviceList.Children.Clear();
+        var found = r.Controllers ?? [];
+        deviceCount.Text = found.Count == 1 ? "1 found" : $"{found.Count} found";
+        if (found.Count == 0)
+        {
+            var empty = new StackPanel { Margin = new(12, 32, 12, 0) };
+            empty.Children.Add(Kit.Text("No connected controllers", 18, "DS.Text", FontWeights.SemiBold));
+            var hint = Kit.Text("Connect by USB, receiver or Bluetooth, then choose Scan again.", 14, "DS.TextMuted"); hint.TextWrapping = TextWrapping.Wrap; hint.Margin = new(0, 10, 0, 0); empty.Children.Add(hint); deviceList.Children.Add(empty);
+        }
+        foreach (var device in found)
+        {
+            bool selected = device.ModelId != null && device.ModelId == r.DetectedId && r.Outcome == VerifyOutcome.Match;
+            var name = Kit.Text(device.Name, 16, "DS.Text", FontWeights.SemiBold); name.TextWrapping = TextWrapping.Wrap;
+            var info = Kit.Text(device.Detail, 12, "DS.TextMuted"); info.TextWrapping = TextWrapping.Wrap; info.Margin = new(0, 6, 0, 0);
+            deviceList.Children.Add(new Border { Padding = new(18), Margin = new(0, 0, 0, 12), CornerRadius = new(14), Background = new SolidColorBrush(Color.FromArgb(selected ? (byte)70 : (byte)32, 50, 150, 220)), BorderBrush = new SolidColorBrush(Color.FromArgb(100, 100, 180, 230)), BorderThickness = new(1), Child = new StackPanel { Children = { name, info } } });
+        }
         buttons.Children.Clear();
         switch (r.Outcome)
         {
             case VerifyOutcome.Match:
-                title.Text = $"Verified · {modelName}"; status.Text = (r.DetectedName ?? "") + " · opening";
+                title.Text = $"Model reported · {modelName}"; status.Text = (r.DetectedName ?? "") + " · opening";
                 break;
             case VerifyOutcome.Mismatch:
                 string other = ModelLabel(r.DetectedId!, detectedName);

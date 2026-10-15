@@ -104,6 +104,7 @@ public sealed class ProductHost : Grid
         Zone.IsEnabled = false; Panel.SetZIndex(layer, 36); Children.Add(layer); Fx.Appear(layer, .96, 220);
         async Task Scan()
         {
+            view.BeginScan();
             var started = DateTime.UtcNow;
             var result = await ControllerVerify.Run(model.Id);
             var wait = TimeSpan.FromMilliseconds(1900) - (DateTime.UtcNow - started); if (wait > TimeSpan.Zero) await Task.Delay(wait); // long enough to read what it is doing
