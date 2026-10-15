@@ -146,6 +146,7 @@ public sealed class ProductHost : Grid
             var art=Zone.Docks[player].ControllerArtwork;
             if(art.ActualWidth>0 && art.ActualHeight>0) source=art.TransformToAncestor(this).TransformBounds(new Rect(art.RenderSize));
         }
+        if(Studio.Dashboard is {} dashboard) dashboard.EntryTransitionPending = !Zone.ReducedMotion && DS.Motion;
         Children.Add(Studio); var entering=Studio;
         if (Zone.ReducedMotion || !DS.Motion) { Zone.Visibility=Visibility.Collapsed; return; }
         entering.Opacity=0; entering.IsHitTestVisible=false; Zone.IsHitTestVisible=false;
@@ -159,23 +160,29 @@ public sealed class ProductHost : Grid
         var hero=entering.Dashboard?.ControllerArtwork;
         if(hero==null || source.IsEmpty || hero.ActualWidth<=0)
         {
-            entering.IsHitTestVisible=true;Fx.Appear(entering,1,420,()=>{if(Studio==entering)Zone.Visibility=Visibility.Collapsed;});return;
+            entering.Opacity=1;entering.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;entering.Dashboard?.CompleteEntryTransition();return;
         }
         var destination=hero.TransformToAncestor(this).TransformBounds(new Rect(hero.RenderSize));
-        if(destination.Width<1 || destination.Height<1){entering.Opacity=1;entering.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;return;}
+        if(destination.Width<1 || destination.Height<1){entering.Opacity=1;entering.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;entering.Dashboard?.CompleteEntryTransition();return;}
+        // Animate transforms only: layout and image decoding must not run on every flight frame.
+        var fit = Math.Min(destination.Width / 1536, destination.Height / 1024);
+        destination = new Rect(destination.Left + (destination.Width - 1536 * fit) / 2,
+            destination.Top + (destination.Height - 1024 * fit) / 2, 1536 * fit, 1024 * fit);
         var flight=new Viewbox { Width=source.Width,Height=source.Height,Child=new PhotoController(model.Id),IsHitTestVisible=false };
+        var scale=new ScaleTransform(1,1); var move=new TranslateTransform(source.Left,source.Top);
+        var transforms=new TransformGroup(); transforms.Children.Add(scale);transforms.Children.Add(move);flight.RenderTransform=transforms;
         var layer=new Canvas { IsHitTestVisible=false };layer.Children.Add(flight);Children.Add(layer);Panel.SetZIndex(layer,37);
-        Canvas.SetLeft(flight,source.Left);Canvas.SetTop(flight,source.Top);hero.Opacity=0;
+        hero.Opacity=0;
         var origin=Zone.Docks[entering.Player].ControllerArtwork; origin.Opacity=0;
-        var ease=new QuinticEase { EasingMode=EasingMode.EaseInOut };var duration=TimeSpan.FromMilliseconds(680);
-        flight.BeginAnimation(Canvas.LeftProperty,new DoubleAnimation(source.Left,destination.Left,duration){EasingFunction=ease});
-        flight.BeginAnimation(Canvas.TopProperty,new DoubleAnimation(source.Top,destination.Top,duration){EasingFunction=ease});
-        flight.BeginAnimation(WidthProperty,new DoubleAnimation(source.Width,destination.Width,duration){EasingFunction=ease});
-        var arrive=new DoubleAnimation(source.Height,destination.Height,duration){EasingFunction=ease};
-        arrive.Completed+=(_,_)=>{Children.Remove(layer);origin.Opacity=1;hero.Opacity=1;entering.IsHitTestVisible=true;if(Studio==entering){Zone.Visibility=Visibility.Collapsed;Zone.Opacity=1;}};
-        flight.BeginAnimation(HeightProperty,arrive);
-        var fade=new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(420)){BeginTime=TimeSpan.FromMilliseconds(110),EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}};
-        entering.BeginAnimation(OpacityProperty,fade);
+        layer.UpdateLayout();
+        var ease=new CubicEase { EasingMode=EasingMode.EaseInOut };var duration=TimeSpan.FromMilliseconds(520);
+        move.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(source.Left,destination.Left,duration){EasingFunction=ease});
+        move.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation(source.Top,destination.Top,duration){EasingFunction=ease});
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(1,destination.Width/source.Width,duration){EasingFunction=ease});
+        var arrive=new DoubleAnimation(1,destination.Height/source.Height,duration){EasingFunction=ease};
+        arrive.Completed+=(_,_)=>{Children.Remove(layer);origin.Opacity=1;hero.Opacity=1;entering.IsHitTestVisible=true;if(Studio==entering){Zone.Visibility=Visibility.Collapsed;Zone.Opacity=1;entering.Dashboard?.CompleteEntryTransition();}};
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty,arrive);
+        entering.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,duration){EasingFunction=ease});
         Zone.BeginAnimation(OpacityProperty,new DoubleAnimation(1,0,TimeSpan.FromMilliseconds(360)));
     }
 

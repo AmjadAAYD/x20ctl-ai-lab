@@ -63,11 +63,11 @@ public sealed class DashboardConsolePage : Grid
         heroFocus = heroButton;
         // the same framed panel the Buttons page puts its controller in (owner request, 13 Oct 2026)
         // the agent's invitation in the hero's empty top-right corner (owner request, 14 Oct 2026)
-        var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 14); invite.HorizontalAlignment = HorizontalAlignment.Right; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 10, 10, 0);
+        var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 14); invite.HorizontalAlignment = HorizontalAlignment.Left; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 10, 10, 0);
         var heroContent = new Grid();
         heroContent.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
         heroContent.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        invite.Margin = new(18, 16, 12, 0);
+        invite.Margin = new(-22, 16, 12, 0);
         Grid.SetColumn(invite, 1);
         heroContent.Children.Add(heroButton); heroContent.Children.Add(invite);
         var heroPanel = Kit.Panel(null, null, null, heroContent, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
@@ -110,7 +110,7 @@ public sealed class DashboardConsolePage : Grid
         var shelfPanel = new DockPanel { Children = { new DockPanel { Margin = new(2, 0, 0, 8), Children = { AddButton("Add a folder", AddFolderClick), AddButton("Add a game", AddGameClick), Kit.Text("Your games", 19, "DS.Text", FontWeights.SemiBold) } }.Also(d => DockPanel.SetDock(d, Dock.Top)), shelfScroll } };
         Grid.SetRow(shelfPanel, 4); Children.Add(shelfPanel);
         Feature(null);
-        Loaded += async (_, _) => await Populate();
+        Loaded += async (_, _) => { if (!EntryTransitionPending) await Populate(); };
         SizeChanged += (_, e) => Fit(e.NewSize.Height);
         PreviewKeyDown += OnKey;
     }
@@ -136,6 +136,13 @@ public sealed class DashboardConsolePage : Grid
 
     /// <summary>Moves keyboard/gamepad focus to the hero so the page is immediately navigable.</summary>
     public void FocusHero() => Dispatcher.BeginInvoke(() => (cards.FirstOrDefault().Card ?? (UIElement)play).Focus(), System.Windows.Threading.DispatcherPriority.Input);
+
+    internal bool EntryTransitionPending { get; set; }
+    internal void CompleteEntryTransition()
+    {
+        EntryTransitionPending = false;
+        _ = Populate();
+    }
 
     private async Task Populate()
     {
