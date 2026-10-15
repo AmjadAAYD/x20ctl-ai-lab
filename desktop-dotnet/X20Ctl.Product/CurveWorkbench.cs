@@ -36,6 +36,10 @@ public sealed class CurveWorkbench
     public Func<CurveChannel,StickTuning?>? Tuning { get; set; }
     /// <summary>Saves a stick's settings to PC mode; returns why not, or null. Null when they can't be saved from here.</summary>
     public Func<CurveChannel,StickTuning,string?>? SaveTuning { get; set; }
+    public Func<IReadOnlyList<CurveChannel>,string?>? ResetResponse { get; set; }
+    public bool CanReset => Draft.CanEdit && IsModified(Channel);
+    public bool CanResetAll => Draft.CanEdit && Enum.GetValues<CurveChannel>().Any(IsModified);
+    bool IsModified(CurveChannel channel) => Draft[channel] != CurveSetting.Default || Tuning?.Invoke(channel) is { IsDefault: false };
     private readonly TextBlock editHint = new() { Text="← / →  1% steps · Shift  5% steps",FontSize=13,Foreground=Brushes.LightSteelBlue,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Bottom };
     public event Action<CurveChannel>? ChannelSelected;
     public event Action? Changed;
@@ -205,11 +209,14 @@ public sealed class CurveWorkbench
     public void SelectChannel(CurveChannel channel) {Channel=channel;SelectedPoint=null;liveAt=-1;Refresh();ChannelSelected?.Invoke(channel);}
     private void SelectPoint(int index) {SelectedPoint=index;RefreshPointReadout();}
     public void SetPreset(string preset) {Draft.SetPreset(Channel,preset);Refresh();Changed?.Invoke();}
-    public void Reset()
+    public void Reset() => ResetChannels([Channel]);
+    public void ResetAll() => ResetChannels(Enum.GetValues<CurveChannel>());
+    void ResetChannels(IReadOnlyList<CurveChannel> channels)
     {
-        Draft.Reset(Channel);
-        if(TuningOwnsZones && CurrentTuning is {} t){var keep=new StickTuning{SquareGate=t.SquareGate,AxisRatio=t.AxisRatio};SaveTuning!(Channel,keep);}
-        Refresh();Changed?.Invoke();
+        if (!Draft.CanEdit) return;
+        if (ResetResponse?.Invoke(channels) is { } error) { PreviewNotice.Text=error; return; }
+        foreach (var channel in channels) Draft.Reset(channel);
+        PreviewNotice.Text=Hint; Refresh(); Changed?.Invoke();
     }
     public void SetPoint(int index,int x,int y)
     {

@@ -7,6 +7,8 @@ public static class AgentDirect
 {
     public static AgentProposal? Resolve(string sentence)
     {
+        if (Regex.IsMatch(sentence.Trim(), @"^(?:please\s+)?reset (?:all |the )?curves[.!]?$", RegexOptions.IgnoreCase))
+            return new("I'll reset both stick and trigger responses.", AgentVocabulary.Sticks.Concat(AgentVocabulary.Triggers).Select(t => new AgentAction(AgentVocabulary.Reset,t,JsonSerializer.SerializeToElement(0),"Reset response only.")).ToArray(),"Buttons and turbo stay unchanged.",[],[],"");
         var match = Regex.Match(sentence.Trim(), @"^(?:please\s+)?(?:set|change)\s+(?:the\s+)?(?<target>left stick|right stick|both sticks|left trigger|right trigger|both triggers)(?:'s)?\s+(?<setting>dead ?zone|full at|anti[ -]?dead ?zone|max(?:imum)? output|(?:vertical )?axis ratio)\s+(?:(?:to|at)\s+)?(?<number>-?\d+(?:\.\d+)?)%?[.!]?$", RegexOptions.IgnoreCase);
         if (!match.Success) return null;
         string target = match.Groups["target"].Value.ToLowerInvariant(), setting = match.Groups["setting"].Value.ToLowerInvariant();

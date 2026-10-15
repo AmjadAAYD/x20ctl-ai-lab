@@ -71,6 +71,18 @@ public static class PcModeDrafts
         return p;
     }
 
+    /// <summary>Reset only selected response channels, preserving remaps, turbo and macros.</summary>
+    public static PcModeProfile ResetCurves(PcModeProfile saved, IEnumerable<CurveChannel> channels)
+    {
+        var next = JsonSerializer.Deserialize<PcModeProfile>(JsonSerializer.SerializeToUtf8Bytes(saved))!;
+        foreach (var channel in channels)
+        {
+            next.Curves.Remove(channel.ToString());
+            if (channel is CurveChannel.LeftStick or CurveChannel.RightStick) next.Sticks.Remove(channel.ToString());
+        }
+        next.Validate(); return next;
+    }
+
     /// <summary>Whether the drafts hold anything, so turning PC mode on can keep work done before.</summary>
     public static bool HasChanges(ButtonDraft buttons, CurveDraft curves, MacroDraft macros) =>
         buttons.UnsentChanges > 0 || curves.ModifiedChannels > 0 || macros.ModifiedSlots > 0;

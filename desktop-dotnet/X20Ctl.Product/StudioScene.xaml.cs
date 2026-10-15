@@ -493,7 +493,7 @@ public partial class StudioScene : UserControl
     private void InspectAxis(object sender, RoutedEventArgs e) { string key=(string)((Button)sender).Tag;if(IsCurves)Curves.SelectChannel(key=="LSTICK_ANALOG"?CurveChannel.LeftStick:key=="RSTICK_ANALOG"?CurveChannel.RightStick:CurveChannel.LeftTrigger);else SelectControl(key); }
     private void TargetChanged(object sender, SelectionChangedEventArgs e) { if (!updating && TargetChoice.SelectedValue is string target && Draft.CanEdit(SelectedControl)) SetDraftTarget(target); }
     private void Reset(object sender, RoutedEventArgs e) { Draft.Reset(SelectedControl); RefreshEditor(); }
-    private void ResetAll(object sender, RoutedEventArgs e) { if (IsCurves) {Curves.Draft.ResetAll();Curves.Refresh();UpdateCurveContext();} else {Draft.ResetAll(); RefreshEditor();} }
+    private void ResetAll(object sender, RoutedEventArgs e) { if (IsCurves) {Curves.ResetAll();} else {Draft.ResetAll(); RefreshEditor();} }
     private void ResetCurrentCurve(object sender,RoutedEventArgs e) {if(IsCurves)Curves.Reset();}
     private void MoreCurveActions(object sender,RoutedEventArgs e) {if(IsCurves && CurveMoreChoice.ContextMenu is {} menu) {menu.PlacementTarget=CurveMoreChoice;menu.IsOpen=true;}}
     public void ShowCurves(bool value)
@@ -526,8 +526,8 @@ public partial class StudioScene : UserControl
         ChangeCount.Text = count==0 ? "Curve preview · No local changes" : $"{count} curve channel{(count==1?"":"s")} modified · Local draft";
         DraftChip.Text = count==0 ? "No local changes" : $"{count} local change{(count==1?"":"s")}";
         PrimaryHint.Text = " Select / Adjust"; OverviewHint.Text = " Reset curve";
-        ResetCurveChoice.IsEnabled=Curves.Draft.CanEdit && Curves.Draft[Curves.Channel]!=CurveSetting.Default;
-        ResetAllCurvesAction.IsEnabled=Curves.Draft.CanEdit && count>0; Apply.IsEnabled=false; SyncPcMode();
+        ResetCurveChoice.IsEnabled=Curves.CanReset;
+        ResetAllCurvesAction.IsEnabled=Curves.CanResetAll; Apply.IsEnabled=false; SyncPcMode();
         CanvasHint.Text=Curves.Channel is CurveChannel.LeftStick or CurveChannel.RightStick ? "STICK RESPONSE" : "TRIGGER TRAVEL";
         FrontChoice.IsEnabled=RearChoice.IsEnabled=false;
     }
@@ -538,7 +538,17 @@ public partial class StudioScene : UserControl
     /// it draws exactly what games get, including what Agent XCTL changed.</summary>
     private void WireCurveTuning()
     {
-        if (pcLink is not { } link || !Draft.PcMode) { Curves.Tuning = null; Curves.SaveTuning = null; Curves.Refresh(); return; }
+        if (pcLink is not { } link || !Draft.PcMode) { Curves.Tuning = null; Curves.SaveTuning = null; Curves.ResetResponse = null; Curves.Refresh(); return; }
+        Curves.ResetResponse = channels =>
+        {
+            try
+            {
+                var next = X20Ctl.Zone.PcMode.PcModeDrafts.ResetCurves(link.Store.Get(PcModePage.StoreKey), channels);
+                link.Store.Save(PcModePage.StoreKey, next); link.Service.Reload(); pcSync?.Reload();
+                return null;
+            }
+            catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { return "Couldn't reset curves: " + error.Message; }
+        };
         Curves.Tuning = channel => link.Store.Get(PcModePage.StoreKey).Sticks.GetValueOrDefault(channel.ToString());
         Curves.SaveTuning = (channel, tuning) =>
         {
