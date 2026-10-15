@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,10 +17,12 @@ namespace X20Ctl.Product;
 public sealed class DashboardConsolePage : Grid
 {
     private static Task<IReadOnlyList<GameEntry>>? scan;
-    private readonly StackPanel shelf = new() { Orientation = Orientation.Horizontal };
+    private readonly WrapPanel shelf = new();
+    private readonly DashboardControllerPreview preview;
+    private readonly Button changeIcon;
     private readonly ScrollViewer shelfScroll;
     private readonly Grid featured = new() { ClipToBounds = true };
-    private readonly Image heroArt = new() { Stretch = Stretch.UniformToFill, HorizontalAlignment = HorizontalAlignment.Right, Opacity = 0 };
+    private readonly Image heroArt = new() { Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Stretch, Opacity = 0 };
     private readonly Image logo = new() { Stretch = Stretch.Uniform, MaxHeight = 86, MaxWidth = 380, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly TextBlock featuredTitle = Kit.Text("", 34, "DS.Text", FontWeights.SemiBold), featuredMeta = Kit.Text("", 16, "DS.TextSoft");
     private readonly TextBlock gamesCount; private readonly Button play;
@@ -37,12 +39,13 @@ public sealed class DashboardConsolePage : Grid
     private GameEntry? current;
     private int scanGeneration;
     public event Action? ConfigureRequested;
+    public event Action<string>? PageRequested;
     /// <summary>The invitation in the hero's empty corner was chosen: open the agent.</summary>
     public event Action? AgentRequested;
     private Button? heroFocus;
     public FrameworkElement ControllerArtwork { get; }
     /// <summary>What A does on the highlighted item, for the live footer.</summary>
-    public string FocusAction => heroFocus?.IsKeyboardFocused == true ? "Configure" : play.IsKeyboardFocused || cards.Any(c => c.Card.IsKeyboardFocusWithin) ? "Play" : "Select";
+    public string FocusAction => heroFocus?.IsKeyboardFocused == true ? "Configure" : play.IsKeyboardFocused ? "Play" : "Select";
     /// <summary>Y: scan the launchers again.</summary>
     public async void Rescan() { scanGeneration++; scan = null; cards.Clear(); covers.Clear(); shelf.Children.Clear(); Feature(null); gamesCount.Text = "…"; await Populate(); }
     /// <summary>LT/RT: jump a page (five covers) along the shelf.</summary>
@@ -57,12 +60,14 @@ public sealed class DashboardConsolePage : Grid
     {
         animate = !reducedMotion && DS.Motion;
         ClipToBounds = true; // in a short window nothing may spill under the Studio footer
-        RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star), MinHeight = FullTop }); RowDefinitions.Add(new() { Height = new(12) });
-        RowDefinitions.Add(new() { Height = new(FullFeatured) }); RowDefinitions.Add(new() { Height = new(12) }); RowDefinitions.Add(new() { Height = new(FullCover + 80) });
+        RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
+        RowDefinitions.Add(new() { Height = new(14) });
+        RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
 
         // ---- top: controller hero (left) + status block (right) ----
         var top = new Grid(); top.ColumnDefinitions.Add(new() { Width = new(.95, GridUnitType.Star) }); top.ColumnDefinitions.Add(new() { Width = new(1.05, GridUnitType.Star) }); Children.Add(top);
-        ControllerArtwork = new Viewbox { Child = new PhotoController(model.Id) };
+        preview = new DashboardControllerPreview(model.Id, animate);
+        ControllerArtwork = new Viewbox { Child = preview };
         var heroButton = new Button { Content = new Grid { Children = { ControllerArtwork } }, Template = Bare(), Cursor = Cursors.Hand, ToolTip = "Configure this controller (opens Buttons)", FocusVisualStyle = null };
         heroButton.Click += (_, _) => ConfigureRequested?.Invoke();
         var hint = new Border { CornerRadius = new(14), Padding = new(14, 6, 14, 6), Background = new SolidColorBrush(Color.FromArgb(150, 8, 14, 32)), BorderBrush = new SolidColorBrush(Color.FromArgb(70, 140, 180, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(24, 0, 0, 6),
@@ -94,32 +99,46 @@ public sealed class DashboardConsolePage : Grid
         tiles.Children.Add(new StatTile("", draftChanges.ToString(), "Changes") { Margin = new(0, 0, 12, 0) });
         tiles.Children.Add(new StatTile("", savedSetups.ToString(), "Setups") { Margin = new(0, 0, 12, 0) });
         status.Children.Add(tiles);
+        var shortcuts = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 18, 0, 0) };
+        foreach (var label in new[] { "Buttons", "Curves", "Macros", "Diagnostics" }) {
+            string page = label;
+            var shortcut = AddButton(label, () => PageRequested?.Invoke(page));
+            shortcut.Margin = new(0, 0, 8, 0); shortcuts.Children.Add(shortcut);
+        }
+        status.Children.Add(shortcuts);
         // the status block keeps its proportions and scales down when the window is short or narrow, rather than being cut off
         var statusBox = new Viewbox { Child = status, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new(6, 6, 0, 6) };
         Grid.SetColumn(statusBox, 1); top.Children.Add(statusBox);
 
-        // ---- middle: featured game banner ----
-        featured.Children.Add(new Border { CornerRadius = new(20), Background = new LinearGradientBrush(Color.FromArgb(220, 14, 26, 60), Color.FromArgb(200, 8, 14, 34), 0) });
-        var artHost = new Border { CornerRadius = new(20), ClipToBounds = true, Child = heroArt };
-        artHost.OpacityMask = new LinearGradientBrush(new GradientStopCollection { new(Colors.Transparent, 0), new(Color.FromArgb(120, 0, 0, 0), .32), new(Colors.White, .62) }, new Point(0, .5), new Point(1, .5));
-        featured.Children.Add(artHost);
-        featured.Children.Add(new Border { CornerRadius = new(20), BorderThickness = new(1), BorderBrush = new LinearGradientBrush(Color.FromArgb(110, 120, 170, 255), Color.FromArgb(30, 120, 170, 255), 90) });
-        play = new Button { Style = DS.Style("DS.ActionPrimary"), Width = 200, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(0, 0, 30, 26), Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Icon("", 17, "DS.Text").Also(i => i.Margin = new(0, 0, 12, 0)), Kit.Text("Play", 16, "DS.Text", FontWeights.SemiBold) } } };
-        play.Click += (_, _) => PlayGame(current, play);
-        // the banner: the game's logo and when it was last played, large on the left; Play in blue at the bottom right
-        var info = new StackPanel { Width = 520,
-            Children = { Kit.Text("FEATURED", 12.5, "DS.AccentHi", FontWeights.SemiBold).Also(t => t.Margin = new(0, 0, 0, 8)), logo, featuredTitle, featuredMeta.Also(t => t.Margin = new(0, 8, 0, 0)) } };
-        // like the status block, the banner's words and Play button scale down with a short banner instead of being cut
-        featured.Children.Add(new Viewbox { Child = info, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new(36, 10, 0, 10) });
-        featured.Children.Add(play);
-        Grid.SetRow(featured, 2); Children.Add(featured);
-
-        // ---- bottom: games shelf ----
-        shelfScroll = new ScrollViewer { Content = shelf, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false, Padding = new(4, 6, 4, 6) };
-        var shelfPanel = new DockPanel { Children = { new DockPanel { Margin = new(2, 0, 0, 8), Children = { AddButton("Add a folder", AddFolderClick), AddButton("Add a game", AddGameClick), Kit.Text("Your games", 19, "DS.Text", FontWeights.SemiBold) } }.Also(d => DockPanel.SetDock(d, Dock.Top)), shelfScroll } };
-        Grid.SetRow(shelfPanel, 4); Children.Add(shelfPanel);
+        // Library and selected game share a stable lower row; neither can push the footer away.
+        var lower = new Grid(); lower.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
+        lower.ColumnDefinitions.Add(new() { Width = new(18) }); lower.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
+        Grid.SetRow(lower, 2); Children.Add(lower);
+        shelfScroll = new ScrollViewer { Content = shelf, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Focusable = false, Padding = new(4, 6, 4, 6) };
+        var header = new DockPanel { Margin = new(0, 0, 0, 12) };
+        header.Children.Add(AddButton("Add a folder", AddFolderClick)); header.Children.Add(AddButton("Add a game", AddGameClick));
+        header.Children.Add(Kit.Text("Your games", 19, "DS.Text", FontWeights.SemiBold));
+        DockPanel.SetDock(header, Dock.Top);
+        var library = new DockPanel(); library.Children.Add(header); library.Children.Add(shelfScroll);
+        lower.Children.Add(Kit.Panel(null, null, null, library, new Thickness(16)));
+        featured.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
+        featured.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        heroArt.Margin = new(18, 14, 18, 10); featured.Children.Add(heroArt);
+        var info = new Grid { Margin = new(18, 8, 18, 16) };
+        info.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); info.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        featuredTitle.FontSize = 22; featuredTitle.TextTrimming = TextTrimming.CharacterEllipsis;
+        featuredMeta.FontSize = 12; featuredMeta.TextTrimming = TextTrimming.CharacterEllipsis;
+        var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { featuredTitle, featuredMeta } }; info.Children.Add(words);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        changeIcon = AddButton("Change icon", ChangeIcon); actions.Children.Add(changeIcon);
+        play = new Button { Style = DS.Style("DS.ActionPrimary"), MinWidth = 100, Height = 42, Content = "▶  Play", Margin = new(8, 0, 0, 0) };
+        play.Click += (_, _) => PlayGame(current, heroArt); actions.Children.Add(play);
+        Grid.SetColumn(actions, 1); info.Children.Add(actions); Grid.SetRow(info, 1); featured.Children.Add(info);
+        var selectedPanel = Kit.Panel(null, null, null, featured, new Thickness(0)); Grid.SetColumn(selectedPanel, 2); lower.Children.Add(selectedPanel);
         Feature(null);
-        Loaded += async (_, _) => { if (!EntryTransitionPending) await Populate(); };
+        Loaded += async (_, _) => { if (!EntryTransitionPending) { preview.Start(); await Populate(); } };
+        Unloaded += (_, _) => preview.Stop();
 
         PreviewKeyDown += OnKey;
     }
@@ -137,14 +156,8 @@ public sealed class DashboardConsolePage : Grid
     private void Fit(double height)
     {
         if (height <= 0) return;
-        double Shelf(double cover) => cover + 80; // "Your games", padding, cover and its title
-        double deficit = Math.Max(0, FullTop + 12 + FullFeatured + 12 + Shelf(FullCover) - height);
-        double featured = FullFeatured - Math.Min(76, deficit); deficit -= FullFeatured - featured;
-        double cover = FullCover - Math.Min(88, deficit); deficit -= FullCover - cover;
-        double top = Math.Max(120, height - featured - Shelf(cover) - 24);
-        RowDefinitions[0].MinHeight = top; RowDefinitions[2].Height = new(featured);
-        // The asynchronous game scan must never resize the controller's destination after its flight.
-        RowDefinitions[4].Height = new(Shelf(cover));
+        RowDefinitions[0].MinHeight = 0;
+        double cover = Math.Clamp(height * .19, 86, 140);
         if (Math.Abs(cover - coverHeight) > .5) { coverHeight = cover; foreach (var (art, title) in covers) SizeCover(art, title); }
     }
     private void SizeCover(Border art, TextBlock title)
@@ -160,6 +173,7 @@ public sealed class DashboardConsolePage : Grid
     internal void CompleteEntryTransition()
     {
         EntryTransitionPending = false;
+        preview.Start();
         _ = Populate();
     }
 
@@ -181,7 +195,7 @@ public sealed class DashboardConsolePage : Grid
     private Button Card(GameEntry g)
     {
         UIElement face;
-        var cover = Bitmap(g.Cover);
+        var cover = Bitmap(GameArtwork.PathFor(g));
         if (cover != null) face = new Image { Source = cover, Stretch = Stretch.UniformToFill };
         else
         {
@@ -194,11 +208,11 @@ public sealed class DashboardConsolePage : Grid
         var title = Kit.Text(g.Name, 14, "DS.TextSoft"); title.Margin = new(2, 6, 0, 0);
         covers.Add((art, title)); SizeCover(art, title);
         var stack = new StackPanel { Children = { new Grid { Children = { art, store } }, title }, RenderTransformOrigin = new(.5, .4), RenderTransform = new ScaleTransform(1, 1) };
-        var b = new Button { Content = stack, Template = Bare(), Margin = new(0, 0, 18, 0), Cursor = Cursors.Hand, FocusVisualStyle = null, ToolTip = $"{g.Name} · {g.Store}" };
-        b.GotKeyboardFocus += (_, _) => { Feature(g); art.BorderBrush = Brushes.White; art.Effect = new DropShadowEffect { Color = Kit.Blue, BlurRadius = 26, ShadowDepth = 0, Opacity = .9 }; Lift(stack, 1.06); title.Foreground = DS.Brush("DS.Text"); b.BringIntoView(new Rect(-40, 0, coverHeight + 100, coverHeight + 70)); };
+        var b = new Button { Content = stack, Template = Bare(), Margin = new(0, 0, 12, 12), Cursor = Cursors.Hand, FocusVisualStyle = null, ToolTip = $"{g.Name} · {g.Store}" };
+        b.GotKeyboardFocus += (_, _) => { Feature(g); art.BorderBrush = Brushes.White; art.Effect = new DropShadowEffect { Color = Kit.Blue, BlurRadius = 26, ShadowDepth = 0, Opacity = .9 }; Lift(stack, 1.06); title.Foreground = DS.Brush("DS.Text"); b.BringIntoView(new Rect(-40, 0, coverHeight + 12, coverHeight + 34)); };
         b.LostKeyboardFocus += (_, _) => { art.BorderBrush = Brushes.Transparent; art.Effect = null; Lift(stack, 1); title.Foreground = DS.Brush("DS.TextSoft"); };
-        b.MouseEnter += (_, _) => Feature(g);
-        b.Click += (_, _) => PlayGame(g, art);
+
+        b.Click += (_, _) => Feature(g);
         return b;
     }
 
@@ -218,6 +232,22 @@ public sealed class DashboardConsolePage : Grid
         if (dialog.ShowDialog() == true) { GameLibrary.AddFolder(dialog.FolderName); Rescan(); }
     }
 
+    private void ChangeIcon()
+    {
+        if (current is not { } game) return;
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Change game icon", Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp" };
+        if (dialog.ShowDialog() != true) return;
+        try {
+            GameArtwork.Save(game, dialog.FileName);
+            current = null; Feature(game);
+            int index = cards.FindIndex(c => c.Game.Id == game.Id);
+            if (index >= 0) { var replacement = Card(game); shelf.Children.Remove(cards[index].Card); shelf.Children.Insert(index, replacement); cards[index] = (replacement, game); }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException or System.IO.FileFormatException) {
+            featuredMeta.Text = "Could not use this image. Choose a PNG or JPEG.";
+        }
+    }
+
     private bool playing;
     /// <summary>Play: the game's picture grows from its tile until it fills the page, the game starts, and once it is really
     /// running the page says "In game" and gives itself back (owner request, 13 Oct 2026).</summary>
@@ -228,7 +258,7 @@ public sealed class DashboardConsolePage : Grid
         Border? zoom = null;
         try
         {
-            var image = Bitmap(game.Cover) ?? Bitmap(game.Hero);
+            var image = Bitmap(GameArtwork.PathFor(game)) ?? Bitmap(game.Hero);
             var at = source.TranslatePoint(new Point(0, 0), overlay);
             double w = Math.Max(1, source.ActualWidth), h = Math.Max(1, source.ActualHeight), pageW = overlay.ActualWidth, pageH = overlay.ActualHeight;
             Brush fill = image != null ? new ImageBrush(image) { Stretch = Stretch.Uniform } : new LinearGradientBrush(Color.FromRgb(28, 52, 110), Color.FromRgb(10, 18, 44), 90);
@@ -273,21 +303,23 @@ public sealed class DashboardConsolePage : Grid
     private void Feature(GameEntry? g)
     {
         if (g != null && ReferenceEquals(g, current)) return; current = g;
-        var hero = Bitmap(g?.Hero) ?? Bitmap(g?.Cover); var mark = Bitmap(g?.Logo);
+        var hero = g == null ? null : Bitmap(GameArtwork.PathFor(g)) ?? Bitmap(g.Hero); var mark = Bitmap(g?.Logo);
         if (animate && heroArt.Source != hero) { heroArt.BeginAnimation(OpacityProperty, null); heroArt.Opacity = 0; }
         heroArt.Source = hero; if (hero != null) { if (animate) heroArt.BeginAnimation(OpacityProperty, DS.To(1, 320)); else heroArt.Opacity = 1; }
         logo.Source = mark; logo.Visibility = mark != null ? Visibility.Visible : Visibility.Collapsed; logo.Margin = new(0, 8, 0, 6);
-        featuredTitle.Text = g?.Name ?? "Your library"; featuredTitle.Visibility = mark == null ? Visibility.Visible : Visibility.Collapsed;
+        featuredTitle.Text = g?.Name ?? "Your library"; featuredTitle.Visibility = Visibility.Visible;
         featuredMeta.Text = g == null ? "Scanning installed games…" : $"{g.Store} · {(g.LastPlayed is { } t ? "Last played " + t.ToString("d MMM yyyy") : "Installed")}";
-        play.IsEnabled = g != null;
+        play.IsEnabled = changeIcon.IsEnabled = g != null;
     }
 
     private void OnKey(object sender, KeyEventArgs e)
     {
         int index = cards.FindIndex(c => c.Card.IsKeyboardFocusWithin);
-        if (e.Key is Key.Right or Key.Left && index >= 0)
+        if (e.Key is Key.Right or Key.Left or Key.Up or Key.Down && index >= 0)
         {
-            int next = Math.Clamp(index + (e.Key == Key.Right ? 1 : -1), 0, cards.Count - 1); cards[next].Card.Focus(); e.Handled = true;
+            int columns = Math.Max(1, (int)(shelf.ActualWidth / (coverHeight + 12)));
+            int step = e.Key == Key.Right ? 1 : e.Key == Key.Left ? -1 : e.Key == Key.Down ? columns : -columns;
+            cards[Math.Clamp(index + step, 0, cards.Count - 1)].Card.Focus(); e.Handled = true;
         }
         else if (e.Key is Key.Enter or Key.A && Keyboard.FocusedElement is Button focused && !e.IsRepeat) { focused.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); e.Handled = true; }
     }

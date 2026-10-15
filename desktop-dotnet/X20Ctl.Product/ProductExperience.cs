@@ -18,11 +18,11 @@ public static class ProductLinks
 /// <summary>
 /// Original X20CTL controller and X geometry, with travelling contour strokes, a short anticipation,
 /// one continuous morph and particle release, then a quiet logo hold and the existing Zone handoff.
-/// A deterministic 6.65-second score follows the same cues. Skip, mute and reduced motion are retained.
+/// A 7.1-second reference effect is aligned to the reveal and morph cues. Skip, mute and reduced motion are retained.
 /// </summary>
 public sealed class IntroView:Grid
 {
-    private const double Total=6.65, SloganAt=4.6, FlyAt=5.55, FlyFor=.85, ReducedFor=.4, Line=9, MorphAt=2.65, MorphFor=1.0, Samples=160;
+    private const double Total=7.1, SloganAt=5.1, FlyAt=6.0, FlyFor=.85, ReducedFor=.4, Line=9, MorphAt=2.95, MorphFor=1.15, Samples=160;
     private static readonly double[] LedAt={.18,.36,.54};
     public IntroView Visual=>this;
     public Button Skip {get;} public Button Mute {get;}
@@ -43,6 +43,8 @@ public sealed class IntroView:Grid
     private Grid stage=null!;
     private readonly Grid controllerGroup=new(){IsHitTestVisible=false};
     private readonly IntroParticleBurst energy=new(){IsHitTestVisible=false};
+    private readonly IntroContourFlow contours=new(){IsHitTestVisible=false};
+    private readonly System.Windows.Shapes.Path morphGhost=new(){Stroke=new SolidColorBrush(Color.FromArgb(70,200,215,245)),StrokeThickness=8,StrokeLineJoin=PenLineJoin.Round,Opacity=0,IsHitTestVisible=false};
     private readonly Point[][] from=new Point[2][], to=new Point[2][];
     private double lastMorph=-1;
     // Owner direction 10 Oct 2026 (latest): the outline is blue and orange - a blue pencil with an orange trail and a
@@ -114,6 +116,8 @@ public sealed class IntroView:Grid
         }
 
 
+        contours.SetPoints(from[0].Concat(from[1].Reverse()).ToArray(),to);
+
         // both halves are figures of one geometry: the dash runs down each from the top centre at once, and where they
         // meet (top and bottom centre) the caps and glow are painted once, so there is no seam or bright spot
         var left=G(LeftHalf,Pad());double halfLen=Len(left);var halves=new PathGeometry();halves.AddGeometry(left);halves.AddGeometry(G(RightHalf,Pad()));halves.Freeze();
@@ -170,23 +174,23 @@ public sealed class IntroView:Grid
         var back=new PathGeometry();back.Figures.Add(markPx.Figures[1].Clone());back.Freeze();
         // the mark in white with a soft grey-white glow, the same mark as the app icon
         var markFill=new LinearGradientBrush(Color.FromRgb(255,255,255),Color.FromRgb(218,224,236),90);
-        filled=new System.Windows.Shapes.Path{Data=forward,Fill=markFill,Opacity=Warm,Effect=new System.Windows.Media.Effects.DropShadowEffect{Color=GlowHi,BlurRadius=20,ShadowDepth=0,Opacity=.45}};
-        filledBack=new System.Windows.Shapes.Path{Data=back,Fill=markFill,Opacity=Warm,Effect=new System.Windows.Media.Effects.DropShadowEffect{Color=GlowHi,BlurRadius=20,ShadowDepth=0,Opacity=.45}};
+        filled=new System.Windows.Shapes.Path{Data=forward,Fill=markFill,Opacity=Warm,Effect=new System.Windows.Media.Effects.DropShadowEffect{Color=GlowHi,BlurRadius=40,ShadowDepth=0,Opacity=.85}};
+        filledBack=new System.Windows.Shapes.Path{Data=back,Fill=markFill,Opacity=Warm,Effect=new System.Windows.Media.Effects.DropShadowEffect{Color=GlowHi,BlurRadius=40,ShadowDepth=0,Opacity=.85}};
         // the light lives inside the X: a band masked by the mark itself, so nothing floats over the backdrop
         shine.Fill=new LinearGradientBrush(new GradientStopCollection{new(Color.FromArgb(0,255,255,255),.38),new(Color.FromArgb(210,255,255,255),.5),new(Color.FromArgb(0,255,255,255),.62)},new Point(0,0),new Point(1,.35)){RelativeTransform=new TranslateTransform(-1,0)};
         shine.OpacityMask=new DrawingBrush(new GeometryDrawing(Brushes.White,null,markPx)){Stretch=Stretch.None,AlignmentX=AlignmentX.Left,AlignmentY=AlignmentY.Top,ViewboxUnits=BrushMappingMode.Absolute,Viewbox=new(0,0,stageW,stageH),ViewportUnits=BrushMappingMode.Absolute,Viewport=new(0,0,stageW,stageH)};
         stage=new Grid{Width=stageW,Height=stageH,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,RenderTransformOrigin=new(.5,.5),RenderTransform=new ScaleTransform(1,1)};
         // the stage is designed for a 1200-pixel-tall screen and scales with the window, so the mark stays about half its height
         SizeChanged+=(_,_)=>{double z=Math.Clamp(ActualHeight/1200,.55,1.8);((ScaleTransform)stage.RenderTransform).ScaleX=((ScaleTransform)stage.RenderTransform).ScaleY=z;};
-        stage.Children.Add(energy);
+        stage.Children.Add(energy);stage.Children.Add(contours);
         controllerGroup.RenderTransform=new ScaleTransform(1,1,stageW/2,stageH/2);
         foreach(var e in new UIElement[]{floor,body,beat,glow,trail,line,tracer})controllerGroup.Children.Add(e);
         foreach(var (core,bloom) in leds){controllerGroup.Children.Add(bloom);controllerGroup.Children.Add(core);}
         stage.Children.Add(controllerGroup);
         // the X's heartbeat (owner 12 Oct 2026): the mark swells about its own centre, so every piece of it shares one scale
         var xBounds=Rect.Union(forward.Bounds,back.Bounds);var xBeat=new ScaleTransform(1,1,xBounds.X+xBounds.Width/2,xBounds.Y+xBounds.Height/2);
-        foreach(var e in new UIElement[]{morph,filled,filledBack})e.RenderTransform=xBeat;
-        foreach(var e in new UIElement[]{morph,filled,filledBack,shine})xGroup.Children.Add(e);stage.Children.Add(xGroup);this.xBounds=xBounds;
+        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack})e.RenderTransform=xBeat;
+        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,shine})xGroup.Children.Add(e);stage.Children.Add(xGroup);this.xBounds=xBounds;
         Children.Add(stage);sloganBox.Children.Add(slogan);Children.Add(sloganBox);Children.Add(fade);
         // WPF has no letter-spacing: hair spaces between the letters track it out, a wider gap between words
         slogan.Text=string.Join("\u200A",SloganText.Select(c=>c==' '?"\u2009\u2009":c.ToString()));
@@ -237,13 +241,14 @@ public sealed class IntroView:Grid
         void TraceOn(System.Windows.Shapes.Path p,double at,double dur,IEasingFunction e){double u=dash[p];A(p,"StrokeDashOffset",u*.08,u*.08-u,at,dur,e);A(p,"Opacity",0,1,at+.02,.1);A(p,"Opacity",1,0,at+dur-.15,.12);}
         if(Reduced)
         {
-            foreach(var p in new[]{line,glow,tracer,trail,beat,morph})p.Visibility=Visibility.Collapsed;
+            foreach(var p in new[]{line,glow,tracer,trail,beat,morph,morphGhost})p.Visibility=Visibility.Collapsed;
             foreach(var (core,bloom) in leds){core.Visibility=bloom.Visibility=Visibility.Collapsed;}
             // reduced motion: the X, held for a moment, while the zone comes up underneath it
             A(dark,"Opacity",1,0,0,.1);A(haze,"Opacity",0,1,0,.1);A(filled,"Opacity",0,1,0,.1);A(filledBack,"Opacity",0,1,0,.1);foreach(var p in new UIElement[]{heart,aura,dotsLeft,dotsRight})A(p,"Opacity",0,1,0,.1);story.Duration=TimeSpan.FromSeconds(ReducedFor);
         }
         else
         {
+            foreach(var old in new[]{line,glow,tracer,trail})old.Visibility=Visibility.Collapsed;
             // One continuous sequence: tracing, recognition, anticipation, transformation, settlement.
             A(haze,"Opacity",0,.65,0,.75,outE);
             A(dark,"Opacity",1,.25,.12,.9,outE);
@@ -261,17 +266,18 @@ public sealed class IntroView:Grid
             // Keep the owner's controller geometry, with restrained volume rather than a filled plastic body.
             A(body,"Opacity",0,.18,1.2,.55,outE);A(floor,"Opacity",0,.25,1.3,.55,outE);
             foreach(var axis in new[]{"(UIElement.RenderTransform).(ScaleTransform.ScaleX)","(UIElement.RenderTransform).(ScaleTransform.ScaleY)"})
-                A(controllerGroup,axis,1,1.06,2.15,.5,inE);
+                A(controllerGroup,axis,1,1.10,2.45,.5,inE);
             A(line,"Opacity",1,0,MorphAt,.025);A(glow,"Opacity",.3,0,MorphAt,.08);
             A(body,"Opacity",.18,0,MorphAt-.05,.15);A(floor,"Opacity",.25,0,MorphAt-.05,.15);
             A(morph,"Opacity",0,1,MorphAt-.025,.025);
+            A(morphGhost,"Opacity",0,1,MorphAt+.08,.12);A(morphGhost,"Opacity",1,0,MorphAt+MorphFor-.12,.2);
             double lit=MorphAt+MorphFor-.05;
             A(filled,"Opacity",0,1,lit,.32,outE);A(filledBack,"Opacity",0,1,lit+.09,.32,outE);
             A(morph,"Opacity",1,0,lit+.26,.22,outE);
-            A(heart,"Opacity",0,.48,MorphAt+.05,.3,outE);A(heart,"Opacity",.48,.16,lit+.15,1.1,outE);
-            A(aura,"Opacity",0,.22,lit,.45,outE);A(aura,"Opacity",.22,.08,4.4,.8,outE);
+            A(heart,"Opacity",0,.85,MorphAt+.05,.3,outE);A(heart,"Opacity",.85,.45,lit+.15,1.1,outE);
+            A(aura,"Opacity",0,.85,lit,.45,outE);A(aura,"Opacity",.85,.55,5.0,.8,outE);
             A(dotsLeft,"Opacity",0,.18,lit,.3,outE);A(dotsRight,"Opacity",0,.18,lit,.3,outE);
-            A(dotsLeft,"Opacity",.18,0,4.3,.8,outE);A(dotsRight,"Opacity",.18,0,4.3,.8,outE);
+            A(dotsLeft,"Opacity",.18,0,4.8,.8,outE);A(dotsRight,"Opacity",.18,0,4.8,.8,outE);
             A(shine,"Opacity",0,.65,lit+.25,.1);
             A(shine,"(Shape.Fill).(Brush.RelativeTransform).(TranslateTransform.X)",-.8,.8,lit+.3,.85,ease);
             A(shine,"Opacity",.65,0,lit+1.05,.2,outE);
@@ -336,30 +342,36 @@ public sealed class IntroView:Grid
     }
     private void Morph(double t)
     {
-        if(Reduced)return;double key=Math.Round(Math.Clamp((t-MorphAt)/(MorphFor-.1),0,1),3);if(key==lastMorph)return;lastMorph=key;
+        if(Reduced)return;double key=Math.Round(Math.Clamp((t-MorphAt)/MorphFor,0,1),3);if(key==lastMorph)return;lastMorph=key;
         // the two halves of the line are open strokes that close as they land on the outline
         StreamGeometry Shape(params int[] figures)
         {
             var g=new StreamGeometry{FillRule=FillRule.Nonzero};
             using(var c=g.Open())foreach(int f in figures)
             {
-                double u=Math.Clamp((t-MorphAt)/(MorphFor-.1),0,1);u=u<.5?4*u*u*u:1-Math.Pow(-2*u+2,3)/2;
+                double raw=Math.Clamp((t-MorphAt)/MorphFor,0,1);
+                double u=Smooth(raw);
                 var a=from[f];var b=to[f];
                 Point At(int i)
                 {
                     var centre=new Point(StageW/2,StageH/2);
-                    var start=centre+(a[i]-centre)*1.06;
-                    var delta=b[i]-start;
-                    // A shallow arc guides each contour into the original X without a spiral or a shape swap.
-                    var bend=new Vector(-delta.Y,delta.X)*(.055*Math.Sin(Math.PI*u)*(f==0?1:-1));
-                    return start+delta*u+bend;
+                    var start=centre+(a[i]-centre)*1.10;
+                    double angle=-Math.PI/2+(f==0?-1:1)*Math.PI*i/(a.Length-1)+.24*Math.Sin(Math.PI*raw);
+                    double radius=230+45*Math.Sin(Math.PI*raw);
+                    var arc=centre+new Vector(Math.Cos(angle)*radius,Math.Sin(angle)*radius*.9);
+                    if(raw<.48)return start+(arc-start)*Smooth(raw/.48);
+                    return arc+(b[i]-arc)*Smooth((raw-.48)/.52);
                 }
                 c.BeginFigure(At(0),false,u>=.999);
                 var r=new Point[a.Length-1];for(int i=1;i<a.Length;i++)r[i-1]=At(i);c.PolyLineTo(r,true,true);
             }
             g.Freeze();return g;
         }
-        morph.Data=Shape(0,1);
+        morph.Data=Shape(0,1);morphGhost.Data=morph.Data;
+        double progress=Math.Clamp((t-MorphAt)/MorphFor,0,1);
+        double strength=Math.Sin(Math.PI*progress);
+        morph.StrokeThickness=Line+3*strength;
+        morph.StrokeDashArray=null; morph.StrokeDashOffset=0;
     }
     private static double Length(PathFigure f)
     {
@@ -370,7 +382,7 @@ public sealed class IntroView:Grid
     private double Elapsed=>seekAt?.TotalSeconds??(DateTime.UtcNow-beganAt).TotalSeconds;
     private DateTime beganAt=DateTime.UtcNow;
     public void Start(){startRequested=true;PrepareSound();if(IsLoaded)Begin();}
-    /// <summary>The original stereo tracing/reveal/morph score. Off for reduced motion, development fixtures and mute.</summary>
+    /// <summary>The supplied recording's stereo effect, trimmed and aligned to this preview. Off for reduced motion, development fixtures and mute.</summary>
     public static bool SoundEnabled {get;set;}=true;
     private System.Windows.Media.MediaPlayer? sound;
     private bool soundReady,soundWanted;
@@ -415,6 +427,7 @@ public sealed class IntroView:Grid
     {
         Morph(t);
         energy.SetTime(Reduced ? -1 : t-MorphAt);
+        contours.SetTime(Reduced ? -1 : t);
         if(Reduced)
         {
             double start=Duration-.5,amount=Math.Clamp((t-start)/.5,0,1);amount=1-Math.Pow(1-amount,3);
@@ -496,7 +509,7 @@ internal sealed class IntroParticleBurst : FrameworkElement
     public IntroParticleBurst()
     {
         var random=new Random(20261015);
-        points=Enumerable.Range(0,150).Select(_=>(random.NextDouble()*Math.PI*2,80+random.NextDouble()*300,.25+random.NextDouble()*.75)).ToArray();
+        points=Enumerable.Range(0,240).Select(i=>(i*2.399963229728653,70+Math.Sqrt((i+.5)/240)*310,.4+random.NextDouble()*.6)).ToArray();
     }
     public void SetTime(double value)
     {
@@ -512,8 +525,55 @@ internal sealed class IntroParticleBurst : FrameworkElement
         {
             double r=distance*(.3+travel*1.25);
             var at=new Point(390+Math.Cos(angle)*r,320+Math.Sin(angle)*r*.72);
-            var colour=Color.FromArgb((byte)(170*rise*fall*fall*depth),(byte)(65+80*depth),(byte)(125+55*depth),255);
-            var brush=new SolidColorBrush(colour);brush.Freeze();dc.DrawEllipse(brush,null,at,.6+depth,.6+depth);
+            var colour=Color.FromArgb((byte)(235*rise*fall*depth),(byte)(65+80*depth),(byte)(125+55*depth),255);
+            var brush=new SolidColorBrush(colour);brush.Freeze();dc.DrawEllipse(brush,null,at,.9+depth, .9+depth);
+        }
+    }
+}
+
+
+/// <summary>Travelling tapered fragments and delayed white recognition on the original controller contour.</summary>
+internal sealed class IntroContourFlow:FrameworkElement
+{
+    private Point[] controller=[];private Point[][] mark=[];private double time=-1;
+    public void SetPoints(Point[] source,Point[][] destination){controller=source;mark=destination;}
+    public void SetTime(double value){if(value==time)return;time=value;InvalidateVisual();}
+    private static double Smooth(double t){t=Math.Clamp(t,0,1);return t*t*(3-2*t);}
+    protected override void OnRender(DrawingContext dc)
+    {
+        if(time<.12 || controller.Length==0)return;
+        if(time<2.95)
+        {
+            double anticipate=1+.10*Smooth((time-2.45)/.5);
+            dc.PushTransform(new ScaleTransform(anticipate,anticipate,390,320));
+            double colour=1-Smooth((time-1.65)/.65);
+            double position=(time-.12)*.61;
+            Segment(dc,controller,position,.24,9,colour,true);
+            Segment(dc,controller,position+.48,.20,6,colour*.34,false);
+            double white=Smooth((time-1.45)/1.0);
+            if(white>0)Segment(dc,controller,0,white,8.5,1,false,white>.999);
+            dc.Pop();
+        }
+        else if(time>4.35 && time<5.95)
+        {
+            double a=Smooth((time-4.35)/.15)*(1-Smooth((time-5.5)/.45));
+            foreach(var piece in mark)Segment(dc,piece,(time-4.35)*.72,.24,4.5,a,true);
+        }
+    }
+    private void Segment(DrawingContext dc,Point[] points,double start,double span,double width,double alpha,bool coloured,bool full=false)
+    {
+        if(alpha<=0 || span<=0)return;
+        int count=Math.Max(2,(int)(span*points.Length));
+        Point At(double v){v-=Math.Floor(v);double index=v*(points.Length-1);int i=(int)index;return points[i]+(points[Math.Min(i+1,points.Length-1)]-points[i])*(index-i);}
+        for(int j=0;j<count;j++)
+        {
+            double u=j/(double)count;
+            double tip=full?1:Math.Pow(Math.Sin(Math.PI*Math.Clamp(u,0,1)),.45);
+            double phase=Math.Clamp((time-.3)/2,0,1);
+            var c=coloured?Color.FromRgb((byte)(45+95*phase), (byte)(145-65*phase),255):Color.FromRgb(238,242,250);
+            var ink=new SolidColorBrush(Color.FromArgb((byte)(255*alpha*tip),c.R,c.G,c.B));ink.Freeze();
+            var pen=new Pen(ink,width*(.25+.75*tip)){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};pen.Freeze();
+            dc.DrawLine(pen,At(start+u*span),At(start+(j+1)/(double)count*span));
         }
     }
 }
