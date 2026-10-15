@@ -8,7 +8,7 @@ Preserves the exact LeftHalf, LeftGrip, Arch and Mark(Point) source geometry.
 
 ## Sound
 
-The local preview uses the effect extracted from the user-supplied Steam recording, starting at source 2.25 s, aligned to the reveal/morph. This replaces the rejected synthesized music. See Brand/intro-audio-provenance.md. Regenerate with tools/build_intro_sound.py --reference <decoded-recording.wav>. Standard-library Python only. WAV: 48 kHz stereo, 16-bit, 7.1 s, peak -14.41 dBFS, silent final 100 ms.
+The copied reference audio was removed. The app now loads Brand/original-intro.wav, generated only from mathematical oscillators and seeded noise. No recording is read. Air sweeps, a low impact and short inharmonic transients replace the sampled effect. WAV: 48 kHz stereo, 16-bit, 7.1 seconds, peak -12.40 dBFS, silent final 300 ms. See Brand/intro-audio-provenance.md.
 
 ## Research
 

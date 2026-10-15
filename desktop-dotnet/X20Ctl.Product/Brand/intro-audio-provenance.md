@@ -1,5 +1,7 @@
-# Intro preview audio provenance
+# Intro audio provenance
 
-This local school-project preview uses the sound from the user-supplied recording `20261015-1608-58.4435596.mp4`, decoded to PCM and trimmed from 2.25 seconds. Short entrance/exit fades and a silent ending align it to the 7.1-second intro. It is reference audio, not an original X20CTL composition. Redistribution rights have not been established by this work.
+original-intro.wav is generated entirely from mathematical oscillators and deterministically seeded noise by tools/build_intro_sound.py. It reads no source recording or sampled sound. The design uses air sweeps, a low impact, inharmonic metallic transients and short stereo reflections. It contains no Steam audio samples.
 
-Regenerate with `python tools/build_intro_sound.py --reference <decoded-reference.wav>`. The prepared WAV needs no audio-generation runtime.
+The previously copied intro.wav has been removed from source and local build outputs, and the app now loads a different filename. That earlier file remains in private Git history; do not distribute builds from commit 538a2e3.
+
+Regenerate: python tools/build_intro_sound.py (NumPy and SciPy required only for regeneration).

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,7 +18,7 @@ public static class ProductLinks
 /// <summary>
 /// Original X20CTL controller and X geometry, with travelling contour strokes, a short anticipation,
 /// one continuous morph and particle release, then a quiet logo hold and the existing Zone handoff.
-/// A 7.1-second reference effect is aligned to the reveal and morph cues. Skip, mute and reduced motion are retained.
+/// A 7.1-second original effect is aligned to the reveal and morph cues. Skip, mute and reduced motion are retained.
 /// </summary>
 public sealed class IntroView:Grid
 {
@@ -382,7 +382,7 @@ public sealed class IntroView:Grid
     private double Elapsed=>seekAt?.TotalSeconds??(DateTime.UtcNow-beganAt).TotalSeconds;
     private DateTime beganAt=DateTime.UtcNow;
     public void Start(){startRequested=true;PrepareSound();if(IsLoaded)Begin();}
-    /// <summary>The supplied recording's stereo effect, trimmed and aligned to this preview. Off for reduced motion, development fixtures and mute.</summary>
+    /// <summary>Original oscillator and noise sound design; no sampled recording. Off for reduced motion, development fixtures and mute.</summary>
     public static bool SoundEnabled {get;set;}=true;
     private System.Windows.Media.MediaPlayer? sound;
     private bool soundReady,soundWanted;
@@ -390,7 +390,7 @@ public sealed class IntroView:Grid
     private void PrepareSound()
     {
         if(sound!=null||!SoundEnabled||Muted||Reduced||ReviewSandbox.Active)return;
-        string path=System.IO.Path.Combine(AppContext.BaseDirectory,"Brand","intro.wav");if(!System.IO.File.Exists(path))return;
+        string path=System.IO.Path.Combine(AppContext.BaseDirectory,"Brand","original-intro.wav");if(!System.IO.File.Exists(path))return;
         // a player muted before it opened must not mark its replacement ready
         try{var player=new System.Windows.Media.MediaPlayer{Volume=.85};soundReady=false;sound=player;player.MediaOpened+=(_,_)=>{if(player!=sound)return;soundReady=true;if(soundWanted)PlayInSync();};player.Open(new Uri(path));}
         catch(Exception error) when(error is InvalidOperationException or System.IO.IOException or UriFormatException){sound=null;}
