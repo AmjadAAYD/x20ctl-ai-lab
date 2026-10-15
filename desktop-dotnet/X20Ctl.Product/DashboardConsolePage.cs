@@ -26,6 +26,14 @@ public sealed class DashboardConsolePage : Grid
     private readonly TextBlock gamesCount; private readonly Button play;
     private readonly List<(Button Card, GameEntry Game)> cards = new();
     private readonly bool animate;
+    private readonly StatusChip connectionChip = new("No controller input", ChipKind.Warn);
+    private bool? inputConnected;
+    public void SetInputConnected(bool connected)
+    {
+        if (inputConnected == connected) return;
+        inputConnected = connected;
+        connectionChip.Set(connected ? "Live controller input" : "No controller input", connected ? ChipKind.Success : ChipKind.Warn);
+    }
     private GameEntry? current;
     private int scanGeneration;
     public event Action? ConfigureRequested;
@@ -74,7 +82,7 @@ public sealed class DashboardConsolePage : Grid
         top.Children.Add(heroPanel);
 
         var status = new StackPanel { Width = 560 };
-        status.Children.Add(new StatusChip("Controller offline", ChipKind.Warn));
+        status.Children.Add(connectionChip);
         status.Children.Add(new TextBlock { Text = "Ready to play", Style = DS.Style("DS.Display"), FontWeight = FontWeights.Light, FontSize = 48, Margin = new(0, 10, 0, 8) });
         var pill = new Border { CornerRadius = new(17), Height = 34, Padding = new(14, 0, 16, 0), Background = new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left,
             Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Icon("", 16, "DS.Text").Also(i => i.Margin = new(0, 0, 10, 0)), Kit.Text($"{model.Name} · Player {player + 1}", 14.5) } } };

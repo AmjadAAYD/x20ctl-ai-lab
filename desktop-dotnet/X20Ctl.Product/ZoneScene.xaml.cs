@@ -53,7 +53,8 @@ public partial class ZoneScene : UserControl
             dock.ActionRequested += (index, change) => ControllerActionRequested?.Invoke(index, change);
             DockStage.Children.Add(dock);
         }
-        ScenarioHint.Text = value switch { ZoneScenario.OneController => "One mock assignment · F9 changes fixture", ZoneScenario.MultipleControllers => "Three mock assignments · F9 changes fixture", _ => "All empty · no hardware access" };
+        ProvenanceText.Text = value == ZoneScenario.Empty ? "LIVE INPUT" : "DEMO";
+        ScenarioHint.Text = value switch { ZoneScenario.OneController => "One mock assignment · F9 changes fixture", ZoneScenario.MultipleControllers => "Three mock assignments · F9 changes fixture", _ => "Waiting for controller input" };
         FeedbackText.Text = "Select any player. All four docks begin equal.";
         SnapLayout();
     }
@@ -62,7 +63,7 @@ public partial class ZoneScene : UserControl
         State.Restore(ids, catalog);
         for (int i = 0; i < 4; i++) docks[i].RefreshPlayer(State.Players[i]);
         SnapLayout();
-        ScenarioHint.Text = "Saved assignments · hardware disconnected";
+        ScenarioHint.Text = "Saved models · connection checked separately";
     }
     public void AssignController(int index, ControllerModel model)
     {
@@ -70,7 +71,7 @@ public partial class ZoneScene : UserControl
         docks[index].RefreshPlayer(State.Players[index]);
         SnapLayout();
         FeedbackText.Text = $"{model.Name} assigned to Player {index + 1}. Hardware connection is separate.";
-        ScenarioHint.Text = "Assigned models · hardware disconnected";
+        ScenarioHint.Text = "Assigned models · connection checked separately";
     }
     private void OnLoaded(object sender, RoutedEventArgs e)
     {

@@ -23,7 +23,7 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="../../artifacts/product-engine-phase/native-build/Release/x20ctl-engine.exe" Link="x20ctl-engine.exe" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="$(EngineBesideExe)" Condition="Exists('../../artifacts/product-engine-phase/native-build/Release/x20ctl-engine.exe')" />
+    <Content Include="../../artifacts/product-engine-phase/native-build/Release/x20ctl-engine.exe" Link="x20ctl-engine.exe" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="$(EngineBesideExe)" />
     <ProjectReference Include="../X20Ctl.Zone/X20Ctl.Zone.csproj" />
     <!-- the managed ViGEm client only: it talks to the ViGEmBus driver, which PC mode installs on first use -->
     <PackageReference Include="Nefarius.ViGEm.Client" Version="1.21.256" />
@@ -45,4 +45,7 @@
     <Content Include="../../src/assets/controllers/outlines.json" Link="Data/outlines.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../src/assets/controllers/**/haptics-geometry.json" Link="Data/haptics/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="RequireLiveInputEngine" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('../../artifacts/product-engine-phase/native-build/Release/x20ctl-engine.exe')" Text="Live input engine is missing. Build native-core with CMake into artifacts/product-engine-phase/native-build (Release, target x20ctl-engine) before building the app. A build without live input must not ship." />
+  </Target>
 </Project>

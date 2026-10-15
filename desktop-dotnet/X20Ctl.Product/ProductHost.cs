@@ -201,8 +201,8 @@ public sealed class ProductHost : Grid
     public async Task InitializeNativeEngineAsync()
     {
         if(Engine!=null)return;
-        try{Engine=new();Engine.EventReceived+=QueueNativeEvent;Engine.Disconnected+=reason=>Dispatcher.BeginInvoke(new Action(()=>{nativeSubscription=null;nativeArmed=false;NativeEngineStatus="Native core disconnected · Configuration unavailable";if(Studio!=null){Studio.NativeEngineStatus=NativeEngineStatus;Studio.Device?.UpdateEngineStatus(NativeEngineStatus);Studio.Tester?.ExitCapture();}}));var hello=await Engine.Request("handshake",new{});if(!hello.TryGetProperty("engineEpoch",out var epoch))throw new InvalidDataException("Native handshake omitted epoch.");nativeEpoch=epoch.GetString();NativeEngineStatus="Native C++ core running · Configuration locked";Zone.ProvenanceText.Text="LOCAL ASSIGNMENTS";await RefreshNativeCapabilities(Studio?.Model.Id??"x20");await UpdateNativeContext();}
-        catch(Exception error){NativeEngineStatus="Native core unavailable · "+error.Message;if(Studio!=null){Studio.NativeEngineStatus=NativeEngineStatus;Studio.Device?.UpdateEngineStatus(NativeEngineStatus);}Zone.FeedbackText.Text="Native connection unavailable; local previews remain available.";}
+        try{Engine=new();Engine.EventReceived+=QueueNativeEvent;Engine.Disconnected+=reason=>Dispatcher.BeginInvoke(new Action(()=>{nativeSubscription=null;nativeArmed=false;NativeEngineStatus="Native core disconnected · Configuration unavailable";if(Studio!=null){Studio.NativeEngineStatus=NativeEngineStatus;Studio.Device?.UpdateEngineStatus(NativeEngineStatus);Studio.Tester?.ExitCapture();}}));var hello=await Engine.Request("handshake",new{});if(!hello.TryGetProperty("engineEpoch",out var epoch))throw new InvalidDataException("Native handshake omitted epoch.");nativeEpoch=epoch.GetString();NativeEngineStatus="Native C++ core running · Configuration locked";Zone.ProvenanceText.Text="LIVE INPUT";await RefreshNativeCapabilities(Studio?.Model.Id??"x20");await UpdateNativeContext();}
+        catch(Exception error){Zone.ProvenanceText.Text="INPUT UNAVAILABLE";NativeEngineStatus="Native core unavailable · "+error.Message;if(Studio!=null){Studio.NativeEngineStatus=NativeEngineStatus;Studio.Device?.UpdateEngineStatus(NativeEngineStatus);}Zone.FeedbackText.Text="Native connection unavailable; local previews remain available.";}
     }
     private async Task RefreshNativeCapabilities(string model)
     {
@@ -213,7 +213,12 @@ public sealed class ProductHost : Grid
     private async Task UpdateNativeContext()
     {
         if(Engine==null||nativeEpoch==null)return;await nativeContextLock.WaitAsync();
-        try{if(Engine==null)return;nativeSubscription=null;nativeArmed=false;lastNativeButtons.Clear();lastNativeSequence=-1;string context=ExpectedNativeContext;var response=await Engine.Request("subscribe",new{stream="input",slot=0,context});if(context==ExpectedNativeContext)nativeSubscription=response.GetProperty("subscriptionId").GetString();}
+        try{if(Engine==null)return;nativeSubscription=null;nativeArmed=false;lastNativeButtons.Clear();lastNativeSequence=-1;string context=ExpectedNativeContext;
+            var sources=await Engine.Request("listGameplaySources",new{});
+            var slots=sources.GetProperty("sources").EnumerateArray().Select(s=>s.GetProperty("slot").GetInt32()).Where(s=>!PcModeService.IsVirtual(s)).ToArray();
+            int preferred=Studio?.Player??Zone.State.FocusedPlayer??0;
+            int slot=slots.Contains(preferred)?preferred:slots.FirstOrDefault(0);
+            var response=await Engine.Request("subscribe",new{stream="input",slot,context});if(context==ExpectedNativeContext)nativeSubscription=response.GetProperty("subscriptionId").GetString();}
         catch(Exception error){NativeEngineStatus="Native input unavailable · "+error.Message;}finally{nativeContextLock.Release();}
     }
     private void QueueNativeEvent(JsonElement message)
@@ -227,7 +232,8 @@ public sealed class ProductHost : Grid
         try{
             if(value.GetProperty("engineEpoch").GetString()!=nativeEpoch||value.GetProperty("subscriptionId").GetString()!=nativeSubscription||value.GetProperty("inputContext").GetString()!=ExpectedNativeContext)return;
             long sequence=value.GetProperty("sequence").GetInt64();if(sequence<=lastNativeSequence)return;lastNativeSequence=sequence;
-            var payload=value.GetProperty("payload");bool connected=payload.GetProperty("connected").GetBoolean();Zone.ScenarioHint.Text=connected?"XInput navigation · Model identity unverified · Configuration locked":"No gameplay source connected · Configuration locked";
+            var payload=value.GetProperty("payload");bool connected=payload.GetProperty("connected").GetBoolean();Zone.ProvenanceText.Text=connected?"LIVE INPUT":"NO CONTROLLER";Zone.ScenarioHint.Text=connected?"XInput navigation · Model identity unverified · Configuration locked":"No gameplay source connected · Configuration locked";
+            Studio?.SetGameplayConnected(connected);
             if(connected)Studio?.ObserveLiveInput(payload.GetProperty("leftX").GetDouble(),payload.GetProperty("leftY").GetDouble(),payload.GetProperty("rightX").GetDouble(),payload.GetProperty("rightY").GetDouble(),payload.GetProperty("lt").GetDouble(),payload.GetProperty("rt").GetDouble());
             // virtual buttons: triggers and left stick become digital presses with a threshold
             var now=payload.GetProperty("buttons").EnumerateArray().Select(v=>v.GetString()!).ToHashSet();

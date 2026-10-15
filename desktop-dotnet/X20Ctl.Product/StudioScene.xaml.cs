@@ -723,6 +723,15 @@ public partial class StudioScene : UserControl
             control.Illuminate(key == SelectedControl, navigationMode);
     }
     /// <summary>Read-only gameplay input shown on the Buttons artwork. It never navigates or writes.</summary>
+    private bool? gameplayConnected;
+    public void SetGameplayConnected(bool connected)
+    {
+        if(gameplayConnected==connected)return;
+        gameplayConnected=connected;
+        GameplayConnection.Text=connected?"● Live input":"● No input";
+        GameplayConnection.Foreground=(Brush)FindResource(connected?"Ice":"Amber");
+        Dashboard?.SetInputConnected(connected);
+    }
     public void ObserveLiveInput(double lx, double ly, double rx, double ry, double lt, double rt)
     {
         // the Curves graph follows the real stick or trigger whenever a controller is connected; Try it is the keyboard's
