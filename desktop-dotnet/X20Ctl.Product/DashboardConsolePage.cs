@@ -72,14 +72,17 @@ public sealed class DashboardConsolePage : Grid
         // the same framed panel the Buttons page puts its controller in (owner request, 13 Oct 2026)
         // the agent's invitation in the hero's empty top-right corner (owner request, 14 Oct 2026)
         var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 14); invite.HorizontalAlignment = HorizontalAlignment.Left; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 10, 10, 0);
-        var heroPanel = Kit.Panel(null, null, null, heroButton, new Thickness(0)); heroPanel.Margin = new(0, 0, 14, 0);
+        var heroComposition = new Canvas { Width = 700, Height = 450 };
+        heroButton.Width = 500; heroButton.Height = 380;
+        Canvas.SetLeft(heroButton, 0); Canvas.SetTop(heroButton, 50);
+        invite.Margin = new(0);
+        Canvas.SetLeft(invite, 430); Canvas.SetTop(invite, 14);
+        heroComposition.Children.Add(heroButton); heroComposition.Children.Add(invite);
+        var heroPanel = Kit.Panel(null, null, null, new Viewbox { Child = heroComposition, Stretch = Stretch.Uniform }, new Thickness(0));
+        heroPanel.Margin = new(0, 0, 14, 0);
         top.Children.Add(heroPanel);
-        // One square art panel. The neighbouring help card cannot cover the controller.
-        top.SizeChanged += (_, e) => top.ColumnDefinitions[0].Width = new(Math.Min(e.NewSize.Height, e.NewSize.Width * .55) + 14);
 
         var status = new StackPanel { Width = 560 };
-        invite.Margin = new(0, 0, 0, 14);
-        status.Children.Add(invite);
         status.Children.Add(connectionChip);
         status.Children.Add(new TextBlock { Text = "Ready to play", Style = DS.Style("DS.Display"), FontWeight = FontWeights.Light, FontSize = 48, Margin = new(0, 10, 0, 8) });
         var pill = new Border { CornerRadius = new(17), Height = 34, Padding = new(14, 0, 16, 0), Background = new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left,
