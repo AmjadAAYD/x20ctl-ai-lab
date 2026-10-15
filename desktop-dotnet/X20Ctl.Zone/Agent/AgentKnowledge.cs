@@ -131,12 +131,13 @@ public static class AgentKnowledge
     }
 
     /// <summary>The meanings as prompt text.</summary>
-    public static string Prompt()
+    public static string Prompt(bool compact = false)
     {
         var s = new StringBuilder("What each setting means:\n");
         foreach (var m in Settings.Where(m => m.Action != AgentVocabulary.Reset))
         {
             s.Append($"- {m.Name} ({m.Action}): {m.What}.");
+            if (compact) { s.Append($" Watch out: {m.Careful}.\n"); continue; }
             if (m.More.Length > 0) s.Append($" Higher: {m.More}. Lower: {m.Less}.");
             s.Append($" Good: {m.Good}. Watch out: {m.Careful}.\n");
         }

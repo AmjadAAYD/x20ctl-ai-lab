@@ -47,6 +47,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     /// <summary>Finds the doc passages closest to the sentence (M5). None: no docs are offered.</summary>
     public IDocSearch? Docs { get; set; }
     public const int DocCount = 3;
+    public Action<string>? Progress { get; set; }
 
     public async Task<AgentTurn> Ask(string sentence, PcModeProfile current, CancellationToken cancel = default)
     {
@@ -57,7 +58,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         var pending = Pending;
         string intentSentence = pending == null ? sentence : AgentClarification.AnswerText(pending, sentence);
         AgentProposal? resolved = cancelled ? new("Cancelled. Nothing changed.", [], "", [], [], "")
-            : pending == null ? null : AgentClarification.Resolve(pending, sentence);
+            : pending == null ? AgentDirect.Resolve(sentence) : AgentClarification.Resolve(pending, sentence);
         var messages = new List<ChatMessage> { new("system", SystemPrompt(current)) };
         messages.AddRange(history.TakeLast(Remembered));
         if (pending != null) messages.Add(new("system", $"Pending request: {pending.Request}\nPending question: {pending.Question}\nThe owner's latest answer completes this request. Act when the missing details are supplied; ask only if details are still missing."));
@@ -100,7 +101,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         // owner, 14 Oct 2026: it said "I'll set smooth" and nothing changed. A reply that promises a change but makes none
         // (no action, or values I already have) gets one more go, told exactly that
         if (resolved == null && verdict.Valid && outcome.Changes.Count == 0 && outcome.Mouse == null && outcome.Page == null && outcome.PcMode == null && measured == null
-            && verdict.Proposal!.Question.Length == 0 && verdict.Proposal.Sources.Count == 0 && (verdict.Proposal.Actions.Count > 0 || Promises(verdict.Proposal.Speech)))
+            && verdict.Proposal!.Question.Length == 0 && verdict.Proposal.Sources.Count == 0 && (verdict.Proposal.Actions.Count == 0 && Promises(verdict.Proposal.Speech) || verdict.Proposal.Actions.Count > 0 && System.Text.RegularExpressions.Regex.IsMatch(intentSentence, @"\b(more|less|faster|slower|slight\w*|bit|little)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)))
         {
             messages.Add(new("assistant", attempts[^1].Content));
             messages.Add(new("user", (verdict.Proposal.Actions.Count > 0 ? "That changed nothing: those values are already my settings right now. " : "You said you'd change something but sent no actions, so nothing changed. ")
@@ -131,16 +132,19 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         if (outcome.Mouse is { } mouse) done += $" [mouse mode {(mouse ? "on" : "off")}]";
         if (outcome.Page is { } page) done += $" [opened {page}]";
         history.Add(new("assistant", (verdict.Proposal?.Speech ?? "(no usable reply)") + done + (verdict.Proposal?.Question is { Length: > 0 } asked ? " " + asked : "")));
-        return new(sentence, attempts, verdict, outcome, measured, offered, resolved == null ? "" : "App clarification");
+        return new(sentence, attempts, verdict, outcome, measured, offered, resolved == null ? "" : pending == null && !cancelled ? "Direct command" : "App clarification");
     }
 
     /// <summary>One reply, checked; with one second chance: the model sees exactly what the validator objected to and
     /// answers again. Every attempt is kept and shown; if the second is still wrong, it stands, and nothing changes.</summary>
     async Task<AgentVerdict> Answer(List<ChatMessage> messages, List<ModelReply> attempts, DriftReport? measured, int offered, CancellationToken cancel)
     {
+        int maximum = measured == null ? 2 : 4;
+        if (attempts.Count >= maximum) return ProposalValidator.Check(attempts[^1].Content, modelId, measured, offered);
+        Progress?.Invoke(attempts.Count == 0 ? "Choosing settings" : "Checking and correcting the reply");
         attempts.Add(await model.Chat(messages, SchemaText, cancel));
         var verdict = ProposalValidator.Check(attempts[^1].Content, modelId, measured, offered);
-        if (verdict.Valid) return verdict;
+        if (verdict.Valid || attempts.Count >= maximum) return verdict;
         messages.Add(new("assistant", attempts[^1].Content));
         messages.Add(new("user", "The app rejected that reply, so nothing changed: " + Problems(verdict) + " Answer again with only the JSON object. If what I asked isn't possible, say so with no actions."));
         attempts.Add(await model.Chat(messages, SchemaText, cancel));
@@ -154,7 +158,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         // Explicit numeric points take precedence over qualitative wording.
         if (System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+")) return null;
         if (GentleCurveProblem(sentence, current, verdict) is { } gentle) return gentle;
-        bool slower = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(snip\w*|precis\w*|twitchy|slower|progressive|too sensitive)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        bool slower = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(snip\w*|precis\w*|twitchy|slower|progressive|too sensitive|less sensitive|less twitchy)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         bool faster = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(faster|quicker|responsive)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (slower == faster) return null;
         foreach (var a in verdict.Applicable.Where(a => a.Action is AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints))
@@ -212,9 +216,9 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             {AgentCharacter.Persona}
 
             Reply with one JSON object:
-            - "speech": one or two short sentences, what you'll do.
-            - "actions": the changes, empty when nothing should change.
-            - "recap": why these changes fit what the owner asked, from the meanings below: what each change does, what it is good for, and what to watch out for. Two to four short sentences, with the real numbers. When the owner asks a question instead (what is good or bad, what something does), answer it here, with no actions.
+            - "speech": one short sentence, at most 15 words, what you'll do.
+            - "actions": the changes, empty when nothing should change. Each action reason is at most six words; the recap is the only detailed explanation.
+            - "recap": why these changes fit what the owner asked, from the meanings below: what each change does, what it is good for, and what to watch out for. One short sentence with the real numbers; at most 25 words. When the owner asks a question instead (what is good or bad, what something does), answer it here, with no actions.
             - "assumptions": anything you guessed, such as which button a game uses to jump.
             - "sources": the numbers of the doc passages your recap used, or empty.
             - "question": "" almost always. Ask one short question ONLY when you cannot act without the answer (which button to remap and to what, what a macro should press). Then make no actions.
@@ -252,9 +256,9 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             Drift: when the owner says a stick drifts, moves on its own, or the aim creeps, measure it first: reply with only measure_drift actions (one per stick named, both if they don't say which) and no other actions. The app then sends you what it measured. Answer that with stick_deadzone at least the smallest dead zone it gives for each drifting stick, and explain the numbers in the recap. If it measured no drift worth a dead zone, change nothing and say so.
 
             Reset everything -> one action: reset All, value 0. Turn turbo off -> turbo with value 0.
-            What people mean: precise, slow, sniping -> stick_curve_points under the diagonal. Fast or responsive -> points above the diagonal, or stick_full_at about 85. Steady tracking -> a gentle S close to the diagonal. Diagnose, test or check my controller -> open_page Diagnostics. Also use the advanced settings (max output, vertical ratio, anti-dead zone, square gate) when they fit. Twitchy or too sensitive -> stick_curve_points under the diagonal, plus stick_max_output about 90 when turning is too fast. Triggers that react earlier or faster -> trigger_deadzone 0-3 and trigger_curve_points above the diagonal; trigger_full_at 50-70 only for "hair trigger", never below 50 unless the owner gives a number. Progressive racing triggers -> trigger_curve_points under the diagonal. Choose points from the CURRENT curve and the requested amount, not from memorized examples. For a slight change keep each output within five percentage points of its current output at the same push. Stronger requests may move further. Do not reuse the last points unchanged when the owner asks for more. Ask only for genuinely missing details.
+            What people mean: precise, slow, sniping, less sensitive -> stick_curve_points under the diagonal. Fast or responsive -> points above the diagonal, or stick_full_at about 85. Steady tracking -> a gentle S close to the diagonal. Diagnose, test or check my controller -> open_page Diagnostics. Also use the advanced settings (max output, vertical ratio, anti-dead zone, square gate) when they fit. Twitchy or too sensitive -> stick_curve_points under the diagonal, plus stick_max_output about 90 when turning is too fast. Triggers that react earlier or faster -> trigger_deadzone 0-3 and trigger_curve_points above the diagonal; trigger_full_at 50-70 only for "hair trigger", never below 50 unless the owner gives a number. Progressive racing triggers -> trigger_curve_points under the diagonal. Choose points from the CURRENT curve and the requested amount, not from memorized examples. For a slight change keep each output within five percentage points of its current output at the same push. Stronger requests may move further. Do not reuse the last points unchanged when the owner asks for more. Ask only for genuinely missing details.
 
-            {AgentKnowledge.Prompt()}
+            {AgentKnowledge.Prompt(compact: true)}
 
             Numbers are plain whole numbers (6, not "6%"). Use each action and target once.
             If the owner asks for a number outside its range, don't pick another number for them: tell them the range, with no actions.

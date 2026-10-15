@@ -807,7 +807,7 @@ public partial class StudioScene : UserControl
         if (stickToolsLayer != null) { if (e.Key == Key.Escape) { CloseStickTools(); e.Handled = true; } return; }
         // the agent window: Esc puts it away, and while typing to it every key is the text box's
         if (agentTour != null) { if (e.Key == Key.Escape) agentTour.Skip(); e.Handled = true; return; }
-        if (AgentOpen && e.Key == Key.Escape) { CloseAgent(); e.Handled = true; return; }
+        if (AgentOpen && e.Key == Key.Escape) { if (agentPanel!.SettingsOpen) agentPanel.ShowSettingsPage(false); else CloseAgent(); e.Handled = true; return; }
         if (AgentOpen && agentPanel!.Body.IsKeyboardFocusWithin && Keyboard.FocusedElement is TextBox) return;
         if (CapturingRemap)
         {

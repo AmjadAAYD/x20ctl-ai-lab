@@ -248,10 +248,10 @@ public class AgentCustomizationTests
     {
         string first = preset ? Reply("Original preset.", actions: [Action("stick_curve", "RightStick", "slow")]) : Reply("I'll lower it.");
         string retry = invalid ? Reply("Bad retry.", actions: [Action("stick_max_output", "RightStick", 20)]) : Reply("No change.");
-        var model = new FakeModel(invalid ? [first, retry, retry, Reply()] : [first, retry, Reply()]);
+        var model = new FakeModel(first, retry, Reply());
         var session = new AgentSession(model, "x20_pro", "X20 Pro");
         var turn = await session.Ask("more precise please", new());
-        Assert.Equal(invalid ? 3 : 2, turn.Attempts.Count);
+        Assert.Equal(2, turn.Attempts.Count);
         Assert.True(turn.Verdict.Valid); Assert.Equal(ProposalValidator.Check(first, "x20_pro").Proposal!.Speech, turn.Verdict.Proposal!.Speech);
         Assert.Equal(retry, turn.Reply.Content);
         if (preset) Assert.Equal("slow", turn.Outcome.Next!.Curves["RightStick"].Preset);

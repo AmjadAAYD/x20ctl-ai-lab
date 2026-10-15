@@ -144,9 +144,17 @@ public sealed class AgentPanel
             ShowState(); ShowSettings(new HashSet<string>());
             Say(on ? AgentDemo.Label : "Canned demo off", null);
         }, () => busy);
-        settingsBox = new Border { Visibility = Visibility.Collapsed, Margin = new(0, 0, 0, 8), Padding = new(14, 10, 14, 6), CornerRadius = new(12), Background = new SolidColorBrush(Color.FromArgb(120, 20, 30, 56)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 120, 170, 255)), BorderThickness = new(1),
-            Child = new ScrollViewer { MaxHeight = 170, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 8)), settings, lab } } } };
-        var top = new StackPanel { Children = { heading, settingsBox } };
+        var backToChat = Small("← Back to chat");
+        backToChat.Click += (_, _) => ShowSettingsPage(false); register(backToChat);
+        var settingsHead = new DockPanel { Margin = new(0, 0, 0, 12) };
+        DockPanel.SetDock(backToChat, Dock.Right); settingsHead.Children.Add(backToChat);
+        settingsHead.Children.Add(Kit.Text("Agent settings", 22, "DS.Text", FontWeights.SemiBold));
+        var settingsPage = new DockPanel(); DockPanel.SetDock(settingsHead, Dock.Top); settingsPage.Children.Add(settingsHead);
+        settingsPage.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 12)), settings, lab } } });
+        settingsBox = new Border { Visibility = Visibility.Collapsed, Padding = new(16), CornerRadius = new(12), Background = new SolidColorBrush(Color.FromRgb(8, 15, 32)), Child = settingsPage };
+        settingsToggle.Cursor = Cursors.Hand; settingsToggle.ToolTip = "Open agent settings";
+        settingsToggle.MouseLeftButtonUp += (_, _) => ShowSettingsPage(true);
+        var top = new StackPanel { Children = { heading } };
         // zoomed out (owner, 14 Oct 2026: "so tight, I can't see the message"): more of the conversation fits
         scroller = new ScrollViewer { Content = transcript, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         transcript.LayoutTransform = new ScaleTransform(.8, .8);
@@ -181,7 +189,7 @@ public sealed class AgentPanel
         Grid.SetRow(bar, 1); Grid.SetColumn(bar, 2); split.Children.Add(bar);
         var screen = new Border
         {
-            Width = 990, Height = 418, CornerRadius = new(18), Padding = new(18, 14, 16, 14), BorderThickness = new(1.5), Child = split,
+            Width = 990, Height = 418, CornerRadius = new(18), Padding = new(18, 14, 16, 14), BorderThickness = new(1.5), Child = new Grid { Children = { split, settingsBox } },
             Background = new LinearGradientBrush(Color.FromRgb(8, 13, 28), Color.FromRgb(4, 7, 16), 90),
             BorderBrush = new SolidColorBrush(Color.FromArgb(200, 4, 6, 12)),
         };
@@ -192,7 +200,7 @@ public sealed class AgentPanel
         (offlineSwitch, offlineCap, offlineLabel) = Bumper("LB", "Offline", 70, new CornerRadius(26, 18, 6, 6));
         offlineSwitch.Click += (_, _) => { if (busy || demoChosen) return; offlineChosen = !offlineChosen; StateChanged?.Invoke(); };
         var (settingsButton, _, _) = Bumper("RB", "Settings", DesignWidth - 70 - 220, new CornerRadius(18, 26, 6, 6));
-        settingsButton.Click += (_, _) => { settingsBox.Visibility = settingsBox.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; ShowSettings(new HashSet<string>()); };
+        settingsButton.Click += (_, _) => { ShowSettingsPage(!SettingsOpen); };
         register(offlineSwitch); register(settingsButton);
         pad.Children.Add(offlineSwitch); pad.Children.Add(settingsButton);
         var shell = new System.Windows.Shapes.Path
@@ -261,7 +269,7 @@ public sealed class AgentPanel
         {
             ("Y", 0, -1, "Search the ideas", () => { Search.Focus(); Search.SelectAll(); Look(Gaze.Ideas); }),
             ("X", -1, 0, "New conversation", Restart),
-            ("B", 1, 0, "Put away", () => CloseRequested?.Invoke()),
+            ("B", 1, 0, "Put away", () => { if (SettingsOpen) ShowSettingsPage(false); else CloseRequested?.Invoke(); }),
             ("A", 0, 1, "Send", Send),
         };
         foreach (var f in face)
@@ -671,8 +679,10 @@ public sealed class AgentPanel
         Bubble(sentence, mine: true);
         var thinking = Bubble("Working on your request…", mine: false);
         var elapsed = System.Diagnostics.Stopwatch.StartNew();
+        string phase = "Reading your request";
+        session.Progress = text => phase = text;
         var waitTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        waitTimer.Tick += (_, _) => { if (thinking.Child is TextBlock label) label.Text = $"Working on your request · {elapsed.Elapsed.TotalSeconds:0}s"; };
+        waitTimer.Tick += (_, _) => { if (thinking.Child is TextBlock label) label.Text = $"{phase} · {elapsed.Elapsed.TotalSeconds:0}s"; };
         waitTimer.Start();
         var before = Current;
         AgentMood? mood = null;
@@ -689,13 +699,12 @@ public sealed class AgentPanel
                 try { Store(next); if (!demoChosen) Applied(); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
-                Say(turn, before, switched: switched, mouse: mouse); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
                 if (!demoChosen && Walkthrough != null)
                 {
-                    var tourButton = Small("Show change");
-                    tourButton.Click += async (_, _) => { if (busy) return; tourButton.IsEnabled = false; try { await Walkthrough(before, next, turn.Measured); } finally { tourButton.IsEnabled = true; } };
-                    if (transcript.Children.OfType<Border>().LastOrDefault()?.Child is StackPanel answer) answer.Children.Add(tourButton);
+                    waitTimer.Stop(); Circling(false); Searching(false);
+                    await Walkthrough(before, next, turn.Measured);
                 }
+                Say(turn, before, switched: switched, mouse: mouse); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
             else { Say(turn, null, switched: switched, mouse: mouse); if (switched != null) ShowSettings(new HashSet<string>()); }
             Circling(false);
@@ -711,7 +720,7 @@ public sealed class AgentPanel
             Say(error is TaskCanceledException ? AgentCharacter.Dozed : "My brain isn't answering: " + error.Message, null);
             mood = AgentMood.Failed; return null;
         }
-        finally { waitTimer.Stop(); busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
+        finally { session.Progress = null; waitTimer.Stop(); busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
     }
 
     // ---- the drift reading: a countdown while the sticks are read ----
@@ -815,6 +824,13 @@ public sealed class AgentPanel
         var bubble = Bubble("", false); bubble.Child = stack; scroller.ScrollToEnd();
     }
 
+    public bool SettingsOpen => settingsBox.Visibility == Visibility.Visible;
+    public void ShowSettingsPage(bool show)
+    {
+        settingsBox.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (show) { ShowSettings(new HashSet<string>()); settingsBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); }
+        else Input.Focus();
+    }
     // ---- the settings panel ----
     void ShowSettings(IReadOnlySet<string> changed)
     {
@@ -822,7 +838,7 @@ public sealed class AgentPanel
             : $"PC mode · Player {PcModePage.Player + 1}, {(PcModePage.ProfileKey == PcModeStore.DefaultKey ? "every game" : PcModePage.ProfileKey[PcModeStore.GamePrefix.Length..])}{(link.Service.Enabled ? "" : " · PC mode is off, so games don't see these yet")}";
         settings.Children.Clear();
         var rows = AgentApplier.Diff(new PcModeProfile(), Current);
-        settingsToggle.Text = (rows.Count == 0 ? "Settings now · all default" : $"Settings now · {rows.Count} changed") + (settingsBox.Visibility == Visibility.Visible ? "  ⌃" : "  ⌄");
+        settingsToggle.Text = (rows.Count == 0 ? "Settings now · all default" : $"Settings now · {rows.Count} changed");
         if (rows.Count == 0) settings.Children.Add(Wrap("Everything is at its default.", 14, "DS.TextSoft"));
         foreach (var r in rows)
         {
