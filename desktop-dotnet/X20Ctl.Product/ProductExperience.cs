@@ -33,6 +33,7 @@ public sealed class IntroView:Grid
     private readonly System.Windows.Shapes.Rectangle fade=new(){Fill=Brushes.Black,Opacity=0,IsHitTestVisible=false}, dark=new(){Fill=Brushes.Black,IsHitTestVisible=false};
     private TimeSpan? seekAt; private double? pendingSeek;
     // the aura around the finished mark: a faint grey-white heart, then soft corner light and grey dots on both sides
+    private readonly IntroMarkAura markAura = new();
     private readonly Grid aura=new(){IsHitTestVisible=false,Opacity=Warm}, dotsLeft=new(){IsHitTestVisible=false,Opacity=Warm,HorizontalAlignment=HorizontalAlignment.Left,CacheMode=new BitmapCache(1)}, dotsRight=new(){IsHitTestVisible=false,Opacity=Warm,HorizontalAlignment=HorizontalAlignment.Right,CacheMode=new BitmapCache(1)};
     private readonly System.Windows.Shapes.Rectangle heart=new(){IsHitTestVisible=false,Opacity=Warm,Width=980,Height=560}, shine=new(){IsHitTestVisible=false,Opacity=0};
     private readonly System.Windows.Shapes.Path body=new(){Opacity=0,IsHitTestVisible=false}, floor=new(){Opacity=0,IsHitTestVisible=false};
@@ -190,7 +191,7 @@ public sealed class IntroView:Grid
         // the X's heartbeat (owner 12 Oct 2026): the mark swells about its own centre, so every piece of it shares one scale
         var xBounds=Rect.Union(forward.Bounds,back.Bounds);var xBeat=new ScaleTransform(1,1,xBounds.X+xBounds.Width/2,xBounds.Y+xBounds.Height/2);
         foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack})e.RenderTransform=xBeat;
-        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,shine})xGroup.Children.Add(e);stage.Children.Add(xGroup);this.xBounds=xBounds;
+        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,shine})xGroup.Children.Add(e);xGroup.Children.Insert(0,markAura); markAura.SetGeometry(markPx); aura.Visibility=Visibility.Collapsed; dotsLeft.Visibility=dotsRight.Visibility=Visibility.Collapsed; stage.Children.Add(xGroup);this.xBounds=xBounds;
         Children.Add(stage);sloganBox.Children.Add(slogan);Children.Add(sloganBox);Children.Add(fade);
         // WPF has no letter-spacing: hair spaces between the letters track it out, a wider gap between words
         slogan.Text=string.Join("\u200A",SloganText.Select(c=>c==' '?"\u2009\u2009":c.ToString()));
@@ -426,6 +427,7 @@ public sealed class IntroView:Grid
     private void Frame(double t)
     {
         Morph(t);
+        markAura.SetTime(Reduced ? -1 : t-4.0);
         energy.SetTime(Reduced ? -1 : t-MorphAt);
         contours.SetTime(Reduced ? -1 : t);
         if(Reduced)
@@ -574,6 +576,58 @@ internal sealed class IntroContourFlow:FrameworkElement
             var ink=new SolidColorBrush(Color.FromArgb((byte)(255*alpha*tip),c.R,c.G,c.B));ink.Freeze();
             var pen=new Pen(ink,width*(.25+.75*tip)){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};pen.Freeze();
             dc.DrawLine(pen,At(start+u*span),At(start+(j+1)/(double)count*span));
+        }
+    }
+}
+
+/// <summary>Light follows the original X geometry; no replacement logo or external artwork.</summary>
+internal sealed class IntroMarkAura : FrameworkElement
+{
+    private Geometry mark = Geometry.Empty;
+    private double time = -1;
+    private readonly List<Point[]> contours = new();
+    public IntroMarkAura() { IsHitTestVisible = false; }
+    public void SetGeometry(Geometry geometry)
+    {
+        mark = geometry; contours.Clear();
+        foreach (var figure in geometry.GetFlattenedPathGeometry(.6, ToleranceType.Absolute).Figures) {
+            var points = new List<Point> { figure.StartPoint };
+            foreach (var segment in figure.Segments) {
+                if (segment is PolyLineSegment line) points.AddRange(line.Points);
+                else if (segment is LineSegment edge) points.Add(edge.Point);
+            }
+            if (figure.IsClosed) points.Add(figure.StartPoint);
+            contours.Add(points.ToArray());
+        }
+    }
+    public void SetTime(double value) { time = value; InvalidateVisual(); }
+    protected override void OnRender(DrawingContext dc)
+    {
+        if (time < 0 || time > 2.85 || mark.IsEmpty()) return;
+        double appear = Math.Clamp(time/.35,0,1), fade = 1-Math.Clamp((time-2.15)/.7,0,1);
+        double envelope = appear*fade;
+        var bounds=mark.Bounds;var center=new Point(bounds.X+bounds.Width/2,bounds.Y+bounds.Height/2);
+        var gradient=new LinearGradientBrush(Color.FromRgb(35,185,255),Color.FromRgb(164,98,255),new Point(0,0),new Point(1,1));
+        gradient.RelativeTransform=new RotateTransform(12*Math.Sin(time*1.4),.5,.5);gradient.Freeze();
+        // Broad low-opacity light under a narrow coloured rim keeps the X's interior crisp.
+        for(int layer=16;layer>=1;layer--) {
+            double width=4+layer*3.4, alpha=.012+(.025*Math.Pow(1-layer/16d,2));
+            dc.PushOpacity(envelope*alpha);var pen=new Pen(gradient,width){LineJoin=PenLineJoin.Round};pen.Freeze();dc.DrawGeometry(null,pen,mark);dc.Pop();
+        }
+        dc.PushOpacity(envelope*.65);dc.DrawGeometry(null,new Pen(gradient,2.4),mark);dc.Pop();
+        // One expanding contour release, fading as it moves away from the mark.
+        double release=Math.Clamp(time/1.15,0,1), scale=1+.12*release;
+        dc.PushTransform(new ScaleTransform(scale,scale,center.X,center.Y));dc.PushOpacity(.20*envelope*Math.Pow(1-release,2));
+        dc.DrawGeometry(null,new Pen(gradient,2),mark);dc.Pop();dc.Pop();
+        foreach(var points in contours) {
+            double length=0;var distances=new double[points.Length];for(int i=1;i<points.Length;i++){length+=(points[i]-points[i-1]).Length;distances[i]=length;}
+            if(length<=0)continue;
+            Point At(double u){double d=(u-Math.Floor(u))*length;int j=1;while(j<distances.Length-1&&distances[j]<d)j++;double span=distances[j]-distances[j-1];return points[j-1]+(points[j]-points[j-1])*(span>0?(d-distances[j-1])/span:0);}
+            for(int i=0;i<48;i++) {
+                double u=i/48d, strength=Math.Sin(Math.PI*u);var colour=Color.FromArgb((byte)(230*envelope*strength),180,225,255);
+                var pen=new Pen(new SolidColorBrush(colour),2.6){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};pen.Freeze();
+                double head=time*.32;dc.DrawLine(pen,At(head+u*.22),At(head+(i+1)/48d*.22));
+            }
         }
     }
 }

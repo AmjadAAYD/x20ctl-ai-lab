@@ -56,7 +56,7 @@ public sealed class DashboardConsolePage : Grid
     // tuned for the fixed 1600 x 900 design: hero 250, featured 168, a shelf of 190-pixel square games
     private const double FullCover = 190, FullFeatured = 168, FullTop = 400;
 
-    public DashboardConsolePage(ControllerModel model, int player, int draftChanges, int savedSetups, bool reducedMotion)
+    public DashboardConsolePage(ControllerModel model, int player, int draftChanges, int savedSetups, bool reducedMotion, IReadOnlyList<SavedSetup>? setups = null, Action<string>? loadSetup = null)
     {
         animate = !reducedMotion && DS.Motion;
         ClipToBounds = true; // in a short window nothing may spill under the Studio footer
@@ -112,7 +112,8 @@ public sealed class DashboardConsolePage : Grid
 
         // Library and selected game share a stable lower row; neither can push the footer away.
         var lower = new Grid(); lower.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
-        lower.ColumnDefinitions.Add(new() { Width = new(18) }); lower.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
+        lower.ColumnDefinitions.Add(new() { Width = new(18) }); lower.ColumnDefinitions.Add(new() { Width = new(.58, GridUnitType.Star) });
+        lower.ColumnDefinitions.Add(new() { Width = new(14) }); lower.ColumnDefinitions.Add(new() { Width = new(.46, GridUnitType.Star) });
         Grid.SetRow(lower, 2); Children.Add(lower);
         shelfScroll = new ScrollViewer { Content = shelf, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Focusable = false, Padding = new(4, 6, 4, 6) };
@@ -126,7 +127,7 @@ public sealed class DashboardConsolePage : Grid
         featured.RowDefinitions.Add(new() { Height = GridLength.Auto });
         heroArt.Margin = new(18, 14, 18, 10); featured.Children.Add(heroArt);
         var info = new Grid { Margin = new(18, 8, 18, 16) };
-        info.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); info.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        info.RowDefinitions.Add(new() { Height = GridLength.Auto }); info.RowDefinitions.Add(new() { Height = GridLength.Auto });
         featuredTitle.FontSize = 22; featuredTitle.TextTrimming = TextTrimming.CharacterEllipsis;
         featuredMeta.FontSize = 12; featuredMeta.TextTrimming = TextTrimming.CharacterEllipsis;
         var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { featuredTitle, featuredMeta } }; info.Children.Add(words);
@@ -134,8 +135,28 @@ public sealed class DashboardConsolePage : Grid
         changeIcon = AddButton("Change icon", ChangeIcon); actions.Children.Add(changeIcon);
         play = new Button { Style = DS.Style("DS.ActionPrimary"), MinWidth = 100, Height = 42, Content = "▶  Play", Margin = new(8, 0, 0, 0) };
         play.Click += (_, _) => PlayGame(current, heroArt); actions.Children.Add(play);
-        Grid.SetColumn(actions, 1); info.Children.Add(actions); Grid.SetRow(info, 1); featured.Children.Add(info);
+        actions.Margin = new(0, 10, 0, 0); Grid.SetRow(actions, 1); info.Children.Add(actions); Grid.SetRow(info, 1); featured.Children.Add(info);
         var selectedPanel = Kit.Panel(null, null, null, featured, new Thickness(0)); Grid.SetColumn(selectedPanel, 2); lower.Children.Add(selectedPanel);
+        var setupContent = new StackPanel { Width = 260 };
+        setupContent.Children.Add(Kit.Text("Game setup", 24, "DS.Text", FontWeights.SemiBold));
+        setupContent.Children.Add(Kit.Text("Load a controller setup before playing.", 14, "DS.TextSoft").Also(t => { t.TextWrapping = TextWrapping.Wrap; t.Margin = new(0, 8, 0, 16); }));
+        var choices = new ComboBox { MinHeight = 36, DisplayMemberPath = "Name", ItemsSource = setups?.Where(x => x.ModelId == model.Id && x.Snapshot.HasValue).ToArray() ?? [] };
+        setupContent.Children.Add(choices);
+        bool hasSetups = choices.Items.Count > 0; choices.IsEnabled = hasSetups;
+        var result = Kit.Text(hasSetups ? "Choose a saved setup for this controller." : "No compatible saved setups yet. Open Manage setups to create one.", 12, "DS.TextSoft"); result.TextWrapping = TextWrapping.Wrap;
+        var load = AddButton("Load setup", () => {
+            if (choices.SelectedItem is not SavedSetup chosen || loadSetup == null) return;
+            try { loadSetup(chosen.Id); result.Text = "Loaded into your working settings."; }
+            catch (Exception ex) when (ex is InvalidOperationException or System.IO.InvalidDataException) { result.Text = "This setup cannot be loaded for this controller."; }
+        }); load.Margin = new(0, 12, 0, 10); setupContent.Children.Add(load); setupContent.Children.Add(result);
+        choices.SelectionChanged += (_, _) => load.IsEnabled = choices.SelectedItem != null;
+        load.IsEnabled = false;
+        foreach (string destination in new[] { "Setups", "Buttons", "Curves", "Macros" }) {
+            var target = destination; var shortcut = AddButton(destination == "Setups" ? "Manage setups" : "Edit " + destination.ToLowerInvariant(), () => PageRequested?.Invoke(target));
+            shortcut.Margin = new(0, 12, 0, 0); setupContent.Children.Add(shortcut);
+        }
+        var setupPanel = Kit.Panel(null, null, null, new Viewbox { Child = setupContent, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly }, new Thickness(18));
+        Grid.SetColumn(setupPanel, 4); lower.Children.Add(setupPanel);
         Feature(null);
         Loaded += async (_, _) => { if (!EntryTransitionPending) { preview.Start(); await Populate(); } };
         Unloaded += (_, _) => preview.Stop();

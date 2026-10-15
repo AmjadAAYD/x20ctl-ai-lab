@@ -18,3 +18,9 @@ Motion continuity: https://m1.material.io/motion/choreography.html
 ## Verification
 
 Product build passes with six pre-existing warnings. Original controller strings and entire X geometry function match HEAD. Sixteen isolated WPF frames, reduced-motion construction, Skip exactly once and header handoff pass. WAV format, duration, peak and silent tail pass. These checks open no app window and capture no desktop. Live audiovisual quality remains for user review.
+
+## X aura follow-up
+
+Replaced the old corner light and decorative dot grids with an aura following the original X geometry: layered cyan/violet contour bloom, a single fading outward contour and moving edge highlights. Existing X fill and soft glow remain. The aura lives inside the mark group so the header handoff moves it with the mark. Reduced motion omits the animated aura. No audio changed in this pass; oscillator/noise audio remains.
+
+Verification: Product build passed with the same six warnings; sixteen isolated intro frames; reduced motion, Skip and header handoff checks passed. Original Mark geometry function unchanged. Playback quality still requires user review.
