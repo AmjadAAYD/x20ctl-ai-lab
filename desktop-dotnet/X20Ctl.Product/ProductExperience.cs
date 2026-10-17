@@ -17,12 +17,13 @@ public static class ProductLinks
 
 /// <summary>
 /// Original X20CTL controller and X geometry, with travelling contour strokes, a short anticipation,
-/// one continuous morph and particle release, then a quiet logo hold and the existing Zone handoff.
-/// Restored from the blue/orange review sequence. Playback remains silent; Skip and reduced motion are retained.
+/// then the two blades slide in and lock into the X (IntroBladeFormation), a quiet logo hold and the Zone handoff.
+/// A soft synthesised sound follows the beats: the eyes, the outline, the lock and its "dug dug", the slogan, the landing.
+/// Skip, mute and reduced motion are retained.
 /// </summary>
 public sealed class IntroView:Grid
 {
-    private const double Total=7.1, SloganAt=5.1, FlyAt=6.0, FlyFor=.85, ReducedFor=.4, Line=9, MorphAt=2.95, MorphFor=1.15, Samples=160;
+    private const double Total=7.1, SloganAt=5.1, FlyAt=6.0, FlyFor=.85, ReducedFor=.4, Line=9, MorphAt=2.95, MorphFor=1.15, Samples=160, XBeatAt=4.23;
     private static readonly double[] LedAt={.18,.36,.54};
     public IntroView Visual=>this;
     public Button Skip {get;} public Button Mute {get;}
@@ -193,7 +194,7 @@ public sealed class IntroView:Grid
         stage.Children.Add(controllerGroup);
         // the X's heartbeat (owner 12 Oct 2026): the mark swells about its own centre, so every piece of it shares one scale
         var xBounds=Rect.Union(forward.Bounds,back.Bounds);var xBeat=new ScaleTransform(1,1,xBounds.X+xBounds.Width/2,xBounds.Y+xBounds.Height/2);
-        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack})e.RenderTransform=xBeat;
+        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,formation})e.RenderTransform=xBeat;
         foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,shine})xGroup.Children.Add(e);xGroup.Children.Insert(0,markAura); markAura.SetGeometry(markPx); aura.Visibility=Visibility.Collapsed; dotsLeft.Visibility=dotsRight.Visibility=Visibility.Collapsed; stage.Children.Add(xGroup);this.xBounds=xBounds;
         Children.Add(stage);sloganBox.Children.Add(slogan);Children.Add(sloganBox);Children.Add(fade);
         // WPF has no letter-spacing: hair spaces between the letters track it out, a wider gap between words
@@ -278,6 +279,9 @@ public sealed class IntroView:Grid
             double lit=MorphAt+MorphFor-.05;
             A(filled,"Opacity",0,1,lit,.32,outE);A(filledBack,"Opacity",0,1,lit+.09,.32,outE);
             A(morph,"Opacity",1,0,lit+.26,.22,outE);
+            // the second "dug" of the heartbeat: the locked X swells once about its own centre
+            foreach(var axis in new[]{"(UIElement.RenderTransform).(ScaleTransform.ScaleX)","(UIElement.RenderTransform).(ScaleTransform.ScaleY)"})
+            {A(filled,axis,1,1.035,XBeatAt,.07,outE);A(filled,axis,1.035,1,XBeatAt+.07,.3,ease);}
             A(heart,"Opacity",0,.85,MorphAt+.05,.3,outE);A(heart,"Opacity",.85,.45,lit+.15,1.1,outE);
             A(aura,"Opacity",0,.85,lit,.45,outE);A(aura,"Opacity",.85,.55,5.0,.8,outE);
             A(dotsLeft,"Opacity",0,.18,lit,.3,outE);A(dotsRight,"Opacity",0,.18,lit,.3,outE);
@@ -357,16 +361,18 @@ public sealed class IntroView:Grid
     private double Elapsed=>seekAt?.TotalSeconds??(DateTime.UtcNow-beganAt).TotalSeconds;
     private DateTime beganAt=DateTime.UtcNow;
     public void Start(){startRequested=true;PrepareSound();if(IsLoaded)Begin();}
-    /// <summary>Original oscillator and noise sound design; no sampled recording. Off for reduced motion, development fixtures and mute.</summary>
-    public static bool HasIntroScore => false;
-    public static bool SoundEnabled {get;set;}=false;
+    /// <summary>The opening sound, made from sine waves by tools/build_intro_sound.py (no samples). Off for reduced
+    /// motion, development fixtures and mute.</summary>
+    public static bool HasIntroScore => System.IO.File.Exists(ScorePath);
+    private static string ScorePath => System.IO.Path.Combine(AppContext.BaseDirectory,"Brand","intro.wav");
+    public static bool SoundEnabled {get;set;}=true;
     private System.Windows.Media.MediaPlayer? sound;
     private bool soundReady,soundWanted;
     /// <summary>Opens the sound before the intro starts (opening it on demand made the LED pings lag their lights).</summary>
     private void PrepareSound()
     {
         if(!HasIntroScore||sound!=null||!SoundEnabled||Muted||Reduced||ReviewSandbox.Active)return;
-        string path=System.IO.Path.Combine(AppContext.BaseDirectory,"Brand","licensed-intro.wav");if(!System.IO.File.Exists(path))return;
+        string path=ScorePath;if(!System.IO.File.Exists(path))return;
         // a player muted before it opened must not mark its replacement ready
         try{var player=new System.Windows.Media.MediaPlayer{Volume=.65};soundReady=false;sound=player;player.MediaOpened+=(_,_)=>{if(player!=sound)return;soundReady=true;if(soundWanted)PlayInSync();};player.Open(new Uri(path));}
         catch(Exception error) when(error is InvalidOperationException or System.IO.IOException or UriFormatException){sound=null;}

@@ -26,21 +26,28 @@ double beforeImpact=ImpactEnergy(-1),peakImpact=ImpactEnergy(.10),afterImpact=Im
 if(peakImpact<beforeImpact*2||afterImpact>peakImpact*.5)throw new Exception($"Background impact does not rise and release: {beforeImpact}/{peakImpact}/{afterImpact}");
 Console.WriteLine($"PASS: background impact rendered energy {beforeImpact:0.00} → {peakImpact:0.00} → {afterImpact:0.00}; one landing pulse and release.");
  if(typeof(IntroView).GetField("material",BindingFlags.Instance|BindingFlags.NonPublic)!=null)throw new Exception("Rejected controller PNG still in intro");
-IntroView.SoundEnabled=true;var audioIntro=new IntroView(false,false);
-if(IntroView.HasIntroScore||audioIntro.Mute.Visibility!=Visibility.Collapsed)throw new Exception("Removed intro audio remains available");
-audioIntro.ToggleMute();
-if(typeof(IntroView).GetField("sound",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(audioIntro)!=null)throw new Exception("Removed intro audio opened a player");audioIntro.Finish();
-Console.WriteLine($"PASS: no controller photo; intro audio unavailable even with the sound flag enabled.");
+// the synthesised score ships beside the app; the checks never play it
+var score=System.IO.Path.Combine(AppContext.BaseDirectory,"Brand","intro.wav");
+if(!IntroView.HasIntroScore||!System.IO.File.Exists(score))throw new Exception("Intro score not packaged");
+using(var reader=new System.IO.BinaryReader(System.IO.File.OpenRead(score))){reader.BaseStream.Seek(22,System.IO.SeekOrigin.Begin);int channels=reader.ReadInt16(),rate=reader.ReadInt32();double seconds=(new System.IO.FileInfo(score).Length-44)/(rate*channels*2.0);
+if(channels!=2||rate!=48000||Math.Abs(seconds-7.1)>.01)throw new Exception($"Intro score is {channels} ch {rate} Hz {seconds:0.00} s");}
+IntroView.SoundEnabled=false;var audioIntro=new IntroView(false,false);
+if(audioIntro.Mute.Visibility!=Visibility.Visible)throw new Exception("Mute hidden while the intro has sound");
+audioIntro.ToggleMute();audioIntro.ToggleMute();
+if(typeof(IntroView).GetField("sound",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(audioIntro)!=null)throw new Exception("Intro opened a player with sound disabled");audioIntro.Finish();
+var quietIntro=new IntroView(true,false);if(quietIntro.Mute.Visibility!=Visibility.Collapsed)throw new Exception("Reduced motion offers sound");quietIntro.Finish();
+Console.WriteLine($"PASS: no controller photo; intro score packaged (stereo 48 kHz, 7.1 s), mute shown, no player opened with sound disabled or reduced motion.");
  IntroView.SoundEnabled=false;var intro=new IntroView(false,false);intro.Measure(new Size(1280,800));intro.Arrange(new Rect(0,0,1280,800));intro.UpdateLayout();
  typeof(IntroView).GetMethod("Build",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(intro,null);
  var story=(Storyboard)typeof(IntroView).GetField("story",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(intro)!;
  story.Begin(intro,true);
  var dir=System.IO.Path.Combine(Environment.CurrentDirectory,"artifacts","intro-stabilization-impact");System.IO.Directory.CreateDirectory(dir);
- foreach(var t in new[]{0d,.5,1.25,1.9,2.4,2.9,3.1,3.3,3.5,3.75,4.05,4.10,4.18,4.35,4.70,5.10,4.8,5.4,6.3,6.85}){
+ foreach(var t in new[]{0d,.5,1.25,1.9,2.4,2.9,3.1,3.3,3.5,3.6,3.75,3.9,3.97,4.03,4.05,4.10,4.18,4.35,4.70,5.10,4.8,5.4,6.3,6.85}){
  story.SeekAlignedToLastTick(intro,TimeSpan.FromSeconds(t),TimeSeekOrigin.BeginTime);story.Pause(intro);typeof(IntroView).GetMethod("Frame",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(intro,[t]);intro.UpdateLayout();
  var backgroundImpact=(FrameworkElement)typeof(IntroView).GetField("stabilizationBackground",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(intro)!;
  var bitmap=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32);bitmap.Render(intro);var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(bitmap));using var file=System.IO.File.Create(System.IO.Path.Combine(dir,$"intro-{t:0.00}.png"));png.Save(file);
- if(new[]{1.9,3.3,5.4}.Contains(t)){
+ // the controller (1.90) and the settled mark (5.40) stay the owner's reference; the X in motion between them was redrawn 17 Oct
+ if(new[]{1.9,5.4}.Contains(t)){
  var reference=System.IO.Path.Combine(Environment.CurrentDirectory,"artifacts","intro-shared-video-reference",$"intro-{t:0.00}.png");
  var expected=new BitmapImage();expected.BeginInit();expected.UriSource=new Uri(reference);expected.CacheOption=BitmapCacheOption.OnLoad;expected.EndInit();
  backgroundImpact.Visibility=Visibility.Collapsed;var baseline=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32);baseline.Render(intro);backgroundImpact.Visibility=Visibility.Visible;
