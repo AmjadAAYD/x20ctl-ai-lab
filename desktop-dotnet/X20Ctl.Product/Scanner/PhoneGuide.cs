@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
@@ -174,11 +174,11 @@ public sealed class PhoneGuide : Grid
         var s = steps[index];
         bool last = index == steps.Length - 1;
 
-        var next = Button(last ? "" : "", last ? finishLabel : "Done, next step", "DS.ActionPrimary");
+        var next = Button(last ? "" : "", last ? finishLabel : "Done, next step", "PrimaryButton");
         next.Click += (_, _) => { if (last) finished(); else Go(index + 1); };
-        var back = Button("", index == 0 ? backOutLabel : "Back", "DS.ActionSecondary"); back.IsEnabled = index > 0 || backOut != null;
+        var back = Button("", index == 0 ? backOutLabel : "Back", "ActionButton"); back.IsEnabled = index > 0 || backOut != null;
         back.Click += (_, _) => { if (index > 0) Go(index - 1); else backOut?.Invoke(); };
-        var help = Button("", stuck ? "Hide help" : "I'm stuck", "DS.ActionSecondary"); help.Click += (_, _) => Stuck(!stuck);
+        var help = Button("", stuck ? "Hide help" : "I'm stuck", "ActionButton"); help.Click += (_, _) => Stuck(!stuck);
 
         var body = new StackPanel();
         if (above != null) { Detach(above); body.Children.Add(above); }
@@ -230,7 +230,7 @@ public sealed class PhoneGuide : Grid
         var list = new StackPanel();
         foreach (var (problem, fix) in help)
             list.Children.Add(new StackPanel { Margin = new(0, 0, 0, 12), Children = { Kit.Text(problem, 15, "DS.Text", FontWeights.SemiBold), Wrap(fix, 14.5, "DS.TextSoft").Also(t => t.Margin = new(0, 3, 0, 0)) } });
-        var copy = Button("", "Copy @" + ScanFlow.Discord, "DS.ActionSecondary");
+        var copy = Button("", "Copy @" + ScanFlow.Discord, "ActionButton");
         copy.Click += (_, _) => { try { Clipboard.SetText(ScanFlow.Discord); SetLabel(copy, "Copied"); } catch (System.Runtime.InteropServices.ExternalException) { } };
         list.Children.Add(new DockPanel { Margin = new(0, 4, 0, 0), Children = {
             copy.Also(b => { DockPanel.SetDock(b, Dock.Right); b.Margin = new(12, 0, 0, 0); }),

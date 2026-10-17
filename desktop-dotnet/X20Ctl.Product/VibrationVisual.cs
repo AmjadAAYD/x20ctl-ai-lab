@@ -32,11 +32,12 @@ public sealed class VibrationVisual : Grid
         var tracks = Flow.Load(model);
         var rim = Flow.LoadRim(model);
         var islands = Flow.Islands(model);
-        behind = new Flow(tracks, false) { Rim = rim }; over = new Flow(tracks, true) { Rim = rim, Parts = islands, Palette = Flow.LedColors(model), Body = Flow.Silhouette(model) };
+        behind = new Flow(tracks, false) { Rim = rim }; over = new Flow(tracks, true) { Rim = rim, Parts = islands, Palette = [Color.FromRgb(246,191,105),Color.FromRgb(255,229,187)], Body = Flow.Silhouette(model) };
         Children.Add(behind); Children.Add(new PhotoController(model)); Children.Add(over);
         RenderTransform = shake;
         Loaded += (_, _) => UpdateClock(); Unloaded += (_, _) => Stop(); IsVisibleChanged += (_, _) => UpdateClock();
     }
+    public void SetRegion(string region){over.Region=region;over.InvalidateVisual();}
     public void SetStrength(int percent) { if (percent == strength) return; strength = percent; UpdateClock(); }
 
     private void Stop()
@@ -76,6 +77,7 @@ public sealed class VibrationVisual : Grid
     private sealed class Flow : FrameworkElement
     {
         private readonly List<Track> tracks; private readonly bool front;
+        public string Region {get;set;}="Both grips";
         private int strength; private double time; private bool moving;
         private static readonly Color Deep = Color.FromRgb(56, 132, 255), Ice = Color.FromRgb(170, 214, 255), White = Color.FromRgb(240, 247, 255);
         public Track? Rim { get; init; }
@@ -230,7 +232,7 @@ public sealed class VibrationVisual : Grid
         {
             if (strength == 0 || tracks.Count == 0) return;
             // owner direction 10 Oct 2026: no comets or ripples, just a fast heartbeat on each motor's outline
-            double s = strength / 100.0, beat = .5;
+            double s = strength / 100.0;
             if (!front || Parts.Count == 0) return;
             // owner's references, 13 Oct 2026: the controller's edge round each grip glows like a lit edge, a smooth gradient
             // of the model's own LED colours that fades out at both ends, and over it a brighter neon pulse travels down. Strength sets how fast and how often the pulse runs and how bright it is.
@@ -240,6 +242,8 @@ public sealed class VibrationVisual : Grid
             if (Body != null) dc.PushClip(Body);
             foreach (var part in Parts)
             {
+                if(Region!="All" && (Region=="Triggers"?part.Grip:!part.Grip))continue;
+                if(Region=="Left grip"&&!part.Left || Region=="Right grip"&&part.Left)continue;
                 double m = part.Left ? left : right; if (m <= 0) continue;
                 double railCore = part.Grip ? 5 : 3.8, lit = .6 + .4 * m;
                 EdgeGlow(dc, part, 60 * lit, railCore * 4, false);

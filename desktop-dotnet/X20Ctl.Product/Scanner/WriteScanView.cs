@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,7 +31,7 @@ public sealed class WriteScanView : Grid
     private readonly TextBox model = Field("X20"), app = Field("KeyLinker"), setting = Field(""), original = Field(""), test = Field("");
     private readonly CheckBox undoable = new() { Style = DS.Style("DS.Toggle"), VerticalAlignment = VerticalAlignment.Center };
     private readonly List<StepNote> notes = new();
-    private readonly Button planNext = Action("", "Next: prepare the phone", "DS.ActionPrimary");
+    private readonly Button planNext = Action("", "Next: prepare the phone", "PrimaryButton");
 
     // the guided test
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
@@ -67,7 +67,7 @@ public sealed class WriteScanView : Grid
         page.RowDefinitions.Add(new() { Height = new(84) }); page.RowDefinitions.Add(new() { Height = new(64) }); page.RowDefinitions.Add(new());
 
         var bar = new DockPanel { VerticalAlignment = VerticalAlignment.Center };
-        var back = Action("", "Back to Tools", "DS.ActionSecondary"); back.Click += (_, _) => close(); DockPanel.SetDock(back, Dock.Right); bar.Children.Add(back);
+        var back = Action("", "Back to Tools", "ActionButton"); back.Click += (_, _) => close(); DockPanel.SetDock(back, Dock.Right); bar.Children.Add(back);
         var blue = Kit.Blue;
         var badge = new Border { CornerRadius = new(16), Padding = new(14, 7, 16, 7), Margin = new(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Center, Background = new SolidColorBrush(Color.FromArgb(40, blue.R, blue.G, blue.B)), BorderBrush = new SolidColorBrush(Color.FromArgb(120, blue.R, blue.G, blue.B)), BorderThickness = new(1),
             Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Icon("", 14, "DS.AccentHi").Also(i => i.Margin = new(0, 0, 9, 0)), Kit.Text("X20CTL never writes · you change one setting in KeyLinker", 13.5, "DS.Text", FontWeights.SemiBold) } } };
@@ -103,8 +103,8 @@ public sealed class WriteScanView : Grid
                 : ("Your Read scan comes along", "The Read scan you just finished (" + read.Describe() + ") is added to this report automatically. At the end you review both and press Send online, once."),
         })
             cards.Children.Add(Card(title, text));
-        var go = Action("", "I have the time, start", "DS.ActionPrimary"); go.Click += (_, _) => Fx.Leave(warning, () => warning.Visibility = Visibility.Collapsed, 1.02, 200);
-        var leave = Action("", "Back to Tools", "DS.ActionSecondary"); leave.Click += (_, _) => close();
+        var go = Action("", "I have the time, start", "PrimaryButton"); go.Click += (_, _) => Fx.Leave(warning, () => warning.Visibility = Visibility.Collapsed, 1.02, 200);
+        var leave = Action("", "Back to Tools", "ActionButton"); leave.Click += (_, _) => close();
         var panel = new StackPanel { MaxWidth = 1180, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(40, 36, 40, 30), Children = {
             Kit.Text("Before you start the " + WriteScanReport.Name, 40, "DS.Text", FontWeights.Bold),
             Wrap("You'll change one setting in KeyLinker while your phone records its Bluetooth traffic. X20CTL then shows which bytes the app sent for that change. One recording teaches one setting.", 17, "DS.TextSoft").Also(t => t.Margin = new(0, 8, 0, 0)),
@@ -188,8 +188,8 @@ public sealed class WriteScanView : Grid
     private FrameworkElement TestPage()
     {
         if (part == 0) { bringAt = 0; recordingStatus.Text = ""; }   // a new test: its recording is made from the first step
-        partDone = Action("", "", "DS.ActionPrimary"); partDone.Click += (_, _) => DonePart();
-        var restart = Action("", "Start the test again", "DS.ActionSecondary"); restart.Click += (_, _) => { notes.RemoveAll(n => !n.Event.EndsWith(" ready")); part = 0; Show(2); };
+        partDone = Action("", "", "PrimaryButton"); partDone.Click += (_, _) => DonePart();
+        var restart = Action("", "Start the test again", "ActionButton"); restart.Click += (_, _) => { notes.RemoveAll(n => !n.Event.EndsWith(" ready")); part = 0; Show(2); };
         var help = PhoneGuide.HelpPanel([
             ("The app doesn't find the controller", "Turn the controller off and on, in the mode you always use with the app. Check Bluetooth is on: you restarted it while preparing the phone."),
             ("I changed something else by mistake", "Press Start the test again and begin from the top. One recording should hold one change."),
@@ -197,7 +197,7 @@ public sealed class WriteScanView : Grid
             ("The controller was already paired", "That's fine. Leave it paired."),
             ("I pressed the button too early", "Press Start the test again. The pauses keep each action apart, so the result is easier to read.")]);
         help.Visibility = Visibility.Collapsed;
-        var stuck = Action("", "I'm stuck", "DS.ActionSecondary"); stuck.Click += (_, _) => help.Visibility = help.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        var stuck = Action("", "I'm stuck", "ActionButton"); stuck.Click += (_, _) => help.Visibility = help.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
         var left = Kit.Panel("Do the test", "Follow each step on the phone, then confirm here", null, new StackPanel { Children = {
             Detach(partTitle), Detach(partSay).Also(t => t.Margin = new(0, 8, 0, 0)), Detach(partCount).Also(t => t.Margin = new(0, 14, 0, 0)),
             new WrapPanel { Margin = new(0, 22, 0, 0), Children = { partDone, restart.Also(b => b.Margin = new(12, 0, 0, 0)), stuck.Also(b => b.Margin = new(12, 0, 0, 0)) } }, help } });
@@ -320,12 +320,12 @@ public sealed class WriteScanView : Grid
         headline.Children.Add(Card("Changes found", report.IsKeyLinker ? $"{Count(report.KeyLinker.Changes.Count, "write")}, {Count(report.KeyLinker.Changes.Sum(c => c.Bytes.Count), "byte")} changed, {report.KeyLinker.Changes.Count(c => c.ReadBack == "matches")} read back as stored" : $"{report.Shapes.Count} kinds of write"));
         summary.Text = report.Summary() + (secondText is null ? "" : "\n" + secondText);
 
-        var save = Action("", "Save the findings", "DS.ActionPrimary"); save.Click += (_, _) => Save();
-        var open = Action("", "Open the folder", "DS.ActionSecondary"); open.Click += (_, _) => OpenFolder();
-        var compare = Action("", "Compare with a second recording", "DS.ActionSecondary"); compare.Click += async (_, _) => await Choose(true);
+        var save = Action("", "Save the findings", "PrimaryButton"); save.Click += (_, _) => Save();
+        var open = Action("", "Open the folder", "ActionButton"); open.Click += (_, _) => OpenFolder();
+        var compare = Action("", "Compare with a second recording", "ActionButton"); compare.Click += async (_, _) => await Choose(true);
         compare.ToolTip = "The same test recorded twice, or the same change on a second controller: lists the messages only one recording holds";
-        var again = Action("", "Test another setting", "DS.ActionSecondary"); again.Click += (_, _) => { if (unsaved && !closeArmed) { closeArmed = true; resultStatus.Text = "These findings aren't saved. Press again to start over without them."; return; } report = null; log = null; secondText = null; closeArmed = false; unsaved = false; resultStatus.Text = ""; Show(0); };
-        var send = Action("\uE724", "Send online", "DS.ActionSecondary"); send.Click += (_, _) => { sendPanel.Visibility = sendPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; };
+        var again = Action("", "Test another setting", "ActionButton"); again.Click += (_, _) => { if (unsaved && !closeArmed) { closeArmed = true; resultStatus.Text = "These findings aren't saved. Press again to start over without them."; return; } report = null; log = null; secondText = null; closeArmed = false; unsaved = false; resultStatus.Text = ""; Show(0); };
+        var send = Action("\uE724", "Send online", "ActionButton"); send.Click += (_, _) => { sendPanel.Visibility = sendPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; };
         send.ToolTip = read is null ? "Send these findings to the X20CTL team, so your controller can be supported" : "Send these findings and the Read scan report to the X20CTL team in one go";
         BuildSendPanel();
         var actions = new WrapPanel { Children = { save, send.Also(b => b.Margin = new(12, 0, 0, 0)), open.Also(b => b.Margin = new(12, 0, 0, 0)), compare.Also(b => b.Margin = new(12, 0, 0, 0)), again.Also(b => b.Margin = new(12, 0, 0, 0)) } };
@@ -343,7 +343,7 @@ public sealed class WriteScanView : Grid
     private void BuildSendPanel()
     {
         if (sendGo != null) return;
-        sendGo = Action("\uE724", "Send", "DS.ActionPrimary"); sendGo.IsEnabled = false; sendGo.Click += async (_, _) => await Send();
+        sendGo = Action("\uE724", "Send", "PrimaryButton"); sendGo.IsEnabled = false; sendGo.Click += async (_, _) => await Send();
         agree.Checked += (_, _) => sendGo.IsEnabled = receipt is null && !sending; agree.Unchecked += (_, _) => sendGo.IsEnabled = false;
         sendPanel.CornerRadius = new(14); sendPanel.Margin = new(0, 14, 0, 0); sendPanel.Padding = new(18, 14, 18, 14); sendPanel.BorderThickness = new(1);
         sendPanel.BorderBrush = new SolidColorBrush(Color.FromArgb(110, 61, 139, 255)); sendPanel.Background = new SolidColorBrush(Color.FromArgb(40, 61, 139, 255));

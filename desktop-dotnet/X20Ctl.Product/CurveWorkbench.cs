@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -20,6 +20,7 @@ public sealed class CurveWorkbench
 {
     public Grid Inspector { get; } = new();
     public Grid Shelf { get; } = new();
+    public WrapPanel Toolbar {get;}=new(){Margin=new(0,0,0,8)};
     public CurveDraft Draft { get; }
     public CurveChannel Channel { get; private set; }
     public IEnumerable<Button> Buttons => channelButtons.Concat(presetButtons);
@@ -28,7 +29,7 @@ public sealed class CurveWorkbench
     public Rect PlotBounds => chart.TransformToAncestor(Inspector).TransformBounds(new Rect(L,T,PW,PH));
     public int? SelectedPoint { get; private set; }
     public string PresetDescription => summary.Text;
-    public TextBlock OutputAxisLabel { get; } = new() { Text="OUTPUT %",FontSize=12,Foreground=Brushes.LightSteelBlue };
+    public TextBlock OutputAxisLabel { get; } = new() { Text="OUTPUT %",FontSize=13,Foreground=Brushes.LightSteelBlue };
     const string Hint="";
     public TextBlock PreviewNotice { get; } = new() { Text=Hint,FontSize=12.5,Foreground=Brushes.LightSteelBlue,TextWrapping=TextWrapping.Wrap };
     public TextBlock ActivePointReadout { get; } = new() { FontSize=14,FontWeight=FontWeights.SemiBold,TextWrapping=TextWrapping.Wrap };
@@ -48,7 +49,7 @@ public sealed class CurveWorkbench
     private const double L=38,T=16,PW=408,PH=240;
     private readonly Canvas chart = new() { Width=480, Height=300 };
     private readonly Polyline response = new() { Stroke=new SolidColorBrush(Color.FromRgb(116,200,255)), StrokeThickness=3.5, StrokeLineJoin=PenLineJoin.Round, Effect=new DropShadowEffect{Color=Color.FromRgb(70,150,255),BlurRadius=12,ShadowDepth=0,Opacity=.7} };
-    private readonly Polygon area = new() { Fill=new LinearGradientBrush(Color.FromArgb(70,70,150,255),Color.FromArgb(0,70,150,255),90) };
+    private readonly Polygon area = new() { Fill=new LinearGradientBrush(Color.FromArgb(30,70,150,255),Color.FromArgb(0,70,150,255),90) };
     private readonly Rectangle innerBand = new() { Fill=new SolidColorBrush(Color.FromArgb(46,232,54,79)) }, outerBand = new() { Fill=new SolidColorBrush(Color.FromArgb(40,61,214,140)) };
     private readonly Line floorLine = Guide(Color.FromArgb(150,255,196,92)), ceilingLine = Guide(Color.FromArgb(150,255,196,92)), liveGuide = Guide(Color.FromArgb(90,169,207,255));
     private readonly Thumb first = new(), second = new(), deadHandle = new(), fullHandle = new(), floorHandle = new(), ceilingHandle = new();
@@ -61,6 +62,9 @@ public sealed class CurveWorkbench
     public Slider Ceiling { get; } = new() { Minimum=60,Maximum=100,Value=100,TickFrequency=1,IsSnapToTickEnabled=true };
     private readonly TextBlock innerText=new() { FontSize=16 }, outerText=new() { FontSize=16 }, floorText=new() { FontSize=16 }, ceilingText=new() { FontSize=16 };
     private readonly StackPanel floorPanel=new() {Margin=new(10,0,24,0)}, ceilingPanel=new() {Margin=new(10,0,24,0)};
+    private readonly TextBox pointInput=new(){Width=86,MinHeight=34,Padding=new(8,3,8,3),Margin=new(6,0,14,0)},pointOutput=new(){Width=86,MinHeight=34,Padding=new(8,3,8,3),Margin=new(6,0,0,0)};
+    private readonly StackPanel pointEditor=new(){Orientation=Orientation.Horizontal,Visibility=Visibility.Hidden};
+    private readonly TextBlock liveReadout=new(){FontSize=14,Foreground=Brushes.LightSteelBlue,Text="Connect a controller or use Keyboard test"};
     private bool updating;
     private double liveAt=-1;
     public bool AnimationsEnabled { get; }
@@ -73,10 +77,13 @@ public sealed class CurveWorkbench
     public CurveWorkbench(CurveDraft draft,FrameworkElement resources,bool animations=true)
     {
         Draft=draft;AnimationsEnabled=animations;
-        Inspector.RowDefinitions.Add(new(){Height=new GridLength(62)});Inspector.RowDefinitions.Add(new());Inspector.RowDefinitions.Add(new(){Height=new GridLength(48)});
-        var heading=new StackPanel();heading.Children.Add(title);heading.Children.Add(summary);Inspector.Children.Add(heading);
+        Inspector.RowDefinitions.Add(new(){Height=GridLength.Auto});Inspector.RowDefinitions.Add(new());Inspector.RowDefinitions.Add(new(){Height=new GridLength(0)});
+        var heading=new StackPanel();heading.Children.Add(Toolbar);heading.Children.Add(title);heading.Children.Add(summary);Inspector.Children.Add(heading);
         var view=new Viewbox { Child=chart,Stretch=Stretch.Uniform };Grid.SetRow(view,1);Inspector.Children.Add(view);
-        var note=new StackPanel();note.Children.Add(coordinates);note.Children.Add(ActivePointReadout);PreviewNotice.Margin=new(0,6,0,0);note.Children.Add(PreviewNotice);Grid.SetRow(note,2);Inspector.Children.Add(note);
+        var note=new StackPanel{ClipToBounds=true};note.Children.Add(coordinates);note.Children.Add(ActivePointReadout);note.Children.Add(pointEditor);note.Children.Add(liveReadout);
+        pointEditor.Children.Add(new TextBlock{Text="Input %",VerticalAlignment=VerticalAlignment.Center});pointEditor.Children.Add(pointInput);pointEditor.Children.Add(new TextBlock{Text="Output %",VerticalAlignment=VerticalAlignment.Center});pointEditor.Children.Add(pointOutput);
+        foreach(var box in new[]{pointInput,pointOutput}){box.IsEnabled=Draft.CanEdit;box.LostKeyboardFocus+=(_,_)=>CommitPoint();box.PreviewKeyDown+=(_,e)=>{if(e.Key==Key.Enter){CommitPoint();e.Handled=true;}};}
+        PreviewNotice.Margin=new(0,6,0,0);note.Children.Add(PreviewNotice);Grid.SetRow(note,1);Grid.SetColumn(note,1);note.Margin=new(20,0,0,0);
         Inspector.SizeChanged+=(_,_)=>RefreshPointReadout();
         foreach(var band in new[]{innerBand,outerBand}) {band.Height=PH;Canvas.SetTop(band,T);chart.Children.Add(band);}
         foreach(int tick in new[]{0,25,50,75,100})
@@ -84,14 +91,14 @@ public sealed class CurveWorkbench
             double x=X(tick),y=Y(tick);
             chart.Children.Add(new Line {X1=x,X2=x,Y1=T,Y2=T+PH,Stroke=new SolidColorBrush(Color.FromArgb(42,132,160,202)),StrokeThickness=1});
             chart.Children.Add(new Line {X1=L,X2=L+PW,Y1=y,Y2=y,Stroke=new SolidColorBrush(Color.FromArgb(42,132,160,202)),StrokeThickness=1});
-            var horizontal=new TextBlock {Text=tick.ToString(),FontSize=12,Foreground=Brushes.LightSteelBlue};Canvas.SetLeft(horizontal,x-7);Canvas.SetTop(horizontal,T+PH+6);chart.Children.Add(horizontal);
-            var vertical=new TextBlock {Text=tick.ToString(),FontSize=12,Foreground=Brushes.LightSteelBlue};Canvas.SetLeft(vertical,4);Canvas.SetTop(vertical,y-8);chart.Children.Add(vertical);
+            var horizontal=new TextBlock {Text=tick.ToString(),FontSize=13,Foreground=Brushes.LightSteelBlue};Canvas.SetLeft(horizontal,x-7);Canvas.SetTop(horizontal,T+PH+6);chart.Children.Add(horizontal);
+            var vertical=new TextBlock {Text=tick.ToString(),FontSize=13,Foreground=Brushes.LightSteelBlue};Canvas.SetLeft(vertical,4);Canvas.SetTop(vertical,y-8);chart.Children.Add(vertical);
         }
-        chart.Children.Add(new Line {X1=L,Y1=T+PH,X2=L+PW,Y2=T,Stroke=new SolidColorBrush(Color.FromArgb(55,200,216,244)),StrokeDashArray=new(){4,4}});
+        chart.Children.Add(new Line {X1=L,Y1=T+PH,X2=L+PW,Y2=T,Stroke=new SolidColorBrush(Color.FromArgb(110,200,216,244)),StrokeDashArray=new(){4,4}});
         chart.Children.Add(area);chart.Children.Add(floorLine);chart.Children.Add(ceilingLine);chart.Children.Add(liveGuide);chart.Children.Add(response);
         chart.Children.Add(halfDot);chart.Children.Add(halfTag);
         Canvas.SetLeft(OutputAxisLabel,L);Canvas.SetTop(OutputAxisLabel,0);chart.Children.Add(OutputAxisLabel);
-        var input=new TextBlock {Text="INPUT %",FontSize=12,Foreground=Brushes.LightSteelBlue};Canvas.SetLeft(input,206);Canvas.SetTop(input,284);chart.Children.Add(input);
+        var input=new TextBlock {Text="INPUT %",FontSize=13,Foreground=Brushes.LightSteelBlue};Canvas.SetLeft(input,206);Canvas.SetTop(input,284);chart.Children.Add(input);
 
         // the curve's two points, on the line itself
         for(int index=0;index<2;index++)
@@ -102,7 +109,7 @@ public sealed class CurveWorkbench
             int pointIndex=index;
             thumb.GotKeyboardFocus+=(_,_)=>SelectPoint(pointIndex);
             thumb.PreviewMouseLeftButtonDown+=(_,_)=>{thumb.Focus();SelectPoint(pointIndex);};
-            thumb.LostKeyboardFocus+=(_,e)=>{if(e.NewFocus!=first && e.NewFocus!=second) {SelectedPoint=null;RefreshPointReadout();}};
+            thumb.LostKeyboardFocus+=(_,e)=>{if(e.NewFocus!=first && e.NewFocus!=second && e.NewFocus!=pointInput && e.NewFocus!=pointOutput) {SelectedPoint=null;RefreshPointReadout();}};
             thumb.DragDelta+=(_,e)=>
             {
                 var z=Zones();var point=pointIndex==0?Draft[Channel].Point1:Draft[Channel].Point2;
@@ -129,30 +136,31 @@ public sealed class CurveWorkbench
         }
         chart.Children.Add(liveDot);chart.Children.Add(liveTag);
 
-        Shelf.RowDefinitions.Add(new(){Height=new GridLength(76)});Shelf.RowDefinitions.Add(new());
+        Shelf.ColumnDefinitions.Add(new());Shelf.ColumnDefinitions.Add(new(){Width=new(360)});Shelf.RowDefinitions.Add(new(){Height=new GridLength(76)});Shelf.RowDefinitions.Add(new());Shelf.Children.Add(note);
         var rail=new Grid();rail.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});rail.ColumnDefinitions.Add(new(){Width=new GridLength(1,GridUnitType.Star)});Shelf.Children.Add(rail);
         var channels=new StackPanel {Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center};rail.Children.Add(channels);
         foreach(var channel in Enum.GetValues<CurveChannel>())
         {
-            var button=new Button {Content=ShortName(channel),Tag=channel,Width=102,Height=48,Style=(Style)resources.FindResource("ConsoleTarget"),Margin=new(0,0,9,0),ToolTip=Name(channel)};
+            var button=new Button {Content=ShortName(channel),Tag=channel,Width=90,Height=36,Style=(Style)resources.FindResource("ActionButton"),Margin=new(0,0,9,0),ToolTip=Name(channel)};
             button.Click+=(_,_)=>SelectChannel(channel);channelButtons.Add(button);channels.Children.Add(button);
         }
-        var presets=new StackPanel {Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center};Grid.SetColumn(presets,1);rail.Children.Add(presets);
+        var presets=new WrapPanel {Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center};Grid.SetColumn(presets,1);rail.Children.Add(presets);
         foreach(string preset in CurveDraft.Presets.Keys)
         {
-            var button=new Button {Content=char.ToUpper(preset[0])+preset[1..],Tag=preset,Style=(Style)resources.FindResource("ConsoleAction"),Padding=new(12,0,12,0),Margin=new(5,0,0,0),IsEnabled=Draft.CanEdit};button.Click+=(_,_)=>SetPreset(preset);presetButtons.Add(button);presets.Children.Add(button);
+            var button=new Button {Content=char.ToUpper(preset[0])+preset[1..],Tag=preset,Style=(Style)resources.FindResource("ActionButton"),Height=34,Padding=new(12,0,12,0),Margin=new(5,0,0,0),IsEnabled=Draft.CanEdit};var mini=new Canvas{Width=32,Height=18,Margin=new(0,0,6,0)};var points=CurveDraft.Presets[preset];mini.Children.Add(new Polyline{Stroke=Brushes.LightSkyBlue,StrokeThickness=1.5,Points=new PointCollection{new(0,18),new(points.First.Item1/255d*32,18-points.First.Item2/255d*18),new(points.Second.Item1/255d*32,18-points.Second.Item2/255d*18),new(32,0)}});button.Content=new StackPanel{Orientation=Orientation.Horizontal,Children={mini,new TextBlock{Text=char.ToUpper(preset[0])+preset[1..]}.Also(t=>t.SetBinding(TextBlock.ForegroundProperty,new System.Windows.Data.Binding("Foreground"){RelativeSource=new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.FindAncestor,typeof(Button),1)}))}};button.ToolTip="Select "+preset+" response";button.Click+=(_,_)=>SetPreset(preset);presetButtons.Add(button);presets.Children.Add(button);
         }
-        var zones=new Grid {Margin=new(0,0,0,10)};for(int c=0;c<4;c++)zones.ColumnDefinitions.Add(new());Grid.SetRow(zones,1);Shelf.Children.Add(zones);
+        rail.Children.Remove(channels);rail.Children.Remove(presets);channels.Margin=new(0);heading.Children.Add(Kit.Segments(channels));presets.HorizontalAlignment=HorizontalAlignment.Left;presets.Margin=new(0);heading.Children.Add(Kit.Segments(presets).Also(b=>b.Margin=new(0,8,0,12)));Shelf.RowDefinitions[0].Height=new(0);
+        var zones=new Grid {Margin=new(0,0,0,10)};for(int c=0;c<2;c++){zones.ColumnDefinitions.Add(new());zones.RowDefinitions.Add(new());}Grid.SetRow(zones,1);Shelf.Children.Add(zones);
         int kind=0;
         foreach(var (slider,text,label) in new[]{(Inner,innerText,"Dead zone percent"),(Outer,outerText,"Full at percent"),(Floor,floorText,"Anti-dead zone percent"),(Ceiling,ceilingText,"Max output percent")})
         {
-            var panel=kind==2?floorPanel:kind==3?ceilingPanel:new StackPanel {Margin=new(10,0,24,0)};panel.Children.Add(text);slider.IsEnabled=Draft.CanEdit;slider.Style=(Style)resources.FindResource("ConsoleCurveSlider");slider.Margin=new(0,8,0,0);panel.Children.Add(slider);Grid.SetColumn(panel,kind);zones.Children.Add(panel);
+            var panel=kind==2?floorPanel:kind==3?ceilingPanel:new StackPanel {Margin=new(10,0,24,0)};panel.Children.Add(text);slider.IsEnabled=Draft.CanEdit;slider.Style=(Style)resources.FindResource("ConsoleCurveSlider");slider.Margin=new(0,8,0,0);panel.Children.Add(slider);Grid.SetColumn(panel,kind%2);Grid.SetRow(panel,kind/2);text.FontSize=14;slider.Height=24;slider.Margin=new(0);zones.Children.Add(panel);
             System.Windows.Automation.AutomationProperties.SetName(slider,label);
             slider.ToolTip="← / → adjusts 1 percentage point. Hold Shift for 5-point steps.";
             int k=kind;slider.ValueChanged+=(_,_)=>{if(!updating)SetZone(k,slider.Value);};
             kind++;
         }
-        Grid.SetRow(editHint,1);Shelf.Children.Add(editHint);
+        editHint.Visibility=Visibility.Collapsed;
         Refresh();
     }
 
@@ -229,7 +237,7 @@ public sealed class CurveWorkbench
         int step=(Keyboard.Modifiers&ModifierKeys.Shift)!=0?5:1;
         if(Keyboard.FocusedElement is Thumb thumb && (thumb==first || thumb==second) && thumb.Tag is int index && Draft.CanEdit)
         {
-            var p=index==0?Draft[Channel].Point1:Draft[Channel].Point2;
+            var p=index==0?Draft[Channel].Point1:Draft[Channel].Point2;step=(int)Math.Round(step*2.55);
             if(e.Key is Key.Left or Key.Right or Key.Up or Key.Down) {SetPoint(index,p.X+(e.Key==Key.Right?step:e.Key==Key.Left?-step:0),p.Y+(e.Key==Key.Up?step:e.Key==Key.Down?-step:0));e.Handled=true;return true;}
         }
         if(Keyboard.FocusedElement is Thumb zone && Draft.CanEdit && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
@@ -247,7 +255,8 @@ public sealed class CurveWorkbench
     /// <summary>The real controller, live: how far this stick (or trigger) is pushed, 0–1. Always on while one is connected.</summary>
     public void ShowLive(double pushed)
     {
-        pushed=Math.Clamp(pushed,0,1);
+        if(pushed<0){liveReadout.Text="Input unavailable · Connect a controller or use keyboard simulation";liveDot.Visibility=liveTag.Visibility=liveGuide.Visibility=Visibility.Collapsed;liveAt=-1;return;}
+        pushed=Math.Clamp(pushed,0,1);liveReadout.Text=$"Input {pushed:P0} → Output {Output(pushed):P0}";
         if(pushed<.02){if(liveAt>=0){liveAt=-1;liveDot.Visibility=liveTag.Visibility=liveGuide.Visibility=Visibility.Collapsed;}return;}
         if(Math.Abs(pushed-liveAt)<.004)return;liveAt=pushed;
         double o=Output(pushed)*100,x=X(pushed*100),y=Y(o);
@@ -264,7 +273,7 @@ public sealed class CurveWorkbench
         summary.Text=setting.Preset=="custom"?$"Custom curve · based on {basis}":$"{basis} curve · {(modified?"Modified":"Unmodified")}";
         if(tuning?.Raw==true)summary.Text+=" · Raw 1:1 (curve and zones are skipped)";
         Inner.Value=z.Inner;Outer.Value=z.Outer;Floor.Value=z.Floor;Ceiling.Value=z.Ceiling;
-        innerText.Text=$"Dead zone   {z.Inner:0.#}%";outerText.Text=$"Full at   {z.Outer:0.#}%";floorText.Text=$"Anti-dead zone   {z.Floor:0.#}%";ceilingText.Text=$"Max output   {z.Ceiling:0.#}%";
+        innerText.Text=$"{(IsStick?"Inner dead zone":"Start point")}   {z.Inner:0.#}%";outerText.Text=$"{(IsStick?"Full output at":"Full press point")}   {z.Outer:0.#}%";floorText.Text=$"Anti-dead zone   {z.Floor:0.#}%";ceilingText.Text=$"Max output   {z.Ceiling:0.#}%";
         bool limits=TuningOwnsZones;
         Inner.Maximum=limits?StickTuning.MaxInner:99;Outer.Minimum=limits?StickTuning.MinOuter:1;
         floorPanel.Visibility=ceilingPanel.Visibility=limits?Visibility.Visible:Visibility.Collapsed;
@@ -300,8 +309,10 @@ public sealed class CurveWorkbench
         coordinates.Text=$"Points  {setting.Point1.X/2.55:0} → {setting.Point1.Y/2.55:0}%   ·   {setting.Point2.X/2.55:0} → {setting.Point2.Y/2.55:0}%"+(tuning is {AxisRatio:not 100} r?$"   ·   Vertical {r.AxisRatio}%":"")+(tuning?.SquareGate==true?"   ·   Square gate":"");
         coordinates.ToolTip=$"Stored point 1: {setting.Point1.X}/255, {setting.Point1.Y}/255. Point 2: {setting.Point2.X}/255, {setting.Point2.Y}/255.";
         coordinates.TextWrapping=TextWrapping.Wrap;RefreshPointReadout();
-        foreach(var button in channelButtons)button.Background=(CurveChannel)button.Tag==Channel?new SolidColorBrush(Color.FromRgb(38,120,237)):new SolidColorBrush(Color.FromArgb(117,24,35,55));
-        foreach(var button in presetButtons)button.Background=(string)button.Tag==setting.Preset?new SolidColorBrush(Color.FromRgb(38,120,237)):new SolidColorBrush(Color.FromArgb(27,255,255,255));
+        foreach(var button in channelButtons)button.Background=(CurveChannel)button.Tag==Channel?Brushes.White:DS.Brush("Control.ButtonFill");
+        foreach(var button in channelButtons)button.Foreground=(CurveChannel)button.Tag==Channel?new SolidColorBrush(Color.FromRgb(17,24,39)):Brushes.LightSteelBlue;
+        foreach(var button in presetButtons)button.Foreground=(string)button.Tag==setting.Preset?new SolidColorBrush(Color.FromRgb(17,24,39)):Brushes.LightSteelBlue;
+        foreach(var button in presetButtons)button.Background=(string)button.Tag==setting.Preset?Brushes.White:DS.Brush("Control.ButtonFill");
         updating=false;
     }
     bool Dragging=>new[]{first,second,deadHandle,fullHandle,floorHandle,ceilingHandle}.Any(t=>t.IsDragging);
@@ -310,16 +321,22 @@ public sealed class CurveWorkbench
     private void RefreshPointReadout()
     {
         bool active=SelectedPoint.HasValue;
-        coordinates.Visibility=active?Visibility.Collapsed:Visibility.Visible;
-        ActivePointReadout.Visibility=active?Visibility.Visible:Visibility.Collapsed;
-        Inspector.RowDefinitions[^1].Height=new(!active && Inspector.ActualWidth>0 && Inspector.ActualWidth<400?64:48);
+        coordinates.Visibility=Visibility.Collapsed;pointEditor.Visibility=active?Visibility.Visible:Visibility.Hidden;
+        ActivePointReadout.Visibility=active?Visibility.Visible:Visibility.Hidden;
+        Inspector.RowDefinitions[^1].Height=new(0);
         editHint.Text=active?$"POINT {SelectedPoint+1}    ← / → Input    ↑ / ↓ Output":"← / →  1% steps · Shift  5% steps";
         if(active)
         {
             var point=SelectedPoint==0?Draft[Channel].Point1:Draft[Channel].Point2;
-            ActivePointReadout.Text=$"POINT {SelectedPoint+1}\nInput {point.X/2.55:0}% · Output {point.Y/2.55:0}%";
+            ActivePointReadout.Text=$"POINT {SelectedPoint+1}";if(!pointInput.IsKeyboardFocused)pointInput.Text=(point.X/2.55).ToString("0.0");if(!pointOutput.IsKeyboardFocused)pointOutput.Text=(point.Y/2.55).ToString("0.0");
             ActivePointReadout.ToolTip=$"Stored point coordinates: input {point.X}/255, output {point.Y}/255.";
         }
+    }
+    void CommitPoint()
+    {
+        if(SelectedPoint is not int index || !Draft.CanEdit)return;
+        if(double.TryParse(pointInput.Text,out double x)&&double.TryParse(pointOutput.Text,out double y)&&double.IsFinite(x)&&double.IsFinite(y))SetPoint(index,(int)Math.Round(Math.Clamp(x,0,100)*2.55),(int)Math.Round(Math.Clamp(y,0,100)*2.55));
+        else PreviewNotice.Text="Enter percentages between 0 and 100.";
     }
     public static string Name(CurveChannel channel)=>channel switch {CurveChannel.LeftStick=>"Left stick",CurveChannel.RightStick=>"Right stick",CurveChannel.LeftTrigger=>"Left trigger · LT",_=>"Right trigger · RT"};
     private static string ShortName(CurveChannel channel)=>channel switch {CurveChannel.LeftStick=>"L Stick",CurveChannel.RightStick=>"R Stick",CurveChannel.LeftTrigger=>"LT",_=>"RT"};

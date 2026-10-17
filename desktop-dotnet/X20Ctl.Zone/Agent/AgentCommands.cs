@@ -42,7 +42,7 @@ public static class AgentCommands
     ]);
     public static string Diagnostics() => AgentVariety.Pick("diagnostics", [
         "Opening Diagnostics: roll each stick round its edge, squeeze both triggers and press every button. I'll watch.",
-        "To Diagnostics! Move everything on me and we'll see what's off. Hold B for a second to come back.",
+        "To Diagnostics! Move everything on me and we'll see what's off. Use Esc or the mouse to leave capture.",
         "Taking you to Diagnostics. Wiggle, squeeze, press: I'm all yours.",
     ]);
     public static string ChangeController() => AgentVariety.Pick("change", [

@@ -47,7 +47,7 @@ public sealed class PcModeProfile
         if (Remap == null || Curves == null || Turbo == null || Macros == null || Sticks == null) throw new InvalidDataException("Missing settings.");
         if (Macros.Count > 32 || Remap.Count > 64) throw new InvalidDataException("Too many settings.");
         foreach (var (source, target) in Remap)
-            if (source == null || target == null || !Known(source) || !Known(target)) throw new InvalidDataException("Unknown button in a remap.");
+            if (source == null || target == null || !Known(source) || !(Known(target)||target=="NONE")) throw new InvalidDataException("Unknown button in a remap.");
         foreach (var (button, hz) in Turbo)
             if (!Known(button) || hz < MinTurboHz || hz > MaxTurboHz) throw new InvalidDataException("Turbo needs a known button and 2 to 30 presses a second.");
         foreach (var (name, curve) in Curves)
@@ -121,14 +121,14 @@ public sealed class PadProcessor
         var target = new Dictionary<string, byte>();
         foreach (var (source, value) in down)
         {
-            string to = profile.Remap.GetValueOrDefault(source, source);
+            string to = profile.Remap.GetValueOrDefault(source, source);if(to=="NONE")continue;
             target[to] = (byte)Math.Max(target.GetValueOrDefault(to), value);
         }
         // a light trigger pull (below the "pressed" threshold) still reaches a trigger target, so feathering survives
         foreach (var (name, value) in new[] { ("LT", input.LeftTrigger), ("RT", input.RightTrigger) })
         {
             if (value == 0 || value > PadButtons.TriggerThreshold || profile.Macros.ContainsKey(name)) continue;
-            string to = profile.Remap.GetValueOrDefault(name, name);
+            string to = profile.Remap.GetValueOrDefault(name, name);if(to=="NONE")continue;
             if (to is "LT" or "RT") target[to] = (byte)Math.Max(target.GetValueOrDefault(to), value);
         }
 

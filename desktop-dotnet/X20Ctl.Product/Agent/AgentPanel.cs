@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
@@ -125,9 +125,9 @@ public sealed class AgentPanel
     Color Edge => skin.Edge;
     const double LeftX = 100, RightX = 1300, EyeY = 165, PadY = 318;
 
-    public AgentPanel(string modelId, string controllerName, PcModeLink? link, Action<Button> register, int player = 0, Func<Action<string, int>, IDriftMeter>? meter = null)
+    public AgentPanel(string modelId, string controllerName, PcModeLink? link, Action<Button> register, int player = 0, Func<Action<string, int>, IDriftMeter>? meter = null, bool reducedMotion = false)
     {
-        this.modelId = modelId; this.link = link; this.player = player; this.register = register; skin = AgentSkin.For(modelId);
+        this.reducedMotion = reducedMotion; this.modelId = modelId; this.link = link; this.player = player; this.register = register; skin = AgentSkin.For(modelId);
         string name = controllerName.Replace("EasySMX ", ""); padName = name;
         // drift is read from the real controller; a review harness can hand in its own reading instead
         session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring), ControllerFacts = Facts(modelId) };
@@ -293,13 +293,14 @@ public sealed class AgentPanel
 
         Body = new Border
         {
+            Visibility = Visibility.Collapsed,
             Background = Brushes.Transparent, Child = new Viewbox { Stretch = Stretch.Uniform, Child = pad },
             RenderTransform = new TransformGroup { Children = { pop, offset } }, RenderTransformOrigin = new(1, 1),
         };
         blink.Tick += (_, _) => Blink();
         Say(greeting, null);
         ShowSettings(new HashSet<string>());
-        StateChanged += ShowState; Body.Unloaded += (_, _) => StateChanged -= ShowState; Body.Loaded += (_, _) => { StateChanged -= ShowState; StateChanged += ShowState; };
+        StateChanged += ShowState; Body.Unloaded += (_, _) => { StateChanged -= ShowState; StopCharacterMotion(); }; Body.Loaded += (_, _) => { StateChanged -= ShowState; StateChanged += ShowState; };
         ShowState(); Look(Gaze.Idle); Prepare();
     }
 
@@ -410,8 +411,8 @@ public sealed class AgentPanel
     async void Laugh()
     {
         int me = ++laughing;
-        foreach (var (pupil, squint) in squints) { pupil.Visibility = Visibility.Hidden; squint.Visibility = Visibility.Visible; if (DS.Motion) Fx.Appear((FrameworkElement)squint, .6, 220); }
-        if (DS.Motion)
+        foreach (var (pupil, squint) in squints) { pupil.Visibility = Visibility.Hidden; squint.Visibility = Visibility.Visible; if (Motion) Fx.Appear((FrameworkElement)squint, .6, 220); }
+        if (Motion)
         {
             var giggle = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames();
             double t = 0; foreach (double y in new[] { -3.0, 2, -3, 2, -2, 0 }) giggle.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(y, TimeSpan.FromMilliseconds(t += 90)));
@@ -446,7 +447,7 @@ public sealed class AgentPanel
     {
         foreach (var (look, _, _) in eyes)
         {
-            if (!on || !DS.Motion) { look.BeginAnimation(TranslateTransform.XProperty, null); look.BeginAnimation(TranslateTransform.YProperty, null); continue; }
+            if (!on || !Motion) { look.BeginAnimation(TranslateTransform.XProperty, null); look.BeginAnimation(TranslateTransform.YProperty, null); continue; }
             const double r = 9; var quarter = TimeSpan.FromSeconds(.7);
             // x = sin, y = -cos: each quarter eases out to a peak or in to the middle, so the path is a circle
             var outOf = new System.Windows.Media.Animation.KeySpline(.39, .575, .565, 1); var into = new System.Windows.Media.Animation.KeySpline(.47, 0, .745, .715);
@@ -464,7 +465,7 @@ public sealed class AgentPanel
     /// <summary>"Wiggling my sticks": they really wiggle, side to side and a little up and down, then settle.</summary>
     void Wiggle()
     {
-        if (!DS.Motion) return;
+        if (!Motion) return;
         foreach (var (look, _, inward) in eyes)
         {
             var x = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames(); var y = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames();
@@ -492,7 +493,7 @@ public sealed class AgentPanel
         foreach (var (look, _, inward) in eyes)
         {
             var (x, y) = gaze switch { Gaze.Typing => (5.0 * inward, 9.0), Gaze.Thinking => (0.0, -10.0), Gaze.Down => (0.0, 10.0), Gaze.Ideas => (-9.0, 3.0), _ => (6.0 * inward, 0.0) };
-            if (!DS.Motion) { look.X = x; look.Y = y; continue; }
+            if (!Motion) { look.X = x; look.Y = y; continue; }
             look.BeginAnimation(TranslateTransform.XProperty, DS.To(x, 260)); look.BeginAnimation(TranslateTransform.YProperty, DS.To(y, 260));
         }
     }
@@ -500,7 +501,7 @@ public sealed class AgentPanel
     void Blink()
     {
         blink.Interval = TimeSpan.FromSeconds(3.5 + Random.Shared.NextDouble() * 3);
-        if (!DS.Motion) return;
+        if (!Motion) return;
         foreach (var (_, lid, _) in eyes)
             lid.BeginAnimation(ScaleTransform.ScaleYProperty, new System.Windows.Media.Animation.DoubleAnimation(1, .1, TimeSpan.FromMilliseconds(80)) { AutoReverse = true });
     }
@@ -509,7 +510,7 @@ public sealed class AgentPanel
     void Applied()
     {
         _ = AgentRumble.Pulse(player);
-        if (!DS.Motion) return;
+        if (!Motion) return;
         foreach (var (_, lid, _) in eyes)
             lid.BeginAnimation(ScaleTransform.ScaleYProperty, new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames { KeyFrames = { new System.Windows.Media.Animation.LinearDoubleKeyFrame(.35, TimeSpan.FromMilliseconds(120)), new System.Windows.Media.Animation.LinearDoubleKeyFrame(.35, TimeSpan.FromMilliseconds(900)), new System.Windows.Media.Animation.LinearDoubleKeyFrame(1, TimeSpan.FromMilliseconds(1050)) } });
         var jolt = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames();
@@ -566,7 +567,7 @@ public sealed class AgentPanel
         for (int i = 0; i < 4; i++)
         {
             leds[i].Background = new SolidColorBrush(color);
-            leds[i].BeginAnimation(UIElement.OpacityProperty, DS.Motion ? new System.Windows.Media.Animation.DoubleAnimation(1, .15, TimeSpan.FromMilliseconds(ms)) { AutoReverse = true, BeginTime = TimeSpan.FromMilliseconds(wave ? 120 * i : 0), RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever } : null);
+            leds[i].BeginAnimation(UIElement.OpacityProperty, Motion ? new System.Windows.Media.Animation.DoubleAnimation(1, .15, TimeSpan.FromMilliseconds(ms)) { AutoReverse = true, BeginTime = TimeSpan.FromMilliseconds(wave ? 120 * i : 0), RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever } : null);
         }
     }
     void Steady()
@@ -611,23 +612,30 @@ public sealed class AgentPanel
     }
 
     /// <summary>Opens out of the round button (the window's bottom-right corner), and folds back into it.</summary>
+    readonly bool reducedMotion;
+    bool Motion => !reducedMotion && DS.Motion;
     public void Show()
     {
-        Body.Visibility = Visibility.Visible; Body.IsHitTestVisible = true; blink.Start();
-        if (!DS.Motion) { Body.Opacity = 1; pop.ScaleX = pop.ScaleY = 1; return; }
+        Body.Visibility = Visibility.Visible; Body.IsHitTestVisible = true; if(Motion) blink.Start();
+        if (!Motion) { Body.Opacity = 1; pop.ScaleX = pop.ScaleY = 1; return; }
         Body.BeginAnimation(UIElement.OpacityProperty, DS.To(1, 180));
         pop.BeginAnimation(ScaleTransform.ScaleXProperty, new System.Windows.Media.Animation.DoubleAnimation(.6, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = DS.Spring });
         pop.BeginAnimation(ScaleTransform.ScaleYProperty, new System.Windows.Media.Animation.DoubleAnimation(.6, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = DS.Spring });
     }
     public void Hide()
     {
-        Body.IsHitTestVisible = false; blink.Stop();
-        if (!DS.Motion) { Body.Visibility = Visibility.Collapsed; return; }
+        Body.IsHitTestVisible = false; StopCharacterMotion();
+        if (!Motion) { Body.Visibility = Visibility.Collapsed; return; }
         var fade = DS.To(0, 160); fade.Completed += (_, _) => { if (!Body.IsHitTestVisible) Body.Visibility = Visibility.Collapsed; };
         Body.BeginAnimation(UIElement.OpacityProperty, fade);
         pop.BeginAnimation(ScaleTransform.ScaleXProperty, DS.To(.6, 160)); pop.BeginAnimation(ScaleTransform.ScaleYProperty, DS.To(.6, 160));
     }
     public bool IsShown => Body.Visibility == Visibility.Visible && Body.IsHitTestVisible;
+    void StopCharacterMotion()
+    {
+        blink.Stop(); lightShow++; Circling(false); Steady();
+        foreach(var (look,_,_) in eyes) { look.BeginAnimation(TranslateTransform.XProperty,null); look.BeginAnimation(TranslateTransform.YProperty,null); }
+    }
 
     void Restart()
     {
@@ -857,12 +865,12 @@ public sealed class AgentPanel
     {
         string text = hit.Chunk.Text, shortText = text.Length > 170 ? text[..170].TrimEnd() + "…" : text;
         var body = Wrap(shortText, 13.5, "DS.TextSoft", 4);
-        var card = new Button { Style = DS.Style("DS.ActionSecondary"), MinHeight = 0, Padding = new(12, 8, 12, 8), Margin = new(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left,
+        var card = new Button { Style = DS.Style("ActionButton"), MinHeight = 0, Padding = new(12, 8, 12, 8), Margin = new(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left,
             Content = new StackPanel { Children = { Wrap("Source · " + hit.Chunk.Where, 12.5, "DS.AccentHi").Also(t => t.FontWeight = FontWeights.SemiBold), body } } };
         card.Click += (_, _) => body.Text = body.Text == shortText ? text : shortText;
         return card;
     }
 
-    static Button Small(string text) => new() { Style = DS.Style("DS.ActionSecondary"), Height = 30, MinHeight = 0, Padding = new(12, 0, 12, 0), Content = Kit.Text(text, 13, "DS.TextSoft") };
+    static Button Small(string text) => new() { Style = DS.Style("ActionButton"), Height = 30, MinHeight = 0, Padding = new(12, 0, 12, 0), Content = Kit.Text(text, 13, "DS.TextSoft") };
     static TextBlock Wrap(string text, double size, string brush, double top = 0) => Kit.Text(text, size, brush).Also(t => { t.TextWrapping = TextWrapping.Wrap; t.TextTrimming = TextTrimming.None; t.Margin = new(0, top, 0, 0); });
 }

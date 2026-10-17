@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -32,7 +32,7 @@ public sealed class AgentTour
     public AgentTour()
     {
         var mark = new Grid { Width = 30, Height = 30, Margin = new(0, 0, 10, 0), Children = { new Ellipse { Fill = AgentMark.Field() }, AgentMark.Glyph(20) } };
-        var skipButton = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 30, MinHeight = 0, Padding = new(12, 0, 12, 0), Content = Kit.Text("Skip", 13, "DS.TextSoft") };
+        var skipButton = new Button { Style = DS.Style("ActionButton"), Height = 30, MinHeight = 0, Padding = new(12, 0, 12, 0), Content = Kit.Text("Skip", 13, "DS.TextSoft") };
         skipButton.Click += (_, _) => Skip();
         var head = new DockPanel { Margin = new(0, 0, 0, 14) };
         DockPanel.SetDock(skipButton, Dock.Right); head.Children.Add(skipButton);

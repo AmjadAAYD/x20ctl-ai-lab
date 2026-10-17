@@ -22,6 +22,9 @@ public sealed class PcModeService : IDisposable
     readonly PcModeStore store;
     Thread? thread; volatile bool stop, reload = true, enabled, paused, suspended, mute;
     PcModeState state = PcModeState.Off; string detail = "PC mode is off. Your controller goes straight to the game.";
+    public sealed record Route(int Player,int PhysicalSlot,int VirtualSlot,string Profile);
+    Route[] routes=[];
+    public IReadOnlyList<Route> Routes => Volatile.Read(ref routes);
     public event Action? Changed;
     /// <summary>Something happened from the controller (the View + Menu hold): a short line for a notification.</summary>
     public event Action<string>? Notice;
@@ -102,7 +105,7 @@ public sealed class PcModeService : IDisposable
         void Teardown()
         {
             foreach (var pair in pairs) try { pair.Pad.Dispose(); } catch (Exception) { }
-            pairs.Clear(); Volatile.Write(ref virtualSlots, []); Controllers = 0;
+            pairs.Clear();Volatile.Write(ref routes,[]); Volatile.Write(ref virtualSlots, []); Controllers = 0;
             if (hidden.Count > 0) { HidHide.Unhide(hidden, restoreCloak: !cloakWasOn); hidden.Clear(); HidHide.ForgetRecovery(); }
         }
         string ActiveText()
@@ -208,6 +211,7 @@ public sealed class PcModeService : IDisposable
                     try { pair.Pad.Update(output); Applied++; }
                     catch (Exception error) when (error is not OutOfMemoryException) { Teardown(); Set(PcModeState.NeedsAttention, "The virtual controller stopped answering: " + error.Message); Thread.Sleep(1000); lost = false; break; }
                 }
+                Volatile.Write(ref routes,pairs.Select(p=>new Route(p.Real,p.Real,p.Pad.Slot,p.Key)).ToArray());
                 // a pad went away: start over, so the others carry on and it rejoins when it's back
                 if (lost) { Teardown(); Thread.Sleep(100); continue; }
                 if (pairs.Count > 0 && clock.ElapsedMilliseconds >= nextJoin)

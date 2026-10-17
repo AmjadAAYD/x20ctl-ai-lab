@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -193,7 +193,7 @@ public sealed class ControllerVerifyView : Grid
 
     private Button Action(string text, bool primary, Action click)
     {
-        var b = new Button { Style = DS.Style(primary ? "DS.ActionPrimary" : "DS.ActionSecondary"), Height = 42, MinHeight = 0, Padding = new(22, 0, 22, 0), Margin = new(5, 0, 5, 0), Content = text };
+        var b = new Button { Style = DS.Style(primary ? "PrimaryButton" : "ActionButton"), Height = 42, MinHeight = 0, Padding = new(22, 0, 22, 0), Margin = new(5, 0, 5, 0), Content = text };
         b.Click += (_, _) => click(); return b;
     }
 

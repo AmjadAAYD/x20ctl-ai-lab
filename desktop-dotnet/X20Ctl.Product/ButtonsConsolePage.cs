@@ -29,7 +29,17 @@ public sealed class ButtonsConsolePage : Grid
     private readonly TextBlock outputsHint = Kit.Text("", 14, "DS.TextSoft"), stepTwoHint = Kit.Text("Choose any button in Outputs below", 13, "DS.TextSoft");
     private readonly RadioButton front = new(), back = new();
     private readonly Button tryButton, allButton;
-    private string selected = "";
+    private string selected = "",outputGroup="All";
+    private readonly TextBlock showcaseTitle=Kit.Text("Buttons showcase",16,"DS.Text",FontWeights.SemiBold);
+    private readonly StackPanel outputPicker=new(){Visibility=Visibility.Collapsed};
+    private readonly TextBlock selectionTitle=Kit.Text("Select a control",24,"DS.Text",FontWeights.SemiBold);
+    private readonly Canvas markers=new(){Width=1536,Height=1024,IsHitTestVisible=false};
+    private readonly TextBlock mappingLabel=Kit.Text("",32,"DS.Text",FontWeights.SemiBold);
+    private bool connected;
+    public void SetConnected(bool value){connected=value;RefreshMapping();}
+    public void SelectPhysical(string key){if(Listening!=Listen.None){Press(key);return;}if(layout.Controls.Any(r=>r.Key==key))Pick(key);}
+    private bool TargetAllowed(string key)=>ButtonDraft.Targets.Contains(key)||key=="NONE"&&draft.PcMode;
+    private string TargetName(string key)=>key=="NONE"?"Disabled":label(key);
     public PhotoController Controller { get; private set; }
     public LiveController Live => Controller.Live;
     public bool IsRear { get; private set; }
@@ -44,9 +54,9 @@ public sealed class ButtonsConsolePage : Grid
         Action<string> select, Func<string, bool> openMacro, Action toggleTry)
     {
         this.model = model; this.layout = layout; this.draft = draft; this.label = label; this.animate = animate; this.select = select; this.openMacro = openMacro; this.toggleTry = toggleTry;
-        Controller = new PhotoController(model.Id); stage.Children.Add(Controller); stage.Children.Add(hotspots);
+        Controller = new PhotoController(model.Id); stage.Children.Add(Controller); stage.Children.Add(hotspots);stage.Children.Add(markers);
         RowDefinitions.Add(new()); RowDefinitions.Add(new() { Height = new(14) }); RowDefinitions.Add(new() { Height = GridLength.Auto });
-        var top = new Grid(); top.ColumnDefinitions.Add(new() { Width = new(1.12, GridUnitType.Star) }); top.ColumnDefinitions.Add(new() { Width = new(16) }); top.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star), MinWidth = 520 });
+        var top = new Grid(); top.ColumnDefinitions.Add(new() { Width = new(1.12, GridUnitType.Star) }); top.ColumnDefinitions.Add(new() { Width = new(16) }); top.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star), MinWidth = 390 });
         Children.Add(top);
 
         // left: visualizer with a Front / Back segmented switch
@@ -55,34 +65,38 @@ public sealed class ButtonsConsolePage : Grid
         foreach (var r in new[] { front, back }) { r.Style = DS.Style("DS.Segment"); r.GroupName = g; r.Width = 86; r.Height = 32; }
         front.IsChecked = true; back.IsEnabled = layout.Controls.Any(c => c.View is "back" or "shoulder");
         front.Checked += (_, _) => ShowView(false); back.Checked += (_, _) => ShowView(true);
-        var viewSwitch = new Border { CornerRadius = new(11), Background = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)), BorderBrush = new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), BorderThickness = new(1), Padding = new(1), Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { front, back } }, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new(0, -60, 0, 0) };
+        var viewSwitch = new Border { CornerRadius = new(11), Background = new SolidColorBrush(Color.FromRgb(29,44,67)), BorderBrush = new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), BorderThickness = new(1), Padding = new(1), Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { front, back } }, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new(0, -60, 0, 0) };
         var visual = new Grid { Children = { new Viewbox { Child = stage }, viewSwitch } };
         top.Children.Add(Kit.Panel("Button Visualizer", "Select a control on the controller to remap it.", null, visual));
 
         // right: two steps around a "you press → game gets" card, then the actions
         var seg = new UniformGrid { Rows = 1 }; string sg = "grp" + Guid.NewGuid().ToString("N");
-        foreach (var (name, first, _) in Groups)
+        var allCategory=new RadioButton{Content="All",Style=DS.Style("DS.Segment"),GroupName=sg};allCategory.Click+=(_,_)=>{outputGroup="All";RefreshMapping();};groups["All"]=allCategory;seg.Children.Add(allCategory);
+        foreach (var (name, first, keys) in Groups)
         {
-            var r = new RadioButton { Content = name, Style = DS.Style("DS.Segment"), GroupName = sg, IsEnabled = layout.Controls.Any(c => c.Key == first) };
-            string f = first; r.Click += (_, _) => { Listening = Listen.None; Source = f; this.select(f); RefreshMapping(); }; groups[name] = r; seg.Children.Add(r);
+            var r = new RadioButton { Content = name, Style = DS.Style("DS.Segment"), GroupName = sg, IsEnabled = keys.Any(ButtonDraft.Targets.Contains) };
+            string groupName=name;r.Click+=(_,_)=>{outputGroup=groupName;RefreshMapping();}; groups[name] = r; seg.Children.Add(r);
         }
-        // two plain steps: pick a button (on the controller or by group), then pick what it does (in Outputs below)
-        workspace.Children.Add(Step(1, "Pick a button", Kit.Text("Click YOU PRESS, or a button on the picture", 13, "DS.TextSoft"), 0));
-        workspace.Children.Add(new Border { CornerRadius = new(12), Background = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)), BorderBrush = new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), BorderThickness = new(1), Padding = new(1), Child = seg });
+        workspace.Children.Add(selectionTitle);
         workspace.Children.Add(BuildMappingCard());
-        workspace.Children.Add(Step(2, "Press what it should do", stepTwoHint, 14));
-        tryButton = ActionButton("", "Try it", "DS.ActionPrimary"); tryButton.Click += (_, _) => this.toggleTry();
-        allButton = ActionButton("", "All assignments", "DS.ActionSecondary"); allButton.Click += (_, _) => ShowOverview(overview.Visibility != Visibility.Visible);
+        workspace.Children.Add(Kit.Text(draft.PcMode?"PC MODE · Processed by X20CTL on this PC. Controller memory is unchanged.":"LOCAL DRAFT · Not written to controller memory.",13,"DS.TextSoft").Also(t=>{t.TextWrapping=TextWrapping.Wrap;t.Margin=new(0,10,0,12);}));
+        outputPicker.Children.Add(outputsHint);
+        outputPicker.Children.Add(new Border{CornerRadius=new(12),Background=new SolidColorBrush(Color.FromArgb(20,255,255,255)),Padding=new(2),Child=seg,Margin=new(0,8,0,10)});
+        workspace.Children.Add(outputPicker);
+        tryButton = ActionButton("", "Test mapping", "ActionButton"); tryButton.Click += (_, _) => this.toggleTry();
+        tryButton.Width=160;tryButton.HorizontalAlignment=HorizontalAlignment.Left;
+        allButton = ActionButton("", "All assignments", "ActionButton"); allButton.Click += (_, _) => ShowOverview(overview.Visibility != Visibility.Visible);
         var more = new Button { Content = "", Style = DS.Style("DS.ActionRound"), ToolTip = "Reset options" };
         more.ContextMenu = new ContextMenu { Items = { Menu("Reset this control", () => { if (Source.Length > 0 && draft.CanEdit(Source)) { draft.Reset(Source); Changed?.Invoke(); } }), Menu("Reset all controls", () => { draft.ResetAll(); Changed?.Invoke(); }) } };
         more.Click += (_, _) => { more.ContextMenu.PlacementTarget = more; more.ContextMenu.IsOpen = true; };
         var actions = new Grid { Margin = new(0, 14, 0, 0) }; actions.ColumnDefinitions.Add(new()); actions.ColumnDefinitions.Add(new() { Width = new(12) }); actions.ColumnDefinitions.Add(new()); actions.ColumnDefinitions.Add(new() { Width = new(12) }); actions.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         actions.Children.Add(tryButton); Grid.SetColumn(allButton, 2); actions.Children.Add(allButton); Grid.SetColumn(more, 4); actions.Children.Add(more);
         var body = new Grid { Children = { workspace, overview } };
-        var right = Kit.Panel(null, null, null, Kit.Stack(body, actions)); Grid.SetColumn(right, 2); top.Children.Add(right);
+        var right = Kit.Panel(null, null, null, new ScrollViewer{Content=new StackPanel{Children={body,actions}},VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled}); Grid.SetColumn(right, 2); top.Children.Add(right);
 
         // bottom: outputs shelf (interactive)
-        var shelf = BuildOutputs(); Grid.SetRow(shelf, 2); Children.Add(shelf);
+
+        var showcase=BuildShowcase();Grid.SetRow(showcase,2);Children.Add(showcase);
         ShowView(false);
     }
 
@@ -112,7 +126,7 @@ public sealed class ButtonsConsolePage : Grid
     {
         // the view follows a newly picked control (a paddle shows the back); a refresh for the same control keeps the
         // view the player chose, so Back stays on the back even with a front button selected
-        bool picked = key != selected; selected = key;
+        bool picked = key != selected; selected = key;Source=layout.Controls.Any(r=>r.Key==key)?key:"";
         var region = layout.Controls.FirstOrDefault(r => r.Key == key);
         if (region != null && picked)
         {
@@ -120,8 +134,8 @@ public sealed class ButtonsConsolePage : Grid
             if (needsRear != IsRear && (needsRear ? back.IsEnabled : true)) { ShowView(needsRear); return; }
         }
         foreach (var (k, h) in regions) h.Illuminate(k == key || region?.Role == "axis" && k == (key.StartsWith('L') ? "L3" : "R3"), false);
-        foreach (var (name, _, keys) in Groups) groups[name].IsChecked = keys.Contains(key);
-        RefreshMapping();
+
+        RefreshMapping();RefreshMarkers();
         if (overview.Visibility == Visibility.Visible) BuildOverview();
     }
 
@@ -131,7 +145,7 @@ public sealed class ButtonsConsolePage : Grid
     public Listen Listening { get; private set; }
     /// <summary>The physical button on the left of the card ("you press"); empty until the player picks one.</summary>
     public string Source { get; private set; } = "";
-    public void BeginListening(Listen side) { Listening = side == Listen.Target && Source.Length == 0 ? Listen.Source : side; RefreshMapping(); }
+    public void BeginListening(Listen side) { if(!connected && side!=Listen.None){Listening=Listen.None;RefreshMapping();return;}Listening = side == Listen.Target && Source.Length == 0 ? Listen.Source : side; RefreshMapping(); }
     public void CancelListening() { if (Listening == Listen.None) return; Listening = Listen.None; RefreshMapping(); }
     /// <summary>A press while listening: a controller button (from the controller or its keyboard mirror), a click on
     /// the picture, or a click in Outputs. The first fills "you press" and moves on; the second sets what it does.</summary>
@@ -143,7 +157,7 @@ public sealed class ButtonsConsolePage : Grid
             Source = button; select(button);
             Listening = draft.CanEdit(button) ? Listen.Target : Listen.None; RefreshMapping(); return;
         }
-        if (Listening == Listen.Target && ButtonDraft.Targets.Contains(button) && draft.CanEdit(Source))
+        if (Listening == Listen.Target && TargetAllowed(button) && draft.CanEdit(Source))
         {
             Listening = Listen.None; draft.Set(Source, button); Changed?.Invoke(); RefreshMapping();
         }
@@ -151,8 +165,7 @@ public sealed class ButtonsConsolePage : Grid
     private void Pick(string key)
     {
         if (openMacro(key)) return;
-        if (Listening == Listen.Target && ButtonDraft.Targets.Contains(key)) { Press(key); return; }
-        Source = key; select(key); Listening = draft.CanEdit(key) ? Listen.Target : Listen.None; RefreshMapping();
+        Source = key; select(key); Listening = Listen.None; RefreshMapping();
     }
     private void RefreshMapping()
     {
@@ -160,27 +173,28 @@ public sealed class ButtonsConsolePage : Grid
         string target = editable ? draft.Target(Source) : "", name = has ? label(Source) : "";
         bool changed = editable && target != Source, waitSource = Listening == Listen.Source, waitTarget = Listening == Listen.Target;
         FillFace(pressedFace, waitSource ? "…" : has ? Short(Source) : "+", waitSource || !has ? null : Source, false, waitSource);
-        FillFace(sendsFace, waitTarget ? "…" : editable ? Short(target) : has ? "—" : "+", waitTarget || !editable ? null : target, changed, waitTarget);
+        FillFace(sendsFace, editable ? Short(target) : has ? "—" : "+", !editable ? null : target, changed, waitTarget);
         Pulse(pressedRing, waitSource); Pulse(sendsRing, waitTarget);
         pressedName.Text = waitSource ? "Press a button…" : has ? Kind(Source) : "Click to choose";
-        sendsName.Text = waitTarget ? "Press its new job…" : editable ? Kind(target) : has ? "Can't change" : "Then press its new job";
-        sentence.Text = waitSource ? "Press the button you want to change, on the controller or on the picture. Esc cancels."
-            : waitTarget ? $"Now press what {name} should do: a button on the controller, or one in Outputs below. Esc cancels."
-            : !has ? "Click YOU PRESS, then press a button. Then press what it should do."
-            : !editable ? "" : changed ? $"Pressing {name} acts like {label(target)}. Click GAME GETS to change it again." : $"{name} works as normal. Click GAME GETS to give it a new job.";
+        sendsName.Text = waitTarget ? "Choose output below" : editable ? target=="NONE"?"Disabled":Kind(target) : has ? "Can't change" : "Then press its new job";
+        selectionTitle.Text=has?label(Source):"Select a control";
+        sentence.Text=!has?(connected?"Select a control on the picture or press it on the controller.":"Select a control on the picture. Physical detection is unavailable while offline."):editable?$"Current mapping: {Short(Source)} → {Short(target)}":"This input can be inspected; remapping is unavailable.";
         readOnly.Text = !has ? "" : model.Id != "x20" && !draft.PcMode ? "Remapping is not verified for this model yet, so it can only be inspected." : editable ? "" : $"{name} can't be remapped. It has no button role to swap.";
         readOnly.Visibility = readOnly.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed; sentence.Visibility = sentence.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
-        restore.Visibility = changed && !waitTarget ? Visibility.Visible : Visibility.Collapsed;
+        restore.Visibility = changed ? Visibility.Visible : Visibility.Collapsed;restore.Content=$"Restore {Short(Source)} → {Short(Source)}";
+        outputPicker.Visibility=editable?Visibility.Visible:Visibility.Collapsed;tryButton.Visibility=changed?Visibility.Visible:Visibility.Collapsed;
         stepTwoHint.Text = waitTarget ? "Waiting for a press" : editable ? "Click GAME GETS, then press a button" : has ? "Not available for this button" : "Pick a button first";
         mappingCard.BorderBrush = new SolidColorBrush(waitSource || waitTarget ? Color.FromArgb(200, 125, 182, 255) : changed ? Color.FromArgb(120, 125, 182, 255) : Color.FromArgb(38, 255, 255, 255));
-        foreach (var (k, b) in outputs) Paint(b, k, editable && k == target, editable);
-        outputsHint.Text = waitTarget ? $"Click what {name} should do" : editable ? $"Choose what {name} should do" : "Pick a remappable button above first";
+        foreach (var pair in groups)pair.Value.IsChecked=pair.Key==outputGroup;showcaseTitle.Text=editable?$"Assign {Short(Source)} · Buttons showcase":"Buttons showcase · Select a physical input";
+        foreach (var (k,b) in outputs){Paint(b,k,editable&&k==target,editable||!has);b.Opacity=outputGroup=="All"||k=="NONE"||Groups.First(g=>g.Name==outputGroup).Keys.Contains(k)?1:.3;}
+        RefreshMarkers();
+        outputsHint.Text=editable?$"Assign {Short(Source)} to:":"Select a control first";
     }
 
     public void ToggleOverview() => ShowOverview(overview.Visibility != Visibility.Visible);
     /// <summary>A on a control jumps here: focus the tile of its current output.</summary>
     public void FocusOutput(string target) { if (outputs.TryGetValue(target, out var b) && b.IsEnabled) b.Focus(); }
-    public void SetTrying(bool on) => ((TextBlock)((StackPanel)tryButton.Content).Children[1]).Text = on ? "Stop" : "Try it";
+    public void SetTrying(bool on) => ((TextBlock)((StackPanel)tryButton.Content).Children[1]).Text = on ? "Stop test" : "Test mapping";
 
     // ----- pieces -----
     private static FrameworkElement Step(int n, string title, TextBlock h, double top)
@@ -209,8 +223,8 @@ public sealed class ButtonsConsolePage : Grid
         g.RowDefinitions.Add(new()); g.RowDefinitions.Add(new() { Height = GridLength.Auto });
         StackPanel Side(string caption, Border face, System.Windows.Shapes.Ellipse ring, TextBlock name, Listen side, string tip)
         {
-            face.Width = face.Height = 64; face.CornerRadius = new(32); face.BorderThickness = new(1.4); face.HorizontalAlignment = HorizontalAlignment.Center; face.VerticalAlignment = VerticalAlignment.Center;
-            var slot = new Button { Template = Bare(), Cursor = System.Windows.Input.Cursors.Hand, FocusVisualStyle = null, ToolTip = tip, Margin = new(0, 2, 0, 2), Content = new Grid { Width = 84, Height = 84, Background = Brushes.Transparent, Children = { ring, face } } };
+            face.Width = face.Height = 50; face.CornerRadius = new(25); face.BorderThickness = new(1.4); face.HorizontalAlignment = HorizontalAlignment.Center; face.VerticalAlignment = VerticalAlignment.Center;
+            var slot = new Button { Template = Bare(), Cursor = System.Windows.Input.Cursors.Hand, FocusVisualStyle = null, ToolTip = tip, Margin = new(0, 2, 0, 2), Content = new Grid { Width = 66, Height = 66, Background = Brushes.Transparent, Children = { ring, face } } };
             slot.Click += (_, _) => BeginListening(Listening == side ? Listen.None : side);
             slot.MouseEnter += (_, _) => face.BorderThickness = new(2.4); slot.MouseLeave += (_, _) => face.BorderThickness = new(1.4);
             System.Windows.Automation.AutomationProperties.SetName(slot, caption);
@@ -218,10 +232,10 @@ public sealed class ButtonsConsolePage : Grid
                 Kit.Text(caption, 11.5, "DS.TextMuted", FontWeights.SemiBold).Also(t => t.HorizontalAlignment = HorizontalAlignment.Center), slot,
                 name.Also(t => t.HorizontalAlignment = HorizontalAlignment.Center) } };
         }
-        g.Children.Add(Side("YOU PRESS", pressedFace, pressedRing, pressedName, Listen.Source, "Click, then press the button you want to change"));
+        g.Children.Add(Side("YOU PRESS", pressedFace, pressedRing, pressedName, Listen.Source, "Choose a physical input on the artwork, or capture it when connected"));
         var arrow = Kit.Icon("\uE72A", 22, "DS.AccentHi"); arrow.Margin = new(18, 0, 18, 8); Grid.SetColumn(arrow, 1); g.Children.Add(arrow);
-        var right = Side("GAME GETS", sendsFace, sendsRing, sendsName, Listen.Target, "Click, then press what it should do"); Grid.SetColumn(right, 2); g.Children.Add(right);
-        restore.Style = DS.Style("DS.ActionSecondary"); restore.Height = 36; restore.MinHeight = 0; restore.Padding = new(22, 0, 22, 0); restore.FontSize = 13.5;
+        var right = Side("GAME GETS", sendsFace, sendsRing, sendsName, Listen.Target, "Choose an output below, or capture a button when connected"); Grid.SetColumn(right, 2); g.Children.Add(right);
+        restore.Style = DS.Style("ActionButton"); restore.Height = 42; restore.MinHeight = 42; restore.Padding = new(22, 0, 22, 0); restore.FontSize = 13.5;
         restore.Click += (_, _) => { if (Source.Length > 0 && draft.CanEdit(Source)) { draft.Reset(Source); Changed?.Invoke(); RefreshMapping(); } };
         var foot = new DockPanel { Margin = new(2, 8, 0, 0) }; DockPanel.SetDock(restore, Dock.Right); foot.Children.Add(restore);
         readOnly.TextWrapping = TextWrapping.Wrap; readOnly.TextTrimming = TextTrimming.None; sentence.TextWrapping = TextWrapping.Wrap; sentence.TextTrimming = TextTrimming.None;
@@ -238,39 +252,52 @@ public sealed class ButtonsConsolePage : Grid
         var t = Kit.Text(text, text.Length > 2 ? 17 : empty ? 30 : 26, empty ? "DS.TextMuted" : "DS.Text", FontWeights.SemiBold); t.HorizontalAlignment = HorizontalAlignment.Center;
         if (!on && color != null) t.Foreground = new SolidColorBrush(color.Value);
         face.Child = t;
-        face.Background = on ? new LinearGradientBrush(Color.FromRgb(70, 150, 255), Color.FromRgb(31, 104, 240), 90) : waiting ? new SolidColorBrush(Color.FromArgb(60, 61, 139, 255)) : new SolidColorBrush(Color.FromArgb(empty ? (byte)14 : (byte)30, 255, 255, 255));
+        face.Background = on ? new SolidColorBrush(Color.FromRgb(43,115,222)) : waiting ? new SolidColorBrush(Color.FromArgb(60, 61, 139, 255)) : new SolidColorBrush(Color.FromArgb(empty ? (byte)14 : (byte)30, 255, 255, 255));
         face.BorderBrush = on || waiting ? Brushes.White : color != null ? new SolidColorBrush(Color.FromArgb(150, color.Value.R, color.Value.G, color.Value.B)) : new SolidColorBrush(Color.FromArgb(empty ? (byte)90 : (byte)46, 255, 255, 255));
         face.Effect = on || waiting ? new DropShadowEffect { Color = Kit.Blue, BlurRadius = 22, ShadowDepth = 0, Opacity = .9 } : null;
     }
     private static string Kind(string key) => key switch { "A" or "B" or "X" or "Y" => $"{key} button", "LB" => "Left bumper", "RB" => "Right bumper", "LT" => "Left trigger", "RT" => "Right trigger", "L3" => "Left stick click", "R3" => "Right stick click", "SELECT" => "View button", "START" => "Menu button", "HOME" => "Guide button", "LSTICK_ANALOG" => "Left stick", "RSTICK_ANALOG" => "Right stick", _ when key.StartsWith("DPAD_") => "D-pad " + key[5..].ToLowerInvariant(), _ => key };
-    private static string Short(string key) => key switch { "DPAD_UP" => "↑", "DPAD_DOWN" => "↓", "DPAD_LEFT" => "←", "DPAD_RIGHT" => "→", "SELECT" => "View", "START" => "Menu", "HOME" => "Guide", "LSTICK_ANALOG" => "LS", "RSTICK_ANALOG" => "RS", _ => key };
+    private static string Short(string key) => key switch { "DPAD_UP" => "↑", "DPAD_DOWN" => "↓", "DPAD_LEFT" => "←", "DPAD_RIGHT" => "→", "SELECT" => "View", "START" => "Menu", "HOME" => "Guide", "NONE"=>"Disabled", "LSTICK_ANALOG" => "LS", "RSTICK_ANALOG" => "RS", _ => key };
     private void SetTarget(string target)
     {
         if (Listening == Listen.Target) { Press(target); return; }
-        if (Source.Length == 0 || !draft.CanEdit(Source)) return;
+        if(Source.Length==0){if(layout.Controls.Any(r=>r.Key==target))Pick(target);return;}
+        if (!draft.CanEdit(Source)) return;
         draft.Set(Source, target); Changed?.Invoke();
     }
-    private Border BuildOutputs()
+    private Border BuildShowcase()
     {
-        var g = new Grid();
-        var cols = new (string Name, double Weight)[] { ("FACE", 1), ("SHOULDERS", 1.15), ("D-PAD", 1), ("STICKS / SYSTEM", 1.25), ("SPECIAL", .6) };
-        foreach (var (_, w) in cols) g.ColumnDefinitions.Add(new() { Width = new(w, GridUnitType.Star) });
-        for (int i = 0; i < cols.Length; i++)
+        var grid=new Grid{Width=1296};for(int i=0;i<6;i++)grid.ColumnDefinitions.Add(new());
+        string[] headings=["FACE","D-PAD","SHOULDERS","STICKS","SYSTEM","SPECIAL"];
+        for(int i=0;i<headings.Length;i++)
         {
-            var col = new DockPanel(); Grid.SetColumn(col, i); g.Children.Add(col);
-            var head = Kit.Text(cols[i].Name, 12.5, "DS.TextSoft", FontWeights.SemiBold); head.HorizontalAlignment = HorizontalAlignment.Center; head.Margin = new(0, 0, 0, 8); DockPanel.SetDock(head, Dock.Top); col.Children.Add(head);
-            if (i < cols.Length - 1) { var sep = new Border { Width = 1, HorizontalAlignment = HorizontalAlignment.Right, Background = new SolidColorBrush(Color.FromArgb(26, 255, 255, 255)), Margin = new(0, 6, 0, 6) }; Grid.SetColumn(sep, i); g.Children.Add(sep); }
-            col.Children.Add(i switch
-            {
-                0 => Diamond(true, ("Y", "Y"), ("X", "X"), ("B", "B"), ("A", "A")),
-                1 => Pairs(("LB", "LB"), ("RB", "RB"), ("LT", "LT"), ("RT", "RT")),
-                2 => Diamond(false, ("DPAD_UP", "↑"), ("DPAD_LEFT", "←"), ("DPAD_RIGHT", "→"), ("DPAD_DOWN", "↓")),
-                3 => Pairs(("L3", "L3"), ("R3", "R3"), ("SELECT", "View"), ("START", "Menu")),
-                _ => new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Output("HOME", "Guide", false, 96, 50, false) } }
-            });
+            var column=new StackPanel{Margin=new(8,10,8,10)};var family=new Border{CornerRadius=new(10),Background=new SolidColorBrush(Color.FromRgb(18,30,50)),BorderBrush=new SolidColorBrush(Color.FromRgb(40,57,82)),BorderThickness=new(1),Margin=new(5,0,5,0),Child=column};Grid.SetColumn(family,i);grid.Children.Add(family);
+            column.Children.Add(Kit.Text(headings[i],12,"DS.TextSoft",FontWeights.SemiBold).Also(t=>{t.HorizontalAlignment=HorizontalAlignment.Center;t.Margin=new(0,0,0,8);}));
+            if(i==0)column.Children.Add(Diamond(true,("Y","Y"),("X","X"),("B","B"),("A","A")));
+            else if(i==1)column.Children.Add(Diamond(false,("DPAD_UP","↑"),("DPAD_LEFT","←"),("DPAD_RIGHT","→"),("DPAD_DOWN","↓")));
+            else if(i==2){var shoulders=Pairs(("LB","LB"),("RB","RB"),("LT","LT"),("RT","RT"));shoulders.Width=180;column.Children.Add(shoulders);}
+            else if(i==3 || i==4){var pair=new UniformGrid{Columns=2,Rows=1,Height=56,Margin=new(0,40,0,0)};foreach(string key in i==3?new[]{"L3","R3"}:new[]{"SELECT","START"}){var output=Output(key,Short(key),false,0,0,true);output.Margin=new(4);pair.Children.Add(output);}column.Children.Add(pair);}
+            else{var special=new StackPanel{Margin=new(0,24,0,0)};var defaults=new Button{Content="Default",Style=DS.Style("ActionButton"),Height=42,MinHeight=42,Margin=new(0,0,0,8)};defaults.Click+=(_,_)=>{if(Source.Length>0&&draft.CanEdit(Source)){draft.Reset(Source);Changed?.Invoke();RefreshMapping();}};special.Children.Add(defaults);if(draft.PcMode){var disabled=Output("NONE","Disabled",false,0,0,true);disabled.Height=40;special.Children.Add(disabled);}column.Children.Add(special);}
         }
-        var panel = Kit.Panel("Outputs", null, draft.PcMode ? "PC mode · applies on this PC" : "Local draft · not applied", new DockPanel { Children = { outputsHint.Also(t => { DockPanel.SetDock(t, Dock.Top); t.Margin = new(0, -10, 0, 8); }), g } }, new(20, 14, 20, 14));
-        return panel;
+        var header=new DockPanel{Margin=new(0,0,0,10)};header.Children.Add(showcaseTitle);
+        return new Border{CornerRadius=new(16),Padding=new(16,12,16,10),BorderThickness=new(1),BorderBrush=new SolidColorBrush(Color.FromArgb(60,125,170,230)),Background=new SolidColorBrush(Color.FromArgb(80,8,17,38)),Child=new StackPanel{Children={header,new Viewbox{Child=grid,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,MaxHeight=176}}}};
+    }
+    private void RefreshMarkers()
+    {
+        markers.Children.Clear();
+        foreach(var (key,hot) in regions)
+        {
+            bool modified=draft.CanEdit(key)&&draft.Target(key)!=key;
+            hot.ToolTip=modified?$"{label(key)} → {TargetName(draft.Target(key))}":label(key);
+            if(!modified)continue;
+            var dot=new System.Windows.Shapes.Ellipse{Width=16,Height=16,Fill=Brushes.LightSkyBlue,Stroke=Brushes.White,StrokeThickness=2};
+            Canvas.SetLeft(dot,Canvas.GetLeft(hot)+hot.Width-10);Canvas.SetTop(dot,Canvas.GetTop(hot)-5);markers.Children.Add(dot);
+        }
+        if(regions.TryGetValue(Source,out var active)&&draft.CanEdit(Source))
+        {
+            mappingLabel.Text=$"{Short(Source)} → {Short(draft.Target(Source))}";mappingLabel.Background=new SolidColorBrush(Color.FromArgb(210,9,22,45));mappingLabel.Padding=new(12,5,12,5);
+            Canvas.SetLeft(mappingLabel,Math.Clamp(Canvas.GetLeft(active)+active.Width+16,12,1280));Canvas.SetTop(mappingLabel,Math.Max(12,Canvas.GetTop(active)-20));markers.Children.Add(mappingLabel);
+        }
     }
     private Canvas Diamond(bool round, (string Key, string Label) t, (string Key, string Label) l, (string Key, string Label) r, (string Key, string Label) b)
     {
@@ -288,10 +315,11 @@ public sealed class ButtonsConsolePage : Grid
     private Button Output(string key, string text, bool round, double w, double h, bool target)
     {
         var face = new TextBlock { Text = text, FontFamily = DS.Display, FontSize = round ? 20 : 18, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var border = new Border { Child = face, CornerRadius = new(round ? w / 2 : 12), BorderThickness = new(1.2) };
+        var border = new Border { Child = face, CornerRadius = new(round ? w / 2 : 18), BorderThickness = new(1.2) };
+        border.SetBinding(Border.CornerRadiusProperty,new System.Windows.Data.Binding("ActualHeight"){RelativeSource=new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.Self),Converter=new HalfHeightRadius()});
         var b = new Button { Content = border, Template = Bare(), Cursor = System.Windows.Input.Cursors.Hand, Tag = key, ToolTip = label(key), FocusVisualStyle = null };
         if (w > 0) { b.Width = w; b.Height = h; }
-        if (target && ButtonDraft.Targets.Contains(key)) { b.Click += (_, _) => SetTarget(key); outputs[key] = b; }
+        if (target && TargetAllowed(key)) { b.Click += (_, _) => SetTarget(key); outputs[key] = b; }
         else b.IsEnabled = false;
         b.GotKeyboardFocus += (_, _) => border.BorderBrush = Brushes.White; b.LostKeyboardFocus += (_, _) => Paint(b, key, false, b.IsEnabled);
         Paint(b, key, false, b.IsEnabled);
@@ -304,10 +332,10 @@ public sealed class ButtonsConsolePage : Grid
         b.IsEnabled = enabled;
         border.Opacity = enabled ? 1 : .45;
         border.BorderThickness = new(on ? 2 : 1.2);
-        border.Background = on ? new LinearGradientBrush(Color.FromRgb(70, 150, 255), Color.FromRgb(31, 104, 240), 90) : new SolidColorBrush(Color.FromArgb(30, 255, 255, 255));
+        border.Background = on ? new SolidColorBrush(Color.FromRgb(43,115,222)) : new SolidColorBrush(Color.FromRgb(29,44,67));
         border.BorderBrush = on ? Brushes.White : color != null ? new SolidColorBrush(Color.FromArgb(150, color.Value.R, color.Value.G, color.Value.B)) : new SolidColorBrush(Color.FromArgb(46, 255, 255, 255));
         face.Foreground = on || color == null ? DS.Brush("DS.Text") : new SolidColorBrush(color.Value);
-        border.Effect = on ? new DropShadowEffect { Color = Kit.Blue, BlurRadius = 22, ShadowDepth = 0, Opacity = .9 } : null;
+        border.Effect = null;
     }
     private void ShowOverview(bool on)
     {
