@@ -84,7 +84,6 @@ public sealed class ButtonsConsolePage : Grid
         outputPicker.Children.Add(new Border{CornerRadius=new(12),Background=new SolidColorBrush(Color.FromArgb(20,255,255,255)),Padding=new(2),Child=seg,Margin=new(0,8,0,10)});
         workspace.Children.Add(outputPicker);
         tryButton = ActionButton("", "Test mapping", "ActionButton"); tryButton.Click += (_, _) => this.toggleTry();
-        tryButton.Width=160;tryButton.HorizontalAlignment=HorizontalAlignment.Left;
         allButton = ActionButton("", "All assignments", "ActionButton"); allButton.Click += (_, _) => ShowOverview(overview.Visibility != Visibility.Visible);
         var more = new Button { Content = "", Style = DS.Style("DS.ActionRound"), ToolTip = "Reset options" };
         more.ContextMenu = new ContextMenu { Items = { Menu("Reset this control", () => { if (Source.Length > 0 && draft.CanEdit(Source)) { draft.Reset(Source); Changed?.Invoke(); } }), Menu("Reset all controls", () => { draft.ResetAll(); Changed?.Invoke(); }) } };
@@ -185,7 +184,7 @@ public sealed class ButtonsConsolePage : Grid
         outputPicker.Visibility=editable?Visibility.Visible:Visibility.Collapsed;tryButton.Visibility=changed?Visibility.Visible:Visibility.Collapsed;
         stepTwoHint.Text = waitTarget ? "Waiting for a press" : editable ? "Click GAME GETS, then press a button" : has ? "Not available for this button" : "Pick a button first";
         mappingCard.BorderBrush = new SolidColorBrush(waitSource || waitTarget ? Color.FromArgb(200, 125, 182, 255) : changed ? Color.FromArgb(120, 125, 182, 255) : Color.FromArgb(38, 255, 255, 255));
-        foreach (var pair in groups)pair.Value.IsChecked=pair.Key==outputGroup;showcaseTitle.Text=editable?$"Assign {Short(Source)} · Buttons showcase":"Buttons showcase · Select a physical input";
+        foreach (var pair in groups)pair.Value.IsChecked=pair.Key==outputGroup;showcaseHint.Text=editable?$"Assign {Short(Source)} to any output":has?"This control can't be reassigned":"Pick a control first";
         foreach (var (k,b) in outputs){Paint(b,k,editable&&k==target,editable||!has);b.Opacity=outputGroup=="All"||k=="NONE"||Groups.First(g=>g.Name==outputGroup).Keys.Contains(k)?1:.3;}
         RefreshMarkers();
         outputsHint.Text=editable?$"Assign {Short(Source)} to:":"Select a control first";
@@ -265,23 +264,61 @@ public sealed class ButtonsConsolePage : Grid
         if (!draft.CanEdit(Source)) return;
         draft.Set(Source, target); Changed?.Invoke();
     }
+    // the showcase (redesigned 17 Oct 2026): every output drawn as the part of a controller it is, filling the width
+    private readonly TextBlock showcaseHint = Kit.Text("", 13, "DS.TextSoft");
     private Border BuildShowcase()
     {
-        var grid=new Grid{Width=1296};for(int i=0;i<6;i++)grid.ColumnDefinitions.Add(new());
-        string[] headings=["FACE","D-PAD","SHOULDERS","STICKS","SYSTEM","SPECIAL"];
-        for(int i=0;i<headings.Length;i++)
+        var grid = new Grid { Height = 190 };
+        (string Name, double Weight)[] families = [("FACE", 1.15), ("D-PAD", 1.15), ("SHOULDERS", 1.3), ("STICKS", 1.05), ("SYSTEM", 1), ("SPECIAL", 1)];
+        for (int i = 0; i < families.Length; i++)
         {
-            var column=new StackPanel{Margin=new(8,10,8,10)};var family=new Border{CornerRadius=new(10),Background=new SolidColorBrush(Color.FromRgb(18,30,50)),BorderBrush=new SolidColorBrush(Color.FromRgb(40,57,82)),BorderThickness=new(1),Margin=new(5,0,5,0),Child=column};Grid.SetColumn(family,i);grid.Children.Add(family);
-            column.Children.Add(Kit.Text(headings[i],12,"DS.TextSoft",FontWeights.SemiBold).Also(t=>{t.HorizontalAlignment=HorizontalAlignment.Center;t.Margin=new(0,0,0,8);}));
-            if(i==0)column.Children.Add(Diamond(true,("Y","Y"),("X","X"),("B","B"),("A","A")));
-            else if(i==1)column.Children.Add(Diamond(false,("DPAD_UP","↑"),("DPAD_LEFT","←"),("DPAD_RIGHT","→"),("DPAD_DOWN","↓")));
-            else if(i==2){var shoulders=Pairs(("LB","LB"),("RB","RB"),("LT","LT"),("RT","RT"));shoulders.Width=180;column.Children.Add(shoulders);}
-            else if(i==3 || i==4){var pair=new UniformGrid{Columns=2,Rows=1,Height=56,Margin=new(0,40,0,0)};foreach(string key in i==3?new[]{"L3","R3"}:new[]{"SELECT","START"}){var output=Output(key,Short(key),false,0,0,true);output.Margin=new(4);pair.Children.Add(output);}column.Children.Add(pair);}
-            else{var special=new StackPanel{Margin=new(0,24,0,0)};var defaults=new Button{Content="Default",Style=DS.Style("ActionButton"),Height=42,MinHeight=42,Margin=new(0,0,0,8)};defaults.Click+=(_,_)=>{if(Source.Length>0&&draft.CanEdit(Source)){draft.Reset(Source);Changed?.Invoke();RefreshMapping();}};special.Children.Add(defaults);if(draft.PcMode){var disabled=Output("NONE","Disabled",false,0,0,true);disabled.Height=40;special.Children.Add(disabled);}column.Children.Add(special);}
+            grid.ColumnDefinitions.Add(new() { Width = new(families[i].Weight, GridUnitType.Star) });
+            var stage = new Grid { Height = 132, VerticalAlignment = VerticalAlignment.Center };
+            var heading = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new(0, 0, 0, 8), Children = {
+                new Border { Width = 5, Height = 5, CornerRadius = new(2.5), Background = new SolidColorBrush(Color.FromRgb(125, 182, 255)), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 8, 0) },
+                Kit.Text(Spaced(families[i].Name), 11.5, "DS.TextSoft", FontWeights.SemiBold) } };
+            var family = new Border
+            {
+                CornerRadius = new(14), BorderThickness = new(1), Margin = new(6, 0, 6, 0), Padding = new(10, 12, 10, 12),
+                BorderBrush = new LinearGradientBrush(Color.FromArgb(70, 140, 180, 240), Color.FromArgb(22, 140, 180, 240), 90),
+                Background = new LinearGradientBrush(Color.FromArgb(150, 24, 39, 64), Color.FromArgb(150, 13, 23, 41), 90),
+                Child = new DockPanel { Children = { heading.Also(h => DockPanel.SetDock(h, Dock.Top)), stage } }
+            };
+            Grid.SetColumn(family, i); grid.Children.Add(family);
+            if (i == 0) stage.Children.Add(FaceDiamond());
+            else if (i == 1) stage.Children.Add(DpadCross());
+            else if (i == 2) stage.Children.Add(Shoulders());
+            else if (i == 3) stage.Children.Add(Row(("L3", "L3"), ("R3", "R3")));
+            else if (i == 4) stage.Children.Add(Row(("SELECT", "View"), ("START", "Menu")));
+            else
+            {
+                var special = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Width = 168 };
+                var defaults = new Button { Template = Bare(), Cursor = System.Windows.Input.Cursors.Hand, FocusVisualStyle = null, Height = 40, Margin = new(0, 0, 0, 10), ToolTip = "Make the picked control send itself again",
+                    Content = new Border { CornerRadius = new(20), BorderThickness = new(1.2), BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)), Background = new LinearGradientBrush(Color.FromRgb(40, 58, 86), Color.FromRgb(26, 39, 60), 90),
+                        Child = IconLabel("", "Default") } };
+                defaults.MouseEnter += (_, _) => ((Border)defaults.Content).BorderBrush = new SolidColorBrush(Color.FromArgb(200, 125, 182, 255));
+                defaults.MouseLeave += (_, _) => ((Border)defaults.Content).BorderBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255));
+                defaults.Click += (_, _) => { if (Source.Length > 0 && draft.CanEdit(Source)) { draft.Reset(Source); Changed?.Invoke(); RefreshMapping(); } };
+                special.Children.Add(defaults);
+                if (draft.PcMode) { var disabled = Output("NONE", "Disabled", 168, 40); special.Children.Add(disabled); }
+                stage.Children.Add(special);
+            }
         }
-        var header=new DockPanel{Margin=new(0,0,0,10)};header.Children.Add(showcaseTitle);
-        return new Border{CornerRadius=new(16),Padding=new(16,12,16,10),BorderThickness=new(1),BorderBrush=new SolidColorBrush(Color.FromArgb(60,125,170,230)),Background=new SolidColorBrush(Color.FromArgb(80,8,17,38)),Child=new StackPanel{Children={header,new Viewbox{Child=grid,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,MaxHeight=176}}}};
+        var header = new DockPanel { Margin = new(6, 0, 6, 12) };
+        showcaseHint.VerticalAlignment = VerticalAlignment.Center; DockPanel.SetDock(showcaseHint, Dock.Right); header.Children.Add(showcaseHint); header.Children.Add(showcaseTitle);
+        var fit = new Viewbox { Child = grid, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
+        var body = new StackPanel { Children = { header, fit } };
+        // fill the width; below 1180 px the whole shelf scales down instead of squeezing the parts
+        body.SizeChanged += (_, e) => grid.Width = Math.Max(1180, e.NewSize.Width);
+        return new Border { CornerRadius = new(16), Padding = new(12, 14, 12, 14), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Color.FromArgb(60, 125, 170, 230)), Background = new SolidColorBrush(Color.FromArgb(80, 8, 17, 38)), Child = body };
     }
+    private static string Spaced(string text) => string.Join(" ", text.ToCharArray());
+    private static StackPanel IconLabel(string icon, string text) => new()
+    {
+        Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+        Children = { new TextBlock { Text = icon, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 14, Foreground = DS.Brush("DS.TextSoft"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 9, 0) },
+            new TextBlock { Text = text, FontFamily = DS.Display, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = DS.Brush("DS.Text"), VerticalAlignment = VerticalAlignment.Center } }
+    };
     private void RefreshMarkers()
     {
         markers.Children.Clear();
@@ -299,43 +336,87 @@ public sealed class ButtonsConsolePage : Grid
             Canvas.SetLeft(mappingLabel,Math.Clamp(Canvas.GetLeft(active)+active.Width+16,12,1280));Canvas.SetTop(mappingLabel,Math.Max(12,Canvas.GetTop(active)-20));markers.Children.Add(mappingLabel);
         }
     }
-    private Canvas Diamond(bool round, (string Key, string Label) t, (string Key, string Label) l, (string Key, string Label) r, (string Key, string Label) b)
+    private Canvas FaceDiamond()
     {
-        double s = round ? 50 : 48, w = 172, h = 150; var c = new Canvas { Width = w, Height = h, HorizontalAlignment = HorizontalAlignment.Center };
-        void Put((string Key, string Label) k, double x, double y) { var o = Output(k.Key, k.Label, round, s, s, true); Canvas.SetLeft(o, x); Canvas.SetTop(o, y); c.Children.Add(o); }
-        Put(t, (w - s) / 2, 0); Put(l, 0, (h - s) / 2); Put(r, w - s, (h - s) / 2); Put(b, (w - s) / 2, h - s);
+        double s = 46, w = 150, h = 132; var c = new Canvas { Width = w, Height = h, HorizontalAlignment = HorizontalAlignment.Center };
+        void Put(string key, double x, double y) { var o = Output(key, key, s, s); Canvas.SetLeft(o, x); Canvas.SetTop(o, y); c.Children.Add(o); }
+        Put("Y", (w - s) / 2, 0); Put("X", 6, (h - s) / 2); Put("B", w - s - 6, (h - s) / 2); Put("A", (w - s) / 2, h - s);
         return c;
     }
-    private UniformGrid Pairs(params (string Key, string Label)[] items)
+    /// <summary>The D-pad as one cross: four arms around a hub, each arm rounded only at its tip.</summary>
+    private Canvas DpadCross()
     {
-        var u = new UniformGrid { Columns = 2, Rows = 2, Width = 220, Height = 124, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        foreach (var (k, l) in items) { var o = Output(k, l, false, 0, 0, true); o.Margin = new(5); u.Children.Add(o); }
-        return u;
+        double s = 42, gap = 2, w = 3 * s + 2 * gap, h = w; var c = new Canvas { Width = w, Height = h, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var hub = new Border { Width = s, Height = s, CornerRadius = new(4), Background = new SolidColorBrush(Color.FromRgb(22, 33, 52)), BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)), BorderThickness = new(1),
+            Child = new System.Windows.Shapes.Ellipse { Width = 16, Height = 16, Fill = new RadialGradientBrush(Color.FromArgb(0, 0, 0, 0), Color.FromArgb(90, 0, 0, 0)), Stroke = new SolidColorBrush(Color.FromArgb(24, 255, 255, 255)) } };
+        Canvas.SetLeft(hub, s + gap); Canvas.SetTop(hub, s + gap); c.Children.Add(hub);
+        void Put(string key, string text, double x, double y) { var o = Output(key, text, s, s); Canvas.SetLeft(o, x); Canvas.SetTop(o, y); c.Children.Add(o); }
+        Put("DPAD_UP", "↑", s + gap, 0); Put("DPAD_LEFT", "←", 0, s + gap); Put("DPAD_RIGHT", "→", 2 * (s + gap), s + gap); Put("DPAD_DOWN", "↓", s + gap, 2 * (s + gap));
+        return c;
     }
-    private Button Output(string key, string text, bool round, double w, double h, bool target)
+    /// <summary>Triggers on top, bumpers under them, the way they sit on the pad's top edge.</summary>
+    private Grid Shoulders()
     {
-        var face = new TextBlock { Text = text, FontFamily = DS.Display, FontSize = round ? 20 : 18, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var border = new Border { Child = face, CornerRadius = new(round ? w / 2 : 18), BorderThickness = new(1.2) };
-        border.SetBinding(Border.CornerRadiusProperty,new System.Windows.Data.Binding("ActualHeight"){RelativeSource=new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.Self),Converter=new HalfHeightRadius()});
-        var b = new Button { Content = border, Template = Bare(), Cursor = System.Windows.Input.Cursors.Hand, Tag = key, ToolTip = label(key), FocusVisualStyle = null };
+        var g = new Grid { Width = 196, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        g.ColumnDefinitions.Add(new()); g.ColumnDefinitions.Add(new() { Width = new(12) }); g.ColumnDefinitions.Add(new());
+        g.RowDefinitions.Add(new() { Height = new(58) }); g.RowDefinitions.Add(new() { Height = new(10) }); g.RowDefinitions.Add(new() { Height = new(40) });
+        void Put(string key, int row, int col) { var o = Output(key, key, 0, 0); Grid.SetRow(o, row); Grid.SetColumn(o, col); g.Children.Add(o); }
+        Put("LT", 0, 0); Put("RT", 0, 2); Put("LB", 2, 0); Put("RB", 2, 2);
+        return g;
+    }
+    private StackPanel Row(params (string Key, string Label)[] items)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        foreach (var (k, l) in items)
+        {
+            bool stick = Shape(k) == "stick"; var o = Output(k, l, stick ? 62 : 76, stick ? 62 : 40); o.Margin = new(7, 0, 7, 0);
+            if (stick) row.Children.Add(new StackPanel { Children = { o, Kit.Text(k == "L3" ? "Left" : "Right", 11.5, "DS.TextMuted").Also(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.Margin = new(0, 8, 0, 0); }) } });
+            else row.Children.Add(o);
+        }
+        return row;
+    }
+    /// <summary>The part of a controller each output is, which sets its outline.</summary>
+    private static string Shape(string key) => key switch { "A" or "B" or "X" or "Y" => "face", "L3" or "R3" => "stick", "LB" or "RB" => "bumper", "LT" or "RT" => "trigger", "SELECT" or "START" or "HOME" => "system", _ when key.StartsWith("DPAD_") => "dpad", _ => "plain" };
+    private static CornerRadius Corners(string key, double w, double h) => key switch
+    {
+        "LT" => new(26, 12, 8, 8), "RT" => new(12, 26, 8, 8), "LB" => new(16, 8, 8, 16), "RB" => new(8, 16, 16, 8),
+        "DPAD_UP" => new(12, 12, 3, 3), "DPAD_DOWN" => new(3, 3, 12, 12), "DPAD_LEFT" => new(12, 3, 3, 12), "DPAD_RIGHT" => new(3, 12, 12, 3),
+        _ => new(Math.Max(w, h) > 0 ? Math.Min(w, h) / 2 : 20)
+    };
+    private Button Output(string key, string text, double w, double h)
+    {
+        var face = new TextBlock { FontFamily = DS.Display, FontSize = Shape(key) is "face" ? 20 : Shape(key) is "stick" ? 17 : 16, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        if (key == "NONE") { face.Inlines.Add(new System.Windows.Documents.Run("  ") { FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 12 }); face.Inlines.Add(new System.Windows.Documents.Run(text)); }
+        else face.Text = text;
+        var border = new Border { Child = face, CornerRadius = Corners(key, w, h) };
+        // rounded tiles without a fixed size (bumpers and triggers excepted) stay pills at any height
+        if (w == 0 && Shape(key) is not ("bumper" or "trigger")) border.SetBinding(Border.CornerRadiusProperty, new System.Windows.Data.Binding("ActualHeight") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.Self), Converter = new HalfHeightRadius() });
+        var b = new Button { Content = border, Template = Bare(), Cursor = System.Windows.Input.Cursors.Hand, Tag = key, ToolTip = TargetName(key), FocusVisualStyle = null, RenderTransformOrigin = new(.5, .5), RenderTransform = new ScaleTransform(1, 1) };
         if (w > 0) { b.Width = w; b.Height = h; }
-        if (target && TargetAllowed(key)) { b.Click += (_, _) => SetTarget(key); outputs[key] = b; }
+        if (TargetAllowed(key)) { b.Click += (_, _) => SetTarget(key); outputs[key] = b; }
         else b.IsEnabled = false;
-        b.GotKeyboardFocus += (_, _) => border.BorderBrush = Brushes.White; b.LostKeyboardFocus += (_, _) => Paint(b, key, false, b.IsEnabled);
+        void Lift(bool on) { if (!b.IsEnabled) return; var to = on ? 1.06 : 1; var t = (ScaleTransform)b.RenderTransform; t.BeginAnimation(ScaleTransform.ScaleXProperty, animate ? DS.To(to, 120) : null); t.BeginAnimation(ScaleTransform.ScaleYProperty, animate ? DS.To(to, 120) : null); if (!animate) t.ScaleX = t.ScaleY = to; }
+        b.MouseEnter += (_, _) => { if (b.DataContext is not true) border.BorderBrush = new SolidColorBrush(Color.FromArgb(220, 160, 205, 255)); Lift(true); };
+        b.MouseLeave += (_, _) => { Paint(b, key, b.DataContext is true, b.IsEnabled); Lift(false); };
+        b.GotKeyboardFocus += (_, _) => border.BorderBrush = Brushes.White; b.LostKeyboardFocus += (_, _) => Paint(b, key, b.DataContext is true, b.IsEnabled);
         Paint(b, key, false, b.IsEnabled);
         return b;
     }
+    /// <summary>A keycap: a soft top light over the body, the face colour on the rim and letter, blue and glowing when it is the current output.</summary>
     private static void Paint(Button b, string key, bool on, bool enabled)
     {
-        var border = (Border)b.Content; var face = (TextBlock)border.Child;
+        var border = (Border)b.Content; var face = (TextBlock)border.Child; b.DataContext = on;
         var color = key switch { "Y" => Color.FromRgb(245, 205, 80), "X" => Color.FromRgb(70, 170, 255), "B" => Color.FromRgb(255, 100, 125), "A" => Color.FromRgb(70, 220, 150), _ => (Color?)null };
+        bool stick = Shape(key) == "stick";
         b.IsEnabled = enabled;
         border.Opacity = enabled ? 1 : .45;
-        border.BorderThickness = new(on ? 2 : 1.2);
-        border.Background = on ? new SolidColorBrush(Color.FromRgb(43,115,222)) : new SolidColorBrush(Color.FromRgb(29,44,67));
-        border.BorderBrush = on ? Brushes.White : color != null ? new SolidColorBrush(Color.FromArgb(150, color.Value.R, color.Value.G, color.Value.B)) : new SolidColorBrush(Color.FromArgb(46, 255, 255, 255));
+        border.BorderThickness = new(on ? 2 : stick ? 2.4 : 1.2);
+        border.Background = on ? new LinearGradientBrush(Color.FromRgb(70, 150, 250), Color.FromRgb(36, 100, 206), 90)
+            : stick ? new RadialGradientBrush(Color.FromRgb(22, 33, 52), Color.FromRgb(44, 62, 92)) { GradientOrigin = new(.5, .38), Center = new(.5, .45) }
+            : new LinearGradientBrush(Color.FromRgb(42, 60, 89), Color.FromRgb(25, 37, 58), 90);
+        border.BorderBrush = on ? Brushes.White : color != null ? new SolidColorBrush(Color.FromArgb(170, color.Value.R, color.Value.G, color.Value.B)) : new SolidColorBrush(Color.FromArgb(stick ? (byte)70 : (byte)52, 255, 255, 255));
         face.Foreground = on || color == null ? DS.Brush("DS.Text") : new SolidColorBrush(color.Value);
-        border.Effect = null;
+        border.Effect = on ? new DropShadowEffect { Color = Kit.Blue, BlurRadius = 20, ShadowDepth = 0, Opacity = .85 } : new DropShadowEffect { Color = Colors.Black, BlurRadius = 8, ShadowDepth = 2, Direction = 270, Opacity = .35 };
     }
     private void ShowOverview(bool on)
     {

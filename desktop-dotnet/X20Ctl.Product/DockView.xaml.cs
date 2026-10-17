@@ -41,6 +41,8 @@ public partial class DockView : UserControl
     }
     /// <summary>The one accent: Steam's blue, for the chosen controller and its bloom.</summary>
     public static readonly Color Accent = Color.FromRgb(26, 159, 255);
+    // the card's own 6 px margin plus breathing room; the heights of the status pill and the small buttons
+    private const double Inset = 20, StatusHeight = 26, ActionGap = 12, SideButton = 32, AddButton = 36;
     public event Action<int>? Selected;
     public event Action<int>? RemoveRequested;
     private void AddController(object sender,RoutedEventArgs e){e.Handled=true;ActionRequested?.Invoke(Index,false);}
@@ -136,10 +138,15 @@ public partial class DockView : UserControl
             // a side tile: label and name on the left, the controller on the right
             Canvas.SetLeft(PlayerPill, 18); Canvas.SetTop(PlayerPill, 16); PlayerLabel.FontSize = 16;
             artWidth = Math.Max(30, Math.Min(w * .48, (h - 58) * 1.5)); artX = w - artWidth - 8; artY = 48 + (h - 58 - artWidth / 1.5) / 2;
-            detailsX = 20; detailsY = Math.Max(44, h / 2 - 8); detailsWidth = Math.Max(40, artX - 28); ModelName.FontSize = 16;
+            ModelName.FontSize = 16; detailsX = 20; detailsWidth = Math.Max(40, artX - 28);
+            // name, status and Remove are one block, centred in the room under the label and kept off the card's bottom
+            // edge (owner report 17 Oct 2026: Remove hung out of the tile)
+            double block = ModelName.FontSize * 1.34 + 2 + StatusHeight + ActionGap + SideButton;
+            detailsY = Math.Clamp(44 + (h - 44 - Inset - block) / 2, 44, Math.Max(44, h - Inset - block));
             if (empty)
-            {   // an empty tile is just the "add" target: the dashed controller in the middle, the words under the pill
-                artWidth = Math.Max(30, Math.Min(w * .42, (h - 94) * 1.5)); artX = (w - artWidth) / 2; artY = Math.Max(40,(h-54-artWidth/1.5)/2);
+            {   // an empty tile is just the "add" target: the dashed controller in the middle, Add controller under it
+                double room = Math.Max(20, h - 40 - Inset - AddButton - 8);
+                artWidth = Math.Max(30, Math.Min(w * .42, room * 1.5)); artX = (w - artWidth) / 2; artY = 40 + (room - artWidth / 1.5) / 2;
                 detailsY = h - 58; detailsWidth = Math.Max(40, artX - 28);
             }
         }
@@ -163,10 +170,12 @@ public partial class DockView : UserControl
         if(PlusBadge.Child is StackPanel plusContent){((TextBlock)plusContent.Children[1]).FontSize=Math.Clamp(artWidth*.09,24,38);foreach(var dot in ((StackPanel)plusContent.Children[0]).Children.OfType<System.Windows.Shapes.Ellipse>()){dot.Width=dot.Height=Math.Clamp(artWidth*.018,5,9);dot.Margin=new(3,0,3,0);}}
         PlusBadge.Margin = new(0, 0, 0, artWidth / 1.5 * .2);
         GlideArt(artX, artY, artWidth);
-        AddControllerButton.Margin=new(Math.Max(12,artX+artWidth/2-73),Math.Min(h-46,artY+artWidth/1.5*.96+8),0,0);
+        // the buttons' real heights (the shared style's 42 px minimum would otherwise win) and a clear gap above the card's edge
+        AddControllerButton.MinHeight=0;AddControllerButton.Height=AddButton;
+        AddControllerButton.Margin=new(Math.Max(12,artX+artWidth/2-73),Math.Min(h-Inset-AddButton,artY+artWidth/1.5*.96+8),0,0);
         RemoveControllerButton.HorizontalAlignment=HorizontalAlignment.Left;
-        RemoveControllerButton.Width=104;RemoveControllerButton.Height=hero?38:32;
-        RemoveControllerButton.Margin=hero?new(w-130-30-104-12,h-66,0,0):new(detailsX,Math.Min(h-42,detailsY+ModelName.FontSize*1.34+42),0,0);
+        RemoveControllerButton.MinHeight=0;RemoveControllerButton.Width=hero?112:96;RemoveControllerButton.Height=hero?38:SideButton;
+        RemoveControllerButton.Margin=hero?new(w-130-30-112-12,h-66,0,0):new(detailsX,Math.Min(h-Inset-SideButton,detailsY+ModelName.FontSize*1.34+2+StatusHeight+ActionGap),0,0);
         // a soft halo behind the controller (or the empty outline), and the arrow on grid cards
         // (the halo and floor shadow follow the art in PlaceArt)
         ArrowBadge.Visibility = Visibility.Collapsed; Canvas.SetLeft(ArrowBadge, w - 74); Canvas.SetTop(ArrowBadge, h - 66);

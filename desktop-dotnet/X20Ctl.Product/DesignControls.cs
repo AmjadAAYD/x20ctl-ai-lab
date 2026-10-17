@@ -313,3 +313,41 @@ public static class Ambient
         return timeline;
     }
 }
+
+/// <summary>The battery in the middle of the Studio title bar (owner request 17 Oct 2026): a battery drawn with four cells
+/// and its tip, and the level beside it. The pads report only full, medium, low, empty or wired, so it shows exactly
+/// that, and a dash when nothing is reported; it never guesses a percentage.</summary>
+public sealed class HeaderBattery : Button
+{
+    private readonly Border[] cells = new Border[4];
+    private readonly TextBlock level = new() { FontFamily = DS.Display, FontSize = 14, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock plug = new() { Text = "\uE945", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 10, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Visibility = Visibility.Collapsed };
+    private readonly Border pill;
+    public HeaderBattery()
+    {
+        Cursor = System.Windows.Input.Cursors.Hand; FocusVisualStyle = null; HorizontalAlignment = HorizontalAlignment.Center; VerticalAlignment = VerticalAlignment.Center;
+        Template = new ControlTemplate(typeof(Button)) { VisualTree = new FrameworkElementFactory(typeof(ContentPresenter)) };
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(2, 0, 0, 0) };
+        for (int i = 0; i < 4; i++) { cells[i] = new Border { Width = 5, Height = 9, CornerRadius = new(1.2), Margin = new(i == 0 ? 0 : 1.6, 0, 0, 0) }; row.Children.Add(cells[i]); }
+        var body = new Border { Width = 32, Height = 15, CornerRadius = new(4), BorderThickness = new(1.4), BorderBrush = new SolidColorBrush(Color.FromArgb(210, 214, 226, 244)), Padding = new(1.6, 1.4, 1.6, 1.4), Child = new Grid { Children = { row, plug } } };
+        var tip = new Border { Width = 2.6, Height = 6, CornerRadius = new(0, 1.5, 1.5, 0), Background = new SolidColorBrush(Color.FromArgb(210, 214, 226, 244)), VerticalAlignment = VerticalAlignment.Center, Margin = new(1, 0, 0, 0) };
+        pill = new Border { CornerRadius = new(18), Height = 34, Padding = new(14, 0, 16, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Color.FromArgb(70, 125, 182, 255)), Background = new SolidColorBrush(Color.FromArgb(46, 30, 60, 130)),
+            Child = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { body, tip, new TextBlock { Text = "Battery", FontFamily = DS.Display, FontSize = 14, Foreground = DS.Brush("DS.TextSoft"), VerticalAlignment = VerticalAlignment.Center, Margin = new(12, 0, 8, 0) }, level } } };
+        Content = pill; ToolTip = "Battery, as the controller reports it · opens Device";
+        MouseEnter += (_, _) => pill.BorderBrush = new SolidColorBrush(Color.FromArgb(170, 125, 182, 255)); MouseLeave += (_, _) => pill.BorderBrush = new SolidColorBrush(Color.FromArgb(70, 125, 182, 255));
+        Show(null);
+    }
+    /// <summary>full, medium, low, empty or wired; anything else is "not reported".</summary>
+    public void Show(string? reported)
+    {
+        int lit = reported switch { "full" => 4, "medium" => 2, "low" => 1, _ => 0 };
+        bool warn = reported is "low" or "empty", wired = reported == "wired";
+        var on = new SolidColorBrush(warn ? Color.FromRgb(240, 178, 92) : Color.FromRgb(232, 240, 252));
+        var off = new SolidColorBrush(Color.FromArgb(34, 214, 226, 244));
+        for (int i = 0; i < 4; i++) { cells[i].Background = i < lit ? on : off; cells[i].Visibility = wired ? Visibility.Hidden : Visibility.Visible; }
+        plug.Visibility = wired ? Visibility.Visible : Visibility.Collapsed;
+        level.Text = reported switch { "full" => "Full", "medium" => "Medium", "low" => "Low", "empty" => "Empty", "wired" => "Wired", _ => "—" };
+        level.Foreground = warn ? on : DS.Brush(reported is "full" or "medium" or "wired" ? "DS.Text" : "DS.TextSoft");
+        System.Windows.Automation.AutomationProperties.SetName(this, "Battery " + (level.Text == "—" ? "not reported" : level.Text));
+    }
+}

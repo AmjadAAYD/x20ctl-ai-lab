@@ -44,7 +44,7 @@ public partial class StudioScene
             }
             NavigationMore.Visibility=NavigationMore.ContextMenu.Items.Count>0?Visibility.Visible:Visibility.Collapsed;
             NavigationTrack.Width=Math.Min(available,used+(NavigationMore.ContextMenu.Items.Count>0?90:0));NavigationTrack.HorizontalAlignment=HorizontalAlignment.Left;
-            Grid.SetColumn(NextTab,0);Grid.SetColumnSpan(NextTab,3);NextTab.HorizontalAlignment=HorizontalAlignment.Left;NextTab.Margin=new(Math.Max(0,76+NavigationTrack.Width-86),22,0,0);
+            Grid.SetColumn(NextTab,0);Grid.SetColumnSpan(NextTab,3);NextTab.HorizontalAlignment=HorizontalAlignment.Left;NextTab.Margin=new(76+NavigationTrack.Width+6,0,0,4);
             NavigationTabs.UpdateLayout();var active=navigation.FirstOrDefault(t=>t.IsChecked==true);if(active==null){NavigationIndicator.Visibility=Visibility.Collapsed;return;}
             NavigationIndicator.Visibility=Visibility.Visible;
             FrameworkElement target=active.Visibility==Visibility.Visible?active:NavigationMore;

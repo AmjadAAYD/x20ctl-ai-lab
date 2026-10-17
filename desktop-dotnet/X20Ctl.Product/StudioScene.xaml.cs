@@ -237,6 +237,7 @@ public partial class StudioScene : UserControl
         batteryLabel.Text="Battery · "+(level switch {"full"=>"Full","medium"=>"Medium","low"=>"Low","empty"=>"Empty","wired"=>"Wired",_=>"Not reported"});
         batteryLabel.Foreground=DS.Brush(level is "low" or "empty"?"DS.Warn":"DS.TextSoft");UpdateDeviceHeader();
     }
+    private readonly HeaderBattery headerBattery=new();
     private readonly StatusChip controllerConnection = new("Offline", ChipKind.Neutral) { Margin = new(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
     private void BuildTitlePills()
     {
@@ -268,7 +269,10 @@ public partial class StudioScene : UserControl
         var deviceBody=new StackPanel{Orientation=Orientation.Horizontal,Children={Kit.Text("",16,"DS.AccentHi").Also(t=>t.FontFamily=new FontFamily("Segoe Fluent Icons")),Kit.Text(Model.Name.Replace("EasySMX ",""),14,"DS.Text",FontWeights.SemiBold).Also(t=>t.Margin=new(10,0,8,0)),deviceState}};
         deviceControl=new Button{Content=deviceBody,Style=DS.Style("Zone.Utility"),Height=36,MinHeight=0,Padding=new(10,0,10,0),ToolTip=new StackPanel{Children={Kit.Text($"{Model.Name} · Player {Player+1}",14,"DS.Text",FontWeights.SemiBold),batteryLabel,Kit.Text("Transport · Not reported",13,"DS.TextSoft")}}};
         deviceControl.Click+=(_,_)=>ShowManagement("Device");System.Windows.Automation.AutomationProperties.SetName(deviceControl,"Selected controller status and details");
-        AgentTitleHost.Children.Add(agentPill);TitlePills.Children.Add(deviceControl);TitlePills.Children.Add(more);UpdateDeviceHeader();
+        AgentTitleHost.Children.Add(agentPill);TitlePills.Children.Add(deviceControl);TitlePills.Children.Add(more);
+        // the battery, in the middle of the title bar (owner request 17 Oct 2026): only what the controller reports
+        headerBattery.Click+=(_,_)=>ShowManagement("Device");System.Windows.Shell.WindowChrome.SetIsHitTestVisibleInChrome(headerBattery,true);
+        Grid.SetColumnSpan(headerBattery,2);HeaderGrid.Children.Add(headerBattery);UpdateDeviceHeader();
 
     }
     private void UpdateDeviceHeader()
@@ -277,6 +281,7 @@ public partial class StudioScene : UserControl
         double previousWidth=deviceControl.ActualWidth;string previousText=deviceState.Text;
         deviceState.Text="· "+(gameplayConnected==true?(currentBatteryLevel is "full" or "medium" or "low" or "empty" or "wired"?(currentBatteryLevel=="wired"?"Wired":batteryLabel.Text.Replace("Battery · ","")+" battery"):"Connected"):"Offline");
         deviceState.Foreground=DS.Brush(gameplayConnected==true?currentBatteryLevel is "low" or "empty"?"DS.Warn":"DS.TextSoft":"DS.Warn");
+        headerBattery.Show(gameplayConnected==true?currentBatteryLevel:null);
         if(animate&&deviceControl.IsLoaded&&previousWidth>0&&previousText!=deviceState.Text){deviceControl.BeginAnimation(WidthProperty,null);deviceControl.Width=double.NaN;deviceControl.Measure(new Size(double.PositiveInfinity,36));double next=deviceControl.DesiredSize.Width;deviceControl.Width=next;deviceControl.BeginAnimation(WidthProperty,new DoubleAnimation(previousWidth,next,TimeSpan.FromMilliseconds(180)){FillBehavior=FillBehavior.Stop,EasingFunction=DS.EaseOut});}
     }
     /// <summary>The console-design Buttons page replaces the older canvas/inspector/shelf while Buttons is active.</summary>
@@ -914,7 +919,11 @@ public partial class StudioScene : UserControl
             if(next==0)ShowManagement("Dashboard");else if(next>=5)ShowManagement(next switch {5=>"PcMode",6=>"Device",7=>"Mouse",_=>"Setups"});else if(next==4)ShowVibration(true);else if(next==3)ShowMacros(true);else if(next==2)ShowCurves(true);else ShowButtons();e.Handled=true;return;
         }
         if (e.Key == Key.F6) { if (!e.IsRepeat) SetNavigationPreview(!navigationMode); e.Handled = true; return; }
-        if (e.Key == Key.Escape || navigationMode && e.Key == Key.B) { if (AssignmentsVisible) ShowAssignments(false);else if(IsVibration && ReferenceEquals(Vibration?.Strength,Keyboard.FocusedElement))FocusSelectedControl(); else if (IsCurves && (Curves.PointHandles.Any(p=>ReferenceEquals(p,Keyboard.FocusedElement)) || ReferenceEquals(Curves.Inner,Keyboard.FocusedElement) || ReferenceEquals(Curves.Outer,Keyboard.FocusedElement))) FocusSelectedControl(); else if (navigationMode && Keyboard.FocusedElement is Button && Keyboard.FocusedElement is not PhysicalHotspot) FocusSelectedControl(); else BackRequested?.Invoke(); e.Handled = true; return; }
+        if (e.Key == Key.B && sender is ProductHost && !navigationMode && OnButtonsPage && buttonsPage != null && SelectedControl.Length > 0 && !AssignmentsVisible) { ClearSelection(); e.Handled = true; return; }
+        if (e.Key == Key.Escape || navigationMode && e.Key == Key.B) { if (AssignmentsVisible) ShowAssignments(false);
+            // B on Buttons with a control picked puts the card back to "Select a control" (owner request 17 Oct 2026); a second B leaves
+            else if (OnButtonsPage && buttonsPage != null && SelectedControl.Length > 0) { string was = SelectedControl; ClearSelection(); if (navigationMode) buttonsPage.Hotspot(was)?.Focus(); }
+            else if(IsVibration && ReferenceEquals(Vibration?.Strength,Keyboard.FocusedElement))FocusSelectedControl(); else if (IsCurves && (Curves.PointHandles.Any(p=>ReferenceEquals(p,Keyboard.FocusedElement)) || ReferenceEquals(Curves.Inner,Keyboard.FocusedElement) || ReferenceEquals(Curves.Outer,Keyboard.FocusedElement))) FocusSelectedControl(); else if (navigationMode && Keyboard.FocusedElement is Button && Keyboard.FocusedElement is not PhysicalHotspot) FocusSelectedControl(); else BackRequested?.Invoke(); e.Handled = true; return; }
         if (navigationMode && e.Key == Key.Y) { if(ManagementPage=="Device")return;else if(ManagementPage=="Setups")Setups?.NewButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));else if(IsVibration)Vibration?.Reset();else if(IsMacros)Macros?.Add();else if(IsCurves) Curves.Reset();else ShowAssignments(!AssignmentsVisible); e.Handled = true; return; }
         FocusNavigationDirection? direction = e.Key switch { Key.Up => FocusNavigationDirection.Up, Key.Down => FocusNavigationDirection.Down, Key.Left => FocusNavigationDirection.Left, Key.Right => FocusNavigationDirection.Right, _ => null };
         if (direction.HasValue)
