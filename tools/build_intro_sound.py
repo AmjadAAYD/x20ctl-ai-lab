@@ -7,7 +7,7 @@ is D minor, kept in the middle register (no lead above D5), so it reads as a cin
 
 The story, in time with IntroView and IntroBladeFormation:
   0.18-0.54  the three LED eyes: D4, F4, A4 on the electric piano, left to right
-  0.75-2.45  the outline being drawn: a quiet plucked figure, panned left and right as the pencil travels
+  1.45-2.45  the white outline drawn on the beat: eight climbing plucks that follow the line round, a ninth as it closes
   2.95-4.03  the blades sliding in: one repeated pluck that speeds up and brightens, and the lock chord swelling in
              backwards out of its own reverb
   4.03       the lock: the chord (D minor with a ninth) on the piano, a soft low body under it, the pad opening up
@@ -135,14 +135,17 @@ def room(seconds=2.6, size=.32):
 for at, note, pan in ((.18, "D4", -.35), (.36, "F4", 0), (.54, "A4", .35)):
     place(piano(note, 2.2, .42), at, .22, pan, wet=.5)
 
-# 2. the outline: a plucked figure follows the pencil, quiet, alternating sides, thinning out as the line closes
-figure = ["D3", "A3", "F4", "A3", "E4", "A3", "D4", "C4", "D3", "A3", "F4", "A3", "G4", "A3", "F4", "E4"]
-for i, note in enumerate(figure):
-    at = .78 + i * .105 * 2
-    if at > 2.5:
-        break
-    fade = 1 - max(0, at - 2.0) / .6
-    place(pluck(note, 1.2, .35), at, .12 * fade * (1.15 if note.endswith("3") else 1), -.45 if i % 2 else .45, wet=.5)
+# 2. the outline (owner 17 Oct: the picture moves with the music): the blue streak glides under the pad alone; then the
+#    white line is drawn in eight surges, one per pluck (IntroBeats.Outline in IntroPetals.cs, keep in step), each
+#    pluck heard from where the line is on the controller - top, left grip, bottom, right grip - climbing as it goes,
+#    and a ninth note as the line closes on itself
+OUTLINE = [1.45 + k * .125 for k in range(9)]
+climb = ["D3", "F3", "G3", "A3", "C4", "D4", "F4", "G4"]
+for k, note in enumerate(climb):
+    where = (k + .5) / 8  # how far round the outline this surge draws: 0 top centre, .25 left, .5 bottom, .75 right
+    place(pluck(note, 1.1, .3 + .03 * k), OUTLINE[k], .11 + .006 * k, -.7 * np.sin(2 * np.pi * where), wet=.5)
+place(pluck("A4", 1.4, .4), OUTLINE[8], .13, 0, wet=.55)
+place(piano("D4", 2.0, .3), OUTLINE[8], .1, 0, wet=.6)
 # under it, a pad on D minor that opens as the controller is drawn and settles as it leans in
 place(pad(["A3", "D4", "F4"], 2.4, lambda s: 250 + 900 * np.sin(np.pi * np.clip(s / 2.4, 0, 1)) ** 2, .7, .7), .7, .045, 0, wet=.7)
 

@@ -47,6 +47,9 @@ public sealed class IntroView:Grid
     private readonly Grid controllerGroup=new(){IsHitTestVisible=false};
     private readonly IntroBladeFormation formation=new(){IsHitTestVisible=false};
     private readonly IntroContourFlow contours=new(){IsHitTestVisible=false};
+    // sakura petals thrown off the seam as the blades lock (owner 17 Oct 2026): most behind the mark, a few in front
+    private readonly IntroPetals petalsBack=new(false){IsHitTestVisible=false}, petalsFront=new(true){IsHitTestVisible=false};
+    private const double LockAt=MorphAt+1.08;
     private readonly System.Windows.Shapes.Path morphGhost=new(){Stroke=new SolidColorBrush(Color.FromArgb(70,200,215,245)),StrokeThickness=8,StrokeLineJoin=PenLineJoin.Round,Opacity=0,IsHitTestVisible=false};
     private readonly Point[][] from=new Point[2][], to=new Point[2][];
     // Owner direction 10 Oct 2026 (latest): the outline is blue and orange - a blue pencil with an orange trail and a
@@ -195,7 +198,7 @@ public sealed class IntroView:Grid
         // the X's heartbeat (owner 12 Oct 2026): the mark swells about its own centre, so every piece of it shares one scale
         var xBounds=Rect.Union(forward.Bounds,back.Bounds);var xBeat=new ScaleTransform(1,1,xBounds.X+xBounds.Width/2,xBounds.Y+xBounds.Height/2);
         foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,formation})e.RenderTransform=xBeat;
-        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,shine})xGroup.Children.Add(e);xGroup.Children.Insert(0,markAura); markAura.SetGeometry(markPx); aura.Visibility=Visibility.Collapsed; dotsLeft.Visibility=dotsRight.Visibility=Visibility.Collapsed; stage.Children.Add(xGroup);this.xBounds=xBounds;
+        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,shine})xGroup.Children.Add(e);xGroup.Children.Insert(0,markAura); markAura.SetGeometry(markPx); aura.Visibility=Visibility.Collapsed; dotsLeft.Visibility=dotsRight.Visibility=Visibility.Collapsed; stage.Children.Add(petalsBack);stage.Children.Add(xGroup);stage.Children.Add(petalsFront);this.xBounds=xBounds;
         Children.Add(stage);sloganBox.Children.Add(slogan);Children.Add(sloganBox);Children.Add(fade);
         // WPF has no letter-spacing: hair spaces between the letters track it out, a wider gap between words
         slogan.Text=string.Join("\u200A",SloganText.Select(c=>c==' '?"\u2009\u2009":c.ToString()));
@@ -412,6 +415,7 @@ public sealed class IntroView:Grid
         markAura.SetTime(Reduced ? -1 : t-4.0);
         formation.SetTime(Reduced ? -1 : t-MorphAt);
         contours.SetTime(Reduced ? -1 : t);
+        petalsBack.SetTime(Reduced ? -1 : t-LockAt);petalsFront.SetTime(Reduced ? -1 : t-LockAt);
         if(Reduced)
         {
             double start=Duration-.5,amount=Math.Clamp((t-start)/.5,0,1);amount=1-Math.Pow(1-amount,3);
@@ -504,7 +508,8 @@ internal sealed class IntroContourFlow:FrameworkElement
             double position=(time-.12)*.61;
             Segment(dc,controller,position,.24,9,colour,true);
             Segment(dc,controller,position+.48,.20,6,colour*.34,false);
-            double white=Smooth((time-1.45)/1.0);
+            // drawn on the beat: one surge per pluck of the sound (IntroBeats)
+            double white=IntroBeats.Drawn(time);
             if(white>0)Segment(dc,controller,0,white,8.5,1,false,white>.999);
             dc.Pop();
         }
