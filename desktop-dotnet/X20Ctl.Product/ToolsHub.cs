@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -123,13 +123,14 @@ public sealed class ProductSettings : Grid
 
         // the opening intro (owner request 12 Oct 2026): play it at launch or not, with sound or without; the intro's own
         // Mute button sets the same switch
-        introLaunch.IsChecked = preferences?.IntroOnLaunch != false; introSound.IsChecked = preferences?.IntroSound != false;
-        introLaunch.IsEnabled = introSound.IsEnabled = preferences != null;
+        introLaunch.IsChecked = preferences?.IntroOnLaunch != false; introSound.IsChecked = IntroView.HasIntroScore && preferences?.IntroSound != false;
+        introLaunch.IsEnabled = preferences != null; introSound.IsEnabled=preferences!=null && IntroView.HasIntroScore;
         introLaunch.Checked += (_, _) => SetIntro(true, null); introLaunch.Unchecked += (_, _) => SetIntro(false, null);
         introSound.Checked += (_, _) => SetIntro(null, true); introSound.Unchecked += (_, _) => SetIntro(null, false);
         StackPanel Switch(CheckBox box, string label, double gap) => new() { Orientation = Orientation.Horizontal, Margin = new(gap, 0, 0, 0), Children = { box, Kit.Text(label, 15, "DS.Text").Also(t => t.Margin = new(10, 0, 0, 0)) } };
         // one row, as tall as the updates bar beside it: a taller bar squeezed the tiles above until their words were cut
-        var switches = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { Switch(introLaunch, "At launch", 0), Switch(introSound, "Sound", 22) } };
+        var soundSwitch=Switch(introSound,"Sound",22);soundSwitch.Visibility=IntroView.HasIntroScore?Visibility.Visible:Visibility.Collapsed;
+        var switches = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { Switch(introLaunch, "At launch", 0), soundSwitch } };
         DockPanel.SetDock(switches, Dock.Right);
         introBar.Child = new DockPanel { Children = { switches, new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 16, 0), Children = {
             Kit.Text("Opening intro", 16, "DS.Text", FontWeights.SemiBold), introStatus } } } };
@@ -209,7 +210,7 @@ public sealed class ProductSettings : Grid
         catch (Exception error) when (error is System.IO.IOException or InvalidOperationException or UnauthorizedAccessException) { introStatus.Text = "Couldn't save this setting: " + error.Message; }
     }
     private void ShowIntroStatus() => introStatus.Text = introLaunch.IsChecked != true ? "Off. Replay Intro still plays it."
-        : introSound.IsChecked == true ? "Esc skips it, M mutes it." : "Plays without sound.";
+        : !IntroView.HasIntroScore ? "Esc skips it." : introSound.IsChecked == true ? "Esc skips it, M mutes it." : "Plays without sound.";
     private void ShowUpdateStatus()
     {
         updateGo.Visibility = Updater.Ready != null && Updater.Installed == null ? Visibility.Visible : Visibility.Collapsed;
@@ -247,6 +248,7 @@ public sealed class ProductSettings : Grid
             BorderBrush = new LinearGradientBrush(Color.FromArgb(110, 120, 170, 255), Color.FromArgb(30, 120, 170, 255), 90)
         };
         var stack = new StackPanel(); panel.Child = stack;
+        stack.Children.Add(Kit.Text("Credits · Desktop-control layout inspired by Gopher360 — Tylemagne, GPL-3.0. See the distributed open-source license notices.",13,"DS.TextMuted").Also(t=>{t.TextWrapping=TextWrapping.Wrap;t.Margin=new(0,12,0,16);}));
         var mark = new Image { Source = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/brand.png")), Width = 72, Height = 72, Margin = new(0, 0, 24, 0) };
         RenderOptions.SetBitmapScalingMode(mark, BitmapScalingMode.HighQuality);
         stack.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { mark, new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = {
@@ -278,7 +280,7 @@ public sealed class ProductSettings : Grid
 
     private static Button Pill(string icon, string text)
     {
-        var b = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 46, MinHeight = 0, Padding = new(22, 0, 24, 0), FontSize = 15.5,
+        var b = new Button { Style = DS.Style("ActionButton"), Height = 46, MinHeight = 0, Padding = new(22, 0, 24, 0), FontSize = 15.5,
             Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Icon(icon, 15, "DS.Text").Also(i => i.Margin = new(0, 0, 10, 0)), Kit.Text(text, 15.5, "DS.Text", FontWeights.SemiBold) } } };
         return b;
     }

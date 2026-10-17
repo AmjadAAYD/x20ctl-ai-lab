@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,7 +17,7 @@ namespace X20Ctl.Product;
 public sealed class DashboardConsolePage : Grid
 {
     private static Task<IReadOnlyList<GameEntry>>? scan;
-    private readonly WrapPanel shelf = new();
+    private readonly StackPanel shelf = new() { Orientation = Orientation.Horizontal };
     private readonly DashboardControllerPreview preview;
     private readonly Button changeIcon;
     private readonly ScrollViewer shelfScroll;
@@ -25,23 +25,41 @@ public sealed class DashboardConsolePage : Grid
     private readonly Image heroArt = new() { Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Stretch, Opacity = 0 };
     private readonly Image logo = new() { Stretch = Stretch.Uniform, MaxHeight = 86, MaxWidth = 380, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly TextBlock featuredTitle = Kit.Text("", 34, "DS.Text", FontWeights.SemiBold), featuredMeta = Kit.Text("", 16, "DS.TextSoft");
+    private readonly TextBlock changesCount = Kit.Text("0",18,"DS.Text",FontWeights.SemiBold);
+    private readonly TextBlock connectionValue=Kit.Text("Not detected",17,"DS.TextSoft"), batteryValue=Kit.Text("Not reported",17,"DS.TextSoft"), firmwareValue=Kit.Text("Not reported",17,"DS.TextSoft");
+    private readonly TextBlock profileState=Kit.Text("No game-specific setup linked",13,"DS.TextSoft");
+    public void SetBatteryLevel(string? level)=>batteryValue.Text=level switch {"full"=>"Full","medium"=>"Medium","low"=>"Low","empty"=>"Empty","wired"=>"Wired",_=>"Not reported"};
     private readonly TextBlock gamesCount; private readonly Button play;
     private readonly List<(Button Card, GameEntry Game)> cards = new();
     private readonly bool animate;
-    private readonly StatusChip connectionChip = new("No controller input", ChipKind.Warn);
     private bool? inputConnected;
+    private readonly TextBlock deviceState = Kit.Text("Controller offline", 28, "DS.Text", FontWeights.SemiBold);
+    private readonly TextBlock stateDetail = Kit.Text("Connect your controller to use live input.", 14, "DS.TextSoft");
+    private readonly TextBlock workingSetup = Kit.Text("Current working settings", 20, "DS.Text", FontWeights.SemiBold);
+    private readonly TextBlock changesLabel = Kit.Text("", 14, "DS.TextSoft");
+    private readonly Button setupAction = new() { Style=DS.Style("ActionButton"),HorizontalAlignment=HorizontalAlignment.Left,Margin=new(0,12,0,0) };
+    public void SetWorkingState(int changes, string? setup, bool pcMode)
+    {
+        changesCount.Text = changes==0?"0":$"{changes} unsaved";
+        workingSetup.Text = setup ?? "Current working settings";
+        stateDetail.Text=pcMode?"PC mode · Settings apply on this PC":"Local working settings · Hardware unchanged";
+        changesLabel.Text = pcMode ? "PC mode · Settings apply on this PC" : changes == 0 ? "No local changes" : $"{changes} local changes · Hardware unchanged";
+        setupAction.Content=pcMode?"Open PC mode  →":"Edit working setup  →";
+        setupAction.Tag=pcMode?"PcMode":"Buttons";
+    }
     public void SetInputConnected(bool connected)
     {
         if (inputConnected == connected) return;
         inputConnected = connected;
-        connectionChip.Set(connected ? "Live controller input" : "No controller input", connected ? ChipKind.Success : ChipKind.Warn);
+        deviceState.Text = connected?"Connected":"Offline";
+        connectionValue.Text=connected?"Detected · Transport not reported":"Not detected";
+        deviceState.Foreground=DS.Brush(connected?"DS.Success":"DS.TextSoft");
     }
     private GameEntry? current;
     private int scanGeneration;
     public event Action? ConfigureRequested;
     public event Action<string>? PageRequested;
-    /// <summary>The invitation in the hero's empty corner was chosen: open the agent.</summary>
-    public event Action? AgentRequested;
+
     private Button? heroFocus;
     public FrameworkElement ControllerArtwork { get; }
     /// <summary>What A does on the highlighted item, for the live footer.</summary>
@@ -60,103 +78,61 @@ public sealed class DashboardConsolePage : Grid
     {
         animate = !reducedMotion && DS.Motion;
         ClipToBounds = true; // in a short window nothing may spill under the Studio footer
+        Margin = new(0, 12, 0, 0);
         RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
-        RowDefinitions.Add(new() { Height = new(14) });
-        RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
+        RowDefinitions.Add(new() { Height = new(24) });
+        RowDefinitions.Add(new() { Height = new(230) });
+        RowDefinitions.Add(new() { Height = new(86) });
 
-        // ---- top: controller hero (left) + status block (right) ----
-        var top = new Grid(); top.ColumnDefinitions.Add(new() { Width = new(.95, GridUnitType.Star) }); top.ColumnDefinitions.Add(new() { Width = new(1.05, GridUnitType.Star) }); Children.Add(top);
+        var top = new Grid(); top.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); top.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); Children.Add(top);
         preview = new DashboardControllerPreview(model.Id, animate);
-        ControllerArtwork = new Viewbox { Child = preview };
-        var heroButton = new Button { Content = new Grid { Children = { ControllerArtwork } }, Template = Bare(), Cursor = Cursors.Hand, ToolTip = "Configure this controller (opens Buttons)", FocusVisualStyle = null };
-        heroButton.Click += (_, _) => ConfigureRequested?.Invoke();
-        var hint = new Border { CornerRadius = new(14), Padding = new(14, 6, 14, 6), Background = new SolidColorBrush(Color.FromArgb(150, 8, 14, 32)), BorderBrush = new SolidColorBrush(Color.FromArgb(70, 140, 180, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(24, 0, 0, 6),
-            Child = GlyphHint.Footer(("A", "Configure buttons")) };
-        heroButton.GotKeyboardFocus += (_, _) => hint.BorderBrush = Brushes.White; heroButton.LostKeyboardFocus += (_, _) => hint.BorderBrush = new SolidColorBrush(Color.FromArgb(70, 140, 180, 255));
-        heroFocus = heroButton;
-        // the same framed panel the Buttons page puts its controller in (owner request, 13 Oct 2026)
-        // the agent's invitation in the hero's empty top-right corner (owner request, 14 Oct 2026)
-        var invite = Agent.AgentInvite.Make(() => AgentRequested?.Invoke(), tailRight: false, size: 14); invite.HorizontalAlignment = HorizontalAlignment.Left; invite.VerticalAlignment = VerticalAlignment.Top; invite.Margin = new(0, 10, 10, 0);
-        var heroComposition = new Canvas { Width = 700, Height = 450 };
-        heroButton.Width = 500; heroButton.Height = 380;
-        Canvas.SetLeft(heroButton, 0); Canvas.SetTop(heroButton, 50);
-        invite.Margin = new(0);
-        Canvas.SetLeft(invite, 430); Canvas.SetTop(invite, 14);
-        heroComposition.Children.Add(heroButton); heroComposition.Children.Add(invite);
-        var heroPanel = Kit.Panel(null, null, null, new Viewbox { Child = heroComposition, Stretch = Stretch.Uniform }, new Thickness(0));
-        heroPanel.Margin = new(0, 0, 14, 0);
-        top.Children.Add(heroPanel);
+        ControllerArtwork = new Viewbox { Child = preview, Margin = new(0, 30, 0, 24), RenderTransformOrigin=new(.5,.5), RenderTransform=new ScaleTransform(1.18,1.18) };
+        var heroButton = new Button { Content = ControllerArtwork, Template = Bare(), Cursor = Cursors.Hand, FocusVisualStyle = null, ToolTip = "Configure controller buttons", HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch };
+        heroButton.Click += (_, _) => ConfigureRequested?.Invoke(); heroFocus = heroButton;
+        var stage = new Grid();
+        stage.Children.Add(heroButton);
+        var flip=new Button{Content="Flip controller",Style=DS.Style("ActionButton"),Height=42,MinHeight=42,Padding=new(22,0,22,0),FontSize=14,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Top,ToolTip="Show the back of this controller"};
+        System.Windows.Automation.AutomationProperties.SetName(flip,"Flip controller");
+        flip.Click+=(_,_)=>{preview.Flip();flip.ToolTip=preview.IsRear?"Show the front of this controller":"Show the back of this controller";};stage.Children.Add(flip);
+        var controllerPanel=Kit.Panel(null,null,null,stage);controllerPanel.Margin=new(0,0,12,0);top.Children.Add(controllerPanel);
+        var status = new StackPanel();
+        deviceState.Text="Offline";deviceState.FontSize=18;deviceState.FontWeight=FontWeights.SemiBold;status.Children.Add(deviceState);
+        status.Children.Add(Kit.Text("Current setup",12,"DS.TextMuted",FontWeights.SemiBold).Also(t=>t.Margin=new(0,10,0,4)));status.Children.Add(workingSetup);profileState.Margin=new(0,6,0,0);status.Children.Add(profileState);
+        var stateGrid=new Grid{Margin=new(0,12,0,10)};stateGrid.ColumnDefinitions.Add(new());stateGrid.ColumnDefinitions.Add(new());stateGrid.RowDefinitions.Add(new());stateGrid.RowDefinitions.Add(new());
+        var cells=new[]{("Connection",connectionValue),("Battery",batteryValue),("Firmware",firmwareValue),("Changes",changesCount)};
+        for(int i=0;i<cells.Length;i++){var text=new StackPanel();text.Children.Add(Kit.Text(cells[i].Item1,12,"DS.TextMuted").Also(t=>t.Margin=new(0,0,0,6)));cells[i].Item2.TextWrapping=TextWrapping.Wrap;text.Children.Add(cells[i].Item2);var cell=new Border{CornerRadius=new(12),Padding=new(8),Margin=new(0,0,8,8),Background=new SolidColorBrush(Color.FromArgb(16,180,205,240)),Child=text};Grid.SetRow(cell,i/2);Grid.SetColumn(cell,i%2);stateGrid.Children.Add(cell);}status.Children.Add(stateGrid);status.Children.Add(stateDetail);
+        gamesCount=new TextBlock();SetWorkingState(draftChanges,null,false);
+        var statusBox = new ScrollViewer {Content=status,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};
+        statusBox.Margin=new(0);var statusPanel=Kit.Panel(null,null,null,statusBox);Grid.SetColumn(statusPanel,1);top.Children.Add(statusPanel);
 
-        var status = new StackPanel { Width = 560 };
-        status.Children.Add(connectionChip);
-        status.Children.Add(new TextBlock { Text = "Ready to play", Style = DS.Style("DS.Display"), FontWeight = FontWeights.Light, FontSize = 48, Margin = new(0, 10, 0, 8) });
-        var pill = new Border { CornerRadius = new(17), Height = 34, Padding = new(14, 0, 16, 0), Background = new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), BorderBrush = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left,
-            Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { Kit.Icon("", 16, "DS.Text").Also(i => i.Margin = new(0, 0, 10, 0)), Kit.Text($"{model.Name} · Player {player + 1}", 14.5) } } };
-        status.Children.Add(pill);
-        status.Children.Add(Kit.Text("Select the controller to configure buttons, curves and macros.", 14, "DS.TextSoft").Also(t => t.Margin = new(2, 10, 0, 14)));
-        var tiles = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1, Margin = new(0, 0, -12, 0) };
-        var games = new StatTile("", "…", "Games") { Margin = new(0, 0, 12, 0) }; gamesCount = games.Value; tiles.Children.Add(games);
-        tiles.Children.Add(new StatTile("", draftChanges.ToString(), "Changes") { Margin = new(0, 0, 12, 0) });
-        tiles.Children.Add(new StatTile("", savedSetups.ToString(), "Setups") { Margin = new(0, 0, 12, 0) });
-        status.Children.Add(tiles);
-        var shortcuts = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 18, 0, 0) };
-        foreach (var label in new[] { "Buttons", "Curves", "Macros", "Diagnostics" }) {
-            string page = label;
-            var shortcut = AddButton(label, () => PageRequested?.Invoke(page));
-            shortcut.Margin = new(0, 0, 8, 0); shortcuts.Children.Add(shortcut);
-        }
-        status.Children.Add(shortcuts);
-        // the status block keeps its proportions and scales down when the window is short or narrow, rather than being cut off
-        var statusBox = new Viewbox { Child = status, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new(6, 6, 0, 6) };
-        Grid.SetColumn(statusBox, 1); top.Children.Add(statusBox);
+        var lower = new Grid();lower.RowDefinitions.Add(new() { Height = GridLength.Auto });lower.RowDefinitions.Add(new() { Height = new(1,GridUnitType.Star) });Grid.SetRow(lower,2);Children.Add(lower);
+        var header = new DockPanel { Margin = new(0,0,0,12) };
+        header.Children.Add(AddButton("Add a folder",AddFolderClick));header.Children.Add(AddButton("Add a game",AddGameClick));header.Children.Add(AddButton("Rescan",Rescan));
+        header.Children.Add(Kit.Text("Games & profiles",18,"DS.Text",FontWeights.SemiBold));lower.Children.Add(header);
+        shelfScroll = new ScrollViewer { Content = shelf, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false, Padding = new(0,4,0,8) };
+        Grid.SetRow(shelfScroll,1);lower.Children.Add(shelfScroll);
 
-        // Library and selected game share a stable lower row; neither can push the footer away.
-        var lower = new Grid(); lower.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
-        lower.ColumnDefinitions.Add(new() { Width = new(18) }); lower.ColumnDefinitions.Add(new() { Width = new(.58, GridUnitType.Star) });
-        lower.ColumnDefinitions.Add(new() { Width = new(14) }); lower.ColumnDefinitions.Add(new() { Width = new(.46, GridUnitType.Star) });
-        Grid.SetRow(lower, 2); Children.Add(lower);
-        shelfScroll = new ScrollViewer { Content = shelf, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Focusable = false, Padding = new(4, 6, 4, 6) };
-        var header = new DockPanel { Margin = new(0, 0, 0, 12) };
-        header.Children.Add(AddButton("Add a folder", AddFolderClick)); header.Children.Add(AddButton("Add a game", AddGameClick));
-        header.Children.Add(Kit.Text("Your games", 19, "DS.Text", FontWeights.SemiBold));
-        DockPanel.SetDock(header, Dock.Top);
-        var library = new DockPanel(); library.Children.Add(header); library.Children.Add(shelfScroll);
-        lower.Children.Add(Kit.Panel(null, null, null, library, new Thickness(16)));
-        featured.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
-        featured.RowDefinitions.Add(new() { Height = GridLength.Auto });
-        heroArt.Margin = new(18, 14, 18, 10); featured.Children.Add(heroArt);
-        var info = new Grid { Margin = new(18, 8, 18, 16) };
-        info.RowDefinitions.Add(new() { Height = GridLength.Auto }); info.RowDefinitions.Add(new() { Height = GridLength.Auto });
-        featuredTitle.FontSize = 22; featuredTitle.TextTrimming = TextTrimming.CharacterEllipsis;
-        featuredMeta.FontSize = 12; featuredMeta.TextTrimming = TextTrimming.CharacterEllipsis;
-        var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { featuredTitle, featuredMeta } }; info.Children.Add(words);
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        changeIcon = AddButton("Change icon", ChangeIcon); actions.Children.Add(changeIcon);
-        play = new Button { Style = DS.Style("DS.ActionPrimary"), MinWidth = 100, Height = 42, Content = "▶  Play", Margin = new(8, 0, 0, 0) };
-        play.Click += (_, _) => PlayGame(current, heroArt); actions.Children.Add(play);
-        actions.Margin = new(0, 10, 0, 0); Grid.SetRow(actions, 1); info.Children.Add(actions); Grid.SetRow(info, 1); featured.Children.Add(info);
-        var selectedPanel = Kit.Panel(null, null, null, featured, new Thickness(0)); Grid.SetColumn(selectedPanel, 2); lower.Children.Add(selectedPanel);
-        var setupContent = new StackPanel { Width = 260 };
-        setupContent.Children.Add(Kit.Text("Game setup", 24, "DS.Text", FontWeights.SemiBold));
-        setupContent.Children.Add(Kit.Text("Load a controller setup before playing.", 14, "DS.TextSoft").Also(t => { t.TextWrapping = TextWrapping.Wrap; t.Margin = new(0, 8, 0, 16); }));
-        var choices = new ComboBox { MinHeight = 36, DisplayMemberPath = "Name", ItemsSource = setups?.Where(x => x.ModelId == model.Id && x.Snapshot.HasValue).ToArray() ?? [] };
-        setupContent.Children.Add(choices);
-        bool hasSetups = choices.Items.Count > 0; choices.IsEnabled = hasSetups;
-        var result = Kit.Text(hasSetups ? "Choose a saved setup for this controller." : "No compatible saved setups yet. Open Manage setups to create one.", 12, "DS.TextSoft"); result.TextWrapping = TextWrapping.Wrap;
-        var load = AddButton("Load setup", () => {
-            if (choices.SelectedItem is not SavedSetup chosen || loadSetup == null) return;
-            try { loadSetup(chosen.Id); result.Text = "Loaded into your working settings."; }
-            catch (Exception ex) when (ex is InvalidOperationException or System.IO.InvalidDataException) { result.Text = "This setup cannot be loaded for this controller."; }
-        }); load.Margin = new(0, 12, 0, 10); setupContent.Children.Add(load); setupContent.Children.Add(result);
-        choices.SelectionChanged += (_, _) => load.IsEnabled = choices.SelectedItem != null;
-        load.IsEnabled = false;
-        foreach (string destination in new[] { "Setups", "Buttons", "Curves", "Macros" }) {
-            var target = destination; var shortcut = AddButton(destination == "Setups" ? "Manage setups" : "Edit " + destination.ToLowerInvariant(), () => PageRequested?.Invoke(target));
-            shortcut.Margin = new(0, 12, 0, 0); setupContent.Children.Add(shortcut);
-        }
-        var setupPanel = Kit.Panel(null, null, null, new Viewbox { Child = setupContent, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly }, new Thickness(18));
-        Grid.SetColumn(setupPanel, 4); lower.Children.Add(setupPanel);
+        // A single selected-game context replaces the separate Play and Game setup cards.
+        var context = new Grid { Margin = new(0,12,0,0) };context.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});context.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
+        var words=new StackPanel {VerticalAlignment=VerticalAlignment.Center};featuredTitle.FontSize=18;featuredTitle.Margin=new(0,0,0,3);featuredMeta.FontSize=12;words.Children.Add(featuredTitle);words.Children.Add(featuredMeta);context.Children.Add(words);
+        var actions=new StackPanel { Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center };
+        var choices = new ComboBox { Width=170,MinHeight=38,Margin=new(8,0,4,0),DisplayMemberPath="Name",ToolTip="Choose a saved controller setup",ItemsSource=setups?.Where(x=>x.ModelId==model.Id&&x.Snapshot.HasValue).ToArray()??[] };
+        bool hasSetups=choices.Items.Count>0;choices.IsEnabled=hasSetups;choices.Visibility=Visibility.Visible;actions.Children.Add(choices);
+        var load=AddButton("Load setup",()=>{
+            if(choices.SelectedItem is not SavedSetup chosen||loadSetup==null)return;
+            try{loadSetup(chosen.Id);workingSetup.Text=chosen.Name;}
+            catch(Exception ex) when(ex is InvalidOperationException or InvalidDataException){featuredMeta.Text="This setup cannot be loaded for this controller.";}
+        });load.IsEnabled=false;load.Visibility=Visibility.Visible;choices.SelectionChanged+=(_,_)=>load.IsEnabled=choices.SelectedItem!=null;actions.Children.Add(load);
+        var edit=AddButton("Edit",()=>PageRequested?.Invoke("Setups"));edit.ToolTip="Manage controller setups";actions.Children.Add(edit);
+        var gameActions=new StackPanel{Orientation=Orientation.Horizontal,Margin=new(0)};
+        play=new Button { Style=DS.Style("PrimaryButton"),Content="▶  Play",MinWidth=100,Height=42,MinHeight=42,Margin=new(8,0,0,0) };play.Click+=(_,_)=>PlayGame(current,heroArt);
+        changeIcon=AddButton("Change icon",ChangeIcon);changeIcon.ToolTip="Change the selected game's image";changeIcon.Margin=new(0);changeIcon.Padding=new(10,0,10,0);gameActions.Children.Add(changeIcon);gameActions.Children.Add(play);actions.Children.Add(gameActions);
+        Grid.SetColumn(actions,1);context.Children.Add(actions);Grid.SetRow(context,3);Children.Add(context);
+        // One surface contains the library and its selected-game command row.
+        Children.Remove(lower);Children.Remove(context);
+        var library=new Grid();library.RowDefinitions.Add(new(){Height=new(1,GridUnitType.Star)});library.RowDefinitions.Add(new(){Height=new(70)});
+        Grid.SetRow(lower,0);Grid.SetRow(context,1);library.Children.Add(lower);library.Children.Add(context);
+        var libraryPanel=Kit.Panel(null,null,null,library,new Thickness(16,12,16,8));Grid.SetRow(libraryPanel,2);Grid.SetRowSpan(libraryPanel,2);Children.Add(libraryPanel);
         Feature(null);
         Loaded += async (_, _) => { if (!EntryTransitionPending) { preview.Start(); await Populate(); } };
         Unloaded += (_, _) => preview.Stop();
@@ -178,13 +154,16 @@ public sealed class DashboardConsolePage : Grid
     {
         if (height <= 0) return;
         RowDefinitions[0].MinHeight = 0;
-        double cover = Math.Clamp(height * .19, 86, 140);
+        double cover = Math.Clamp(height * .25, 110, 190);
+        RowDefinitions[2].Height = new(cover + 130);
         if (Math.Abs(cover - coverHeight) > .5) { coverHeight = cover; foreach (var (art, title) in covers) SizeCover(art, title); }
     }
     private void SizeCover(Border art, TextBlock title)
     {
-        double w = Math.Round(coverHeight), h = Math.Round(coverHeight); // big square tiles
-        art.Width = w; art.Height = h; art.Clip = new RectangleGeometry(new Rect(0, 0, w, h), 14, 14); title.Width = w;
+        double w = Math.Round(coverHeight), h = Math.Round(coverHeight); // every cover shares the Genshin square frame
+        if(art.Child is Image cover)cover.Stretch=Stretch.UniformToFill;
+        art.Width = w; art.Height = h; art.Clip = new RectangleGeometry(new Rect(0, 0, w, h), 14, 14); title.Width = Math.Max(130,w); title.TextTrimming = TextTrimming.CharacterEllipsis; title.TextWrapping = TextWrapping.NoWrap;
+        if (art.Parent is Grid frame) { frame.Width = w; frame.Height = h; }
     }
 
     /// <summary>Moves keyboard/gamepad focus to the hero so the page is immediately navigable.</summary>
@@ -208,8 +187,7 @@ public sealed class DashboardConsolePage : Grid
         shelf.Children.Clear();
         gamesCount.Text = list.Count.ToString();
         if (list.Count == 0) { featuredMeta.Text = "No games found"; shelf.Children.Add(Kit.Info("No installed games found. Add a game or folder.")); return; }
-        int i = 0;
-        foreach (var g in list) { var card = Card(g); shelf.Children.Add(card); cards.Add((card, g)); if (animate) Enter(card, i++ * 35); }
+        foreach (var g in list) { var card = Card(g); shelf.Children.Add(card); cards.Add((card, g)); }
         Feature(list[0]);
     }
 
@@ -217,21 +195,24 @@ public sealed class DashboardConsolePage : Grid
     {
         UIElement face;
         var cover = Bitmap(GameArtwork.PathFor(g));
-        if (cover != null) face = new Image { Source = cover, Stretch = Stretch.UniformToFill };
+        if (cover != null) face = new Image { Source = cover, Stretch = Stretch.Uniform, SnapsToDevicePixels=true, UseLayoutRounding=true };
         else
         {
             string initials = string.Concat(g.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => char.IsLetterOrDigit(w[0])).Take(2).Select(w => char.ToUpperInvariant(w[0])));
             int hue = Math.Abs(g.Name.GetHashCode()) % 360; var c = Hsl(hue, .45, .28);
             face = new Grid { Background = new LinearGradientBrush(c, Hsl(hue, .5, .16), 90), Children = { Kit.Text(initials, 40, "DS.Text").Also(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.Opacity = .85; }) } };
         }
-        var art = new Border { CornerRadius = new(14), ClipToBounds = true, Child = face, BorderThickness = new(3), BorderBrush = Brushes.Transparent };
+        if(face is Image image)RenderOptions.SetBitmapScalingMode(image,BitmapScalingMode.HighQuality);
+        var art = new Border { CornerRadius = new(12), Background=new SolidColorBrush(Color.FromRgb(17,26,41)),ClipToBounds = true, Child = face, BorderThickness = new(2), BorderBrush = Brushes.Transparent };
         var store = new Border { CornerRadius = new(9), Padding = new(8, 2, 8, 3), Background = new SolidColorBrush(Color.FromArgb(200, 6, 10, 22)), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(0, 0, 10, 10), Child = Kit.Text(g.Store, 11.5, "DS.TextSoft", FontWeights.SemiBold) };
         var title = Kit.Text(g.Name, 14, "DS.TextSoft"); title.Margin = new(2, 6, 0, 0);
         covers.Add((art, title)); SizeCover(art, title);
-        var stack = new StackPanel { Children = { new Grid { Children = { art, store } }, title }, RenderTransformOrigin = new(.5, .4), RenderTransform = new ScaleTransform(1, 1) };
+        var stack = new StackPanel { Children = { new Grid { HorizontalAlignment=HorizontalAlignment.Left, Children = { art, store } }, title }, RenderTransformOrigin = new(.5, .4), RenderTransform = new ScaleTransform(1, 1) };
+        SizeCover(art,title);
         var b = new Button { Content = stack, Template = Bare(), Margin = new(0, 0, 12, 12), Cursor = Cursors.Hand, FocusVisualStyle = null, ToolTip = $"{g.Name} · {g.Store}" };
-        b.GotKeyboardFocus += (_, _) => { Feature(g); art.BorderBrush = Brushes.White; art.Effect = new DropShadowEffect { Color = Kit.Blue, BlurRadius = 26, ShadowDepth = 0, Opacity = .9 }; Lift(stack, 1.06); title.Foreground = DS.Brush("DS.Text"); b.BringIntoView(new Rect(-40, 0, coverHeight + 12, coverHeight + 34)); };
-        b.LostKeyboardFocus += (_, _) => { art.BorderBrush = Brushes.Transparent; art.Effect = null; Lift(stack, 1); title.Foreground = DS.Brush("DS.TextSoft"); };
+        b.GotKeyboardFocus += (_, _) => { Feature(g); art.BorderBrush = Brushes.White; Lift(stack, 1.01); title.Foreground = DS.Brush("DS.Text"); b.BringIntoView(new Rect(-12,0,coverHeight+12,coverHeight+34)); };
+        b.LostKeyboardFocus += (_, _) => { art.BorderBrush = current?.Id==g.Id?DS.Brush("DS.AccentHi"):Brushes.Transparent;Lift(stack,1); };
+        b.MouseEnter+=(_,_)=>Lift(stack,1.01);b.MouseLeave+=(_,_)=>Lift(stack,1);
 
         b.Click += (_, _) => Feature(g);
         return b;
@@ -239,7 +220,7 @@ public sealed class DashboardConsolePage : Grid
 
     private Button AddButton(string text, Action click)
     {
-        var button = new Button { Style = DS.Style("DS.ActionSecondary"), Height = 30, MinHeight = 0, Padding = new(14, 0, 14, 0), Margin = new(8, 0, 4, 0), Content = Kit.Text(text, 13, "DS.Text"), FocusVisualStyle = null };
+        var button = new Button { Style = DS.Style(text.StartsWith("Add ")?"PrimaryButton":"ActionButton"), Height = 42, MinHeight = 42, Padding = new(22, 0, 22, 0), Margin = new(8, 0, 4, 0), Content = Kit.Text(text, 14, "DS.Text"), FocusVisualStyle = null };
         button.Click += (_, _) => click(); DockPanel.SetDock(button, Dock.Right); return button;
     }
     private void AddGameClick()
@@ -324,6 +305,7 @@ public sealed class DashboardConsolePage : Grid
     private void Feature(GameEntry? g)
     {
         if (g != null && ReferenceEquals(g, current)) return; current = g;
+        for(int i=0;i<Math.Min(cards.Count,covers.Count);i++){bool selected=cards[i].Game.Id==g?.Id;covers[i].art.BorderBrush=selected?DS.Brush("DS.AccentHi"):Brushes.Transparent;covers[i].title.Foreground=DS.Brush(selected?"DS.Text":"DS.TextSoft");}
         var hero = g == null ? null : Bitmap(GameArtwork.PathFor(g)) ?? Bitmap(g.Hero); var mark = Bitmap(g?.Logo);
         if (animate && heroArt.Source != hero) { heroArt.BeginAnimation(OpacityProperty, null); heroArt.Opacity = 0; }
         heroArt.Source = hero; if (hero != null) { if (animate) heroArt.BeginAnimation(OpacityProperty, DS.To(1, 320)); else heroArt.Opacity = 1; }
@@ -336,21 +318,21 @@ public sealed class DashboardConsolePage : Grid
     private void OnKey(object sender, KeyEventArgs e)
     {
         int index = cards.FindIndex(c => c.Card.IsKeyboardFocusWithin);
-        if (e.Key is Key.Right or Key.Left or Key.Up or Key.Down && index >= 0)
+        if (e.Key is Key.Right or Key.Left && index >= 0)
         {
-            int columns = Math.Max(1, (int)(shelf.ActualWidth / (coverHeight + 12)));
-            int step = e.Key == Key.Right ? 1 : e.Key == Key.Left ? -1 : e.Key == Key.Down ? columns : -columns;
+            int step = e.Key == Key.Right ? 1 : -1;
             cards[Math.Clamp(index + step, 0, cards.Count - 1)].Card.Focus(); e.Handled = true;
         }
+        else if(index>=0 && e.Key==Key.Up){heroFocus?.Focus();e.Handled=true;}
+        else if(index>=0 && e.Key==Key.Down){play.Focus();e.Handled=true;}
         else if (e.Key is Key.Enter or Key.A && Keyboard.FocusedElement is Button focused && !e.IsRepeat) { focused.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); e.Handled = true; }
     }
 
     private void Lift(FrameworkElement e, double to)
     {
         // a transform shared from a style is frozen; give the element its own before animating it
-        if (e.RenderTransform is not ScaleTransform s || s.IsFrozen || s.IsSealed) { s = new ScaleTransform(e.RenderTransform is ScaleTransform old ? old.ScaleX : 1, e.RenderTransform is ScaleTransform o2 ? o2.ScaleY : 1); e.RenderTransform = s; e.RenderTransformOrigin = new(.5, .5); }
-        if (!animate) { s.ScaleX = s.ScaleY = to; return; }
-        s.BeginAnimation(ScaleTransform.ScaleXProperty, DS.To(to, 160)); s.BeginAnimation(ScaleTransform.ScaleYProperty, DS.To(to, 160));
+        if(e.RenderTransform is not TranslateTransform s){s=new TranslateTransform();e.RenderTransform=s;}
+        double y=to>1?-2:0;if(!animate){s.Y=y;return;}s.BeginAnimation(TranslateTransform.YProperty,DS.To(y,160));
     }
     private static void Enter(FrameworkElement e, int delay)
     {
@@ -361,7 +343,7 @@ public sealed class DashboardConsolePage : Grid
     private static BitmapImage? Bitmap(string? path)
     {
         if (path == null || !File.Exists(path)) return null;
-        try { var b = new BitmapImage(); b.BeginInit(); b.UriSource = new Uri(path); b.CacheOption = BitmapCacheOption.OnLoad; b.DecodePixelWidth = 900; b.EndInit(); b.Freeze(); return b; } catch { return null; }
+        try { var b = new BitmapImage(); b.BeginInit(); b.UriSource = new Uri(path); b.CacheOption = BitmapCacheOption.OnLoad; b.EndInit(); b.Freeze(); return b; } catch { return null; }
     }
     private static Color Hsl(double h, double s, double l)
     {

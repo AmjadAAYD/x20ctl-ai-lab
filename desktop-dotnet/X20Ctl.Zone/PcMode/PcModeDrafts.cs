@@ -13,7 +13,7 @@ public static class PcModeDrafts
     {
         buttons.ResetAll();
         foreach (var source in ButtonDraft.Sources)
-            if (p.Remap.TryGetValue(source, out var target) && ButtonDraft.Targets.Contains(target)) buttons.Set(source, target);
+            if (p.Remap.TryGetValue(source, out var target) && (ButtonDraft.Targets.Contains(target)||buttons.PcMode&&target=="NONE")) buttons.Set(source, target);
 
         foreach (var channel in Enum.GetValues<CurveChannel>())
         {

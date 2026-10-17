@@ -29,48 +29,24 @@ internal static class GameArtwork
     }
 }
 
-/// <summary>Front/rear artwork turns edge-on before swapping; layout bounds never change.</summary>
+/// <summary>Front by default; the owner can switch sides manually. No timed turn or idle sway.</summary>
 internal sealed class DashboardControllerPreview : Grid
 {
     private readonly Grid body = new();
-    private readonly PhotoController front, rear;
-    private readonly TranslateTransform hover = new();
-    private readonly ScaleTransform turn = new(1, 1);
-    private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(5) };
-    private readonly bool animate;
-    private bool started, back;
-    private int generation;
+    private readonly string model;
+    private readonly PhotoController front;
+    private PhotoController? rear;
+    public bool IsRear {get;private set;}
+    public void Flip()
+    {
+        IsRear=!IsRear;body.Children.Clear();
+        body.Children.Add(IsRear ? rear??=new PhotoController(model,true) : front);
+    }
     public DashboardControllerPreview(string model, bool animate)
     {
-        Width = 1536; Height = 1024; this.animate = animate;
-        front = new PhotoController(model); rear = new PhotoController(model, true) { Opacity = 0 };
-        body.Children.Add(front); body.Children.Add(rear); body.RenderTransform = turn; body.RenderTransformOrigin = new(.5, .5);
-        RenderTransform = hover; Children.Add(body);
-        timer.Tick += (_, _) => Turn();
-        Unloaded += (_, _) => Stop();
-        IsVisibleChanged += (_, _) => { if (IsVisible && started) Resume(); else Pause(); };
+        Width=1536;Height=1024;
+        this.model=model;front=new PhotoController(model);body.Children.Add(front);Children.Add(body);
     }
-    public void Start() { if (!animate) return; started = true; if (IsVisible) Resume(); }
-    private void Resume()
-    {
-        if (timer.IsEnabled) return;
-        hover.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-14, 14, TimeSpan.FromSeconds(2.5)) {
-            AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
-        timer.Start();
-    }
-    private void Pause()
-    {
-        generation++; timer.Stop(); hover.BeginAnimation(TranslateTransform.YProperty, null); turn.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-        turn.ScaleX = 1; hover.Y = 0;
-    }
-    public void Stop() { started = false; Pause(); }
-    private async void Turn()
-    {
-        int token = generation;
-        turn.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, .015, TimeSpan.FromMilliseconds(280)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseIn } });
-        await System.Threading.Tasks.Task.Delay(280);
-        if (token != generation || !IsVisible) return;
-        back = !back; front.Opacity = back ? 0 : 1; rear.Opacity = back ? 1 : 0;
-        turn.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(.015, 1, TimeSpan.FromMilliseconds(340)) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
-    }
+    public void Start() { }
+    public void Stop() { }
 }
