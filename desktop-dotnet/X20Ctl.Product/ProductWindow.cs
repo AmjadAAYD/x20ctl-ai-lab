@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Shell;
@@ -66,7 +66,15 @@ public sealed class ProductWindow : Window
         if(ReviewSandbox.Active)return;
         async void Read()
         {
-            var (text,low)=await Task.Run<(string,bool)>(()=>{try{using var reader=new X20Ctl.Product.Scanner.WindowsReader("XInput1_4.dll");for(int slot=0;slot<4;slot++){if(PcModeService.IsVirtual(slot)||!reader.Read(slot,out _))continue;var (_,level,known)=reader.Battery(slot);return known?("Battery "+level,level is "low" or "empty"):("",false);}}catch(Exception error) when(error is System.IO.IOException or ArgumentException){}return ("",false);});
+            var levels=await Task.Run(()=>{
+                var result=new string?[4];
+                try{using var reader=new X20Ctl.Product.Scanner.WindowsReader("XInput1_4.dll");for(int slot=0;slot<4;slot++){
+                    if(PcModeService.IsVirtual(slot)||!reader.Read(slot,out _))continue;
+                    var(type,level,known)=reader.Battery(slot);result[slot]=type=="wired"?"wired":known?level:null;
+                }}catch(Exception error)when(error is System.IO.IOException or ArgumentException){}return result;
+            });
+            Host.UpdateBatteryLevels(levels);
+            string? first=levels.FirstOrDefault(level=>level!=null && level!="wired");string text=first==null?"":"Battery "+first;bool low=first is "low" or "empty";
             tray?.SetBattery(text);
             if(low&&!batteryWarned){batteryWarned=true;tray?.Notify("Controller battery low","Charge it soon. Windows reports the level as "+text[8..]+".");}else if(!low)batteryWarned=false;
         }

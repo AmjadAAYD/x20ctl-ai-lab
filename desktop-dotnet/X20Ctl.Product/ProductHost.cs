@@ -10,6 +10,8 @@ namespace X20Ctl.Product;
 
 public sealed class ProductHost : Grid
 {
+    private string?[] batteryLevels=new string?[4];
+    public void UpdateBatteryLevels(string?[] levels){batteryLevels=(string?[])levels.Clone();if(Studio is {} studio)studio.SetBatteryLevel(batteryLevels[studio.Player]);}
     public ZoneScene Zone { get; }
     public ControllerCatalog Catalog { get; }
     public StudioScene? Studio { get; private set; }
@@ -24,7 +26,7 @@ public sealed class ProductHost : Grid
     private readonly SemaphoreSlim nativeContextLock=new(1,1);
     private readonly object nativeEventLock=new();private JsonElement? latestNativeEvent;private int nativeEventScheduled;
     private HashSet<string> lastNativeButtons=new();private bool nativeArmed;private long lastNativeSequence=-1,lastNavigationUs;
-    private string ExpectedNativeContext=>Studio?.InputContext==InputOwner.TesterCapture?"TESTER_CAPTURE":"UI_NAVIGATION";
+    private string ExpectedNativeContext=>Studio?.InputContext is InputOwner.TesterCapture or InputOwner.RemapCapture?"TESTER_CAPTURE":"UI_NAVIGATION";
     public bool IntroWasPlayed {get;private set;}
     private readonly ProductPreferences preferences;
     private readonly bool preferencesHealthy;
@@ -66,6 +68,7 @@ public sealed class ProductHost : Grid
         try { var ids = store.Load(); if (assignmentPath != null && ids.Any(id => id != null)) Zone.RestoreAssignments(ids, Catalog); }
         catch (Exception error) when (error is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
         { Zone.FeedbackText.Text = "Saved assignments could not be read. Original file preserved; new choices will be session-only."; }
+        Zone.ControllerRemoved += index => {try{store.Save(Zone.State.Players.Select(p=>p.ModelId).ToArray());}catch(Exception error)when(error is IOException or UnauthorizedAccessException or InvalidOperationException){Zone.FeedbackText.Text="Removed for this session; saved assignments could not be updated.";}};
         Zone.ControllerActionRequested += (index, change) => { if (change || Zone.State.Players[index].Model == null) OpenSelector(index); else VerifyThenEnter(index); };
     }
     public void OpenSelector(int player)
@@ -136,6 +139,7 @@ public sealed class ProductHost : Grid
         if(pcModeStore!=null)PcModePage.UsePlayer(player,pcModeStore); // each controller has its own PC mode settings
         if(pc)PcModeSync.Prepare(pcModeStore!,draft,curveDraft,macroDraft);
         Studio = new(player, model, draft, Zone.ReducedMotion, curveDraft,macroDraft,vibrationDraft,setupStore,legacySources,activeSetup); if(PcMode!=null&&pcModeStore!=null)Studio.PcMode=new(pcModeStore,PcMode,preferencesHealthy?preferences:null);Studio.MouseService=MouseMode;Studio.PcModeSwitched+=()=>Dispatcher.BeginInvoke(()=>{EnterStudio(player);Studio?.ShowManagement("PcMode");});Studio.BackRequested += ReturnToZone;Studio.SupportRequested+=OpenSupport;Studio.ActiveSetupChanged+=id=>activeSetups[key]=id;
+        Studio.SetBatteryLevel(batteryLevels[player]);
         Studio.NativeEngineStatus=NativeEngineStatus;
         Studio.InputContextChanged+=()=>_=UpdateNativeContext();
         if(Engine!=null)_=RefreshNativeCapabilities(model.Id);
@@ -146,44 +150,9 @@ public sealed class ProductHost : Grid
             var art=Zone.Docks[player].ControllerArtwork;
             if(art.ActualWidth>0 && art.ActualHeight>0) source=art.TransformToAncestor(this).TransformBounds(new Rect(art.RenderSize));
         }
-        if(Studio.Dashboard is {} dashboard) dashboard.EntryTransitionPending = !Zone.ReducedMotion && DS.Motion;
-        Children.Add(Studio); var entering=Studio;
-        if (Zone.ReducedMotion || !DS.Motion) { Zone.Visibility=Visibility.Collapsed; return; }
-        entering.Opacity=0; entering.IsHitTestVisible=false; Zone.IsHitTestVisible=false;
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded,new Action(()=>EnterWithController(entering,model,source)));
-    }
-    private void EnterWithController(StudioScene entering, ControllerModel model, Rect source)
-    {
-        if(Studio!=entering)return;
-        // Resolve the destination after the newly added Studio has been measured.
-        entering.UpdateLayout();
-        var hero=entering.Dashboard?.ControllerArtwork;
-        if(hero==null || source.IsEmpty || hero.ActualWidth<=0)
-        {
-            entering.Opacity=1;entering.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;entering.Dashboard?.CompleteEntryTransition();return;
-        }
-        var destination=hero.TransformToAncestor(this).TransformBounds(new Rect(hero.RenderSize));
-        if(destination.Width<1 || destination.Height<1){entering.Opacity=1;entering.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;entering.Dashboard?.CompleteEntryTransition();return;}
-        // Animate transforms only: layout and image decoding must not run on every flight frame.
-        var fit = Math.Min(destination.Width / 1536, destination.Height / 1024);
-        destination = new Rect(destination.Left + (destination.Width - 1536 * fit) / 2,
-            destination.Top + (destination.Height - 1024 * fit) / 2, 1536 * fit, 1024 * fit);
-        var flight=new Viewbox { Width=source.Width,Height=source.Height,Child=new PhotoController(model.Id),IsHitTestVisible=false };
-        var scale=new ScaleTransform(1,1); var move=new TranslateTransform(source.Left,source.Top);
-        var transforms=new TransformGroup(); transforms.Children.Add(scale);transforms.Children.Add(move);flight.RenderTransform=transforms;
-        var layer=new Canvas { IsHitTestVisible=false };layer.Children.Add(flight);Children.Add(layer);Panel.SetZIndex(layer,37);
-        hero.Opacity=0;
-        var origin=Zone.Docks[entering.Player].ControllerArtwork; origin.Opacity=0;
-        layer.UpdateLayout();
-        var ease=new CubicEase { EasingMode=EasingMode.EaseInOut };var duration=TimeSpan.FromMilliseconds(520);
-        move.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(source.Left,destination.Left,duration){EasingFunction=ease});
-        move.BeginAnimation(TranslateTransform.YProperty,new DoubleAnimation(source.Top,destination.Top,duration){EasingFunction=ease});
-        scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(1,destination.Width/source.Width,duration){EasingFunction=ease});
-        var arrive=new DoubleAnimation(1,destination.Height/source.Height,duration){EasingFunction=ease};
-        arrive.Completed+=(_,_)=>{Children.Remove(layer);origin.Opacity=1;hero.Opacity=1;entering.IsHitTestVisible=true;if(Studio==entering){Zone.Visibility=Visibility.Collapsed;Zone.Opacity=1;entering.Dashboard?.CompleteEntryTransition();}};
-        scale.BeginAnimation(ScaleTransform.ScaleYProperty,arrive);
-        entering.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,duration){EasingFunction=ease});
-        Zone.BeginAnimation(OpacityProperty,new DoubleAnimation(1,0,TimeSpan.FromMilliseconds(360)));
+        Children.Add(Studio);
+        Studio.Opacity=1;Studio.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;
+        Studio.Dashboard?.CompleteEntryTransition();
     }
 
     public void ReturnToZone()
@@ -241,14 +210,15 @@ public sealed class ProductHost : Grid
                 double lx=payload.GetProperty("leftX").GetDouble(),ly=payload.GetProperty("leftY").GetDouble();if(Math.Abs(lx)>.6&&Math.Abs(lx)>=Math.Abs(ly))now.Add(lx>0?"LS_RIGHT":"LS_LEFT");else if(Math.Abs(ly)>.6)now.Add(ly>0?"LS_UP":"LS_DOWN");}
             var pressed=now.Except(lastNativeButtons).ToArray();lastNativeButtons=now;
             long time=value.GetProperty("timestampUs").GetInt64();
+            if(Studio?.CapturingButtonEditor==true){if(connected){foreach(var button in pressed.Where(b=>!b.StartsWith("LS_")))Studio.SelectPhysicalButton(button);}nativeArmed=false;return;}
             // Home / Guide: bring X20CTL forward from anywhere (tray, behind a game); in front it goes home
-            if(connected&&pressed.Contains("HOME")&&Studio?.ManagementPage!="Diagnostics"){HomeRequested?.Invoke();return;}
+            if(connected&&pressed.Contains("HOME")&&Studio?.ManagementPage is not ("Diagnostics" or "Mouse")){HomeRequested?.Invoke();return;}
             // the controller is the mouse: its buttons click and type, so they must not also move around X20CTL (Home still comes home)
             if(MouseMode?.Active==true){nativeArmed=false;return;}
-            if(Studio?.ManagementPage is "Tester" or "Diagnostics")
+            if(Studio?.ManagementPage is "Tester" or "Diagnostics" or "Mouse")
             {
                 // the Tester owns every input; only a deliberate one-second hold of B leaves it
-                if(now.Contains("B")){if(bHeldSinceUs==0)bHeldSinceUs=time;else if(time-bHeldSinceUs>=1_000_000){bHeldSinceUs=0;Studio.ShowManagement("Device");nativeArmed=false;return;}}else bHeldSinceUs=0;
+                if(Studio.ManagementPage=="Tester" && now.Contains("B")){if(bHeldSinceUs==0)bHeldSinceUs=time;else if(time-bHeldSinceUs>=1_000_000){bHeldSinceUs=0;Studio.ShowManagement("Device");nativeArmed=false;return;}}else bHeldSinceUs=0;
                 if(Studio.ManagementPage=="Tester")Studio.Tester?.ReceiveNative(value);nativeArmed=false;return;
             }
             if(!connected||Window.GetWindow(this)?.IsActive!=true){nativeArmed=false;return;}if(!nativeArmed){if(now.Count==0)nativeArmed=true;return;}
@@ -302,17 +272,11 @@ public sealed class ProductHost : Grid
     private void ShowUpdateNotice()
     {
         if(updateShown||updateText==null||Updater.Ready is not {} release)return;updateShown=true;
-        var label=Kit.Text(Updater.Installed!=null ? "Update installed · restart to finish" : release.Title+" available  ↓",14,"DS.Text",FontWeights.SemiBold);
+        var label=Kit.Text(Updater.Installed!=null ? "Update installed · restart to finish" : "Update available · "+release.Title,14,"DS.Text",FontWeights.SemiBold);
         label.TextTrimming=TextTrimming.CharacterEllipsis;
-        var go=new Button { Style=DS.Style("DS.ActionSecondary"), MinHeight=38, Padding=new(18,6,18,6), Content=label, ToolTip=updateText };
-        var shine=new LinearGradientBrush(); shine.StartPoint=new(0,0); shine.EndPoint=new(0,1);
-        shine.GradientStops.Add(new(Color.FromArgb(105,174,218,255),0));
-        shine.GradientStops.Add(new(Color.FromArgb(55,63,125,201),.48));
-        shine.GradientStops.Add(new(Color.FromArgb(105,15,44,88),.5));
-        shine.GradientStops.Add(new(Color.FromArgb(95,47,103,174),1));
-        go.Background=Brushes.Transparent; go.BorderThickness=new(0);
-        var glass=new Border { CornerRadius=new(19), Background=shine, BorderThickness=new(1), BorderBrush=new SolidColorBrush(Color.FromArgb(140,163,209,255)), Child=go, MaxWidth=460 };
-        Zone.UpdateNotice.Content=glass;
+        label.Foreground=DS.Brush("Zone.TextSecondary");
+        var go=new Button { Style=DS.Style("Zone.Utility"),MinHeight=38,Padding=new(18,0,18,0),Content=label,ToolTip=updateText,MaxWidth=460 };
+        Zone.UpdateNotice.Content=go;
         go.Click+=async(_,_)=>
         {
             if(Updater.Installed!=null)return;

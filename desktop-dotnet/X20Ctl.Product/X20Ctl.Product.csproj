@@ -34,7 +34,7 @@
     <Content Include="../../src/assets/controllers/control-shapes.json" Link="Data/control-shapes.json" CopyToOutputDirectory="PreserveNewest" />
     <Resource Include="../../src/assets/controllers/**/native/*.png" Link="Assets/native/%(RecursiveDir)%(Filename)%(Extension)" />
     <Content Include="../../src/assets/controllers/native-layers.json" Link="Data/native-layers.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Brand/original-intro.wav" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Brand/intro-audio-provenance.md" CopyToOutputDirectory="PreserveNewest" />
     <!-- the guides Agent XCTL answers app questions from (M5) -->
     <Content Include="../../README.md;../../IF-YOUR-CONTROLLER-ISNT-WORKING.md;../../PRIVACY.md" Link="Help/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <!-- PC mode's two installers (ViGEmBus, HidHide; see vendor/drivers/README.md), carried inside the exe when present -->
