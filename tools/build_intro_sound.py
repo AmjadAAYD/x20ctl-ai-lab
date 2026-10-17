@@ -7,7 +7,7 @@ is D minor, kept in the middle register (no lead above D5), so it reads as a cin
 
 The story, in time with IntroView and IntroBladeFormation:
   0.18-0.54  the three LED eyes: D4, F4, A4 on the electric piano, left to right
-  1.45-2.45  the white outline drawn on the beat: eight climbing plucks that follow the line round, a ninth as it closes
+  1.45-2.45  the white outline: eight soft climbing plucks placed where the smooth line passes, a last as it closes
   2.95-4.03  the blades sliding in: one repeated pluck that speeds up and brightens, and the lock chord swelling in
              backwards out of its own reverb
   4.03       the lock: the chord (D minor with a ninth) on the piano, a soft low body under it, the pad opening up
@@ -135,17 +135,29 @@ def room(seconds=2.6, size=.32):
 for at, note, pan in ((.18, "D4", -.35), (.36, "F4", 0), (.54, "A4", .35)):
     place(piano(note, 2.2, .42), at, .22, pan, wet=.5)
 
-# 2. the outline (owner 17 Oct: the picture moves with the music): the blue streak glides under the pad alone; then the
-#    white line is drawn in eight surges, one per pluck (IntroBeats.Outline in IntroPetals.cs, keep in step), each
-#    pluck heard from where the line is on the controller - top, left grip, bottom, right grip - climbing as it goes,
-#    and a ninth note as the line closes on itself
-OUTLINE = [1.45 + k * .125 for k in range(9)]
+# 2. the outline (owner 17 Oct: a line drawn on a beat felt forced, so the music follows the drawing instead): the white
+#    line is one smooth stroke, 1.45 s to 2.45 s, slow to start, quick through the middle, easing as it closes
+#    (IntroBeats in IntroFog.cs, keep in step). A pluck sounds as the line passes each eighth of the controller, heard
+#    from where it is, climbing as it goes, so the notes gather where the line is quick and part where it slows, like a
+#    hand drawn across a koto. The last rings out as the line closes.
+OUTLINE_FROM, OUTLINE_FOR = 1.45, 1.0
+
+
+def drawn_at(fraction):
+    """When the smooth stroke has drawn this much of the outline (inverting x*x*(3-2x) by bisection)."""
+    lo, hi = 0.0, 1.0
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if mid * mid * (3 - 2 * mid) < fraction else (lo, mid)
+    return OUTLINE_FROM + OUTLINE_FOR * lo
+
+
 climb = ["D3", "F3", "G3", "A3", "C4", "D4", "F4", "G4"]
 for k, note in enumerate(climb):
-    where = (k + .5) / 8  # how far round the outline this surge draws: 0 top centre, .25 left, .5 bottom, .75 right
-    place(pluck(note, 1.1, .3 + .03 * k), OUTLINE[k], .11 + .006 * k, -.7 * np.sin(2 * np.pi * where), wet=.5)
-place(pluck("A4", 1.4, .4), OUTLINE[8], .13, 0, wet=.55)
-place(piano("D4", 2.0, .3), OUTLINE[8], .1, 0, wet=.6)
+    where = (k + .5) / 8  # 0 top centre, .25 left grip, .5 bottom, .75 right grip
+    place(pluck(note, 1.8, .22, .998), drawn_at(where), .085, -.65 * np.sin(2 * np.pi * where), wet=.6)
+place(pluck("A4", 2.2, .25, .998), OUTLINE_FROM + OUTLINE_FOR, .07, 0, wet=.7)
+place(piano("D4", 2.2, .25), OUTLINE_FROM + OUTLINE_FOR + .01, .08, 0, wet=.7)
 # under it, a pad on D minor that opens as the controller is drawn and settles as it leans in
 place(pad(["A3", "D4", "F4"], 2.4, lambda s: 250 + 900 * np.sin(np.pi * np.clip(s / 2.4, 0, 1)) ** 2, .7, .7), .7, .045, 0, wet=.7)
 

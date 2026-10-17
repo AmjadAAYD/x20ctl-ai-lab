@@ -46,13 +46,12 @@ Console.WriteLine($"PASS: no controller photo; intro score packaged (stereo 48 k
  story.SeekAlignedToLastTick(intro,TimeSpan.FromSeconds(t),TimeSeekOrigin.BeginTime);story.Pause(intro);typeof(IntroView).GetMethod("Frame",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(intro,[t]);intro.UpdateLayout();
  var backgroundImpact=(FrameworkElement)typeof(IntroView).GetField("stabilizationBackground",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(intro)!;
  var bitmap=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32);bitmap.Render(intro);var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(bitmap));using var file=System.IO.File.Create(System.IO.Path.Combine(dir,$"intro-{t:0.00}.png"));png.Save(file);
- // the settled mark (5.40) stays the owner's reference; the controller is now drawn on the music's beat and the X
- // locks with petals (both 17 Oct), so those frames are reviewed by eye, not against the old video
- if(t==5.4){
+ // the controller (1.90) and the settled mark (5.40) stay the owner's reference; the X in motion was redrawn 17 Oct
+ if(new[]{1.9,5.4}.Contains(t)){
  var reference=System.IO.Path.Combine(Environment.CurrentDirectory,"artifacts","intro-shared-video-reference",$"intro-{t:0.00}.png");
  var expected=new BitmapImage();expected.BeginInit();expected.UriSource=new Uri(reference);expected.CacheOption=BitmapCacheOption.OnLoad;expected.EndInit();
- var petals=new[]{"petalsBack","petalsFront"}.Select(n=>(FrameworkElement)typeof(IntroView).GetField(n,BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(intro)!).ToArray();foreach(var petal in petals)petal.Visibility=Visibility.Collapsed;
- backgroundImpact.Visibility=Visibility.Collapsed;var baseline=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32);baseline.Render(intro);backgroundImpact.Visibility=Visibility.Visible;foreach(var petal in petals)petal.Visibility=Visibility.Visible;
+ var fog=new[]{"fogBack","fogFront"}.Select(n=>(FrameworkElement)typeof(IntroView).GetField(n,BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(intro)!).ToArray();foreach(var veil in fog)veil.Visibility=Visibility.Collapsed;
+ backgroundImpact.Visibility=Visibility.Collapsed;var baseline=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32);baseline.Render(intro);backgroundImpact.Visibility=Visibility.Visible;foreach(var veil in fog)veil.Visibility=Visibility.Visible;
  var expectedPixels=new byte[1280*800*4];var actualPixels=new byte[1280*800*4];
  new FormatConvertedBitmap(expected,PixelFormats.Pbgra32,null,0).CopyPixels(expectedPixels,1280*4,0);baseline.CopyPixels(actualPixels,1280*4,0);
  double error=Enumerable.Range(0,1280*680*4).Average(i=>Math.Abs(actualPixels[i]-expectedPixels[i]));
