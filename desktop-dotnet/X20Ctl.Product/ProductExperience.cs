@@ -18,7 +18,7 @@ public static class ProductLinks
 /// <summary>
 /// Original X20CTL controller and X geometry, with travelling contour strokes, a short anticipation,
 /// one continuous morph and particle release, then a quiet logo hold and the existing Zone handoff.
-/// A 7.1-second original effect is aligned to the reveal and morph cues. Skip, mute and reduced motion are retained.
+/// Restored from the blue/orange review sequence. Playback remains silent; Skip and reduced motion are retained.
 /// </summary>
 public sealed class IntroView:Grid
 {
@@ -34,6 +34,7 @@ public sealed class IntroView:Grid
     private TimeSpan? seekAt; private double? pendingSeek;
     // the aura around the finished mark: a faint grey-white heart, then soft corner light and grey dots on both sides
     private readonly IntroMarkAura markAura = new();
+    private readonly IntroStabilizationBackground stabilizationBackground = new();
     private readonly Grid aura=new(){IsHitTestVisible=false,Opacity=Warm}, dotsLeft=new(){IsHitTestVisible=false,Opacity=Warm,HorizontalAlignment=HorizontalAlignment.Left,CacheMode=new BitmapCache(1)}, dotsRight=new(){IsHitTestVisible=false,Opacity=Warm,HorizontalAlignment=HorizontalAlignment.Right,CacheMode=new BitmapCache(1)};
     private readonly System.Windows.Shapes.Rectangle heart=new(){IsHitTestVisible=false,Opacity=Warm,Width=980,Height=560}, shine=new(){IsHitTestVisible=false,Opacity=0};
     private readonly System.Windows.Shapes.Path body=new(){Opacity=0,IsHitTestVisible=false}, floor=new(){Opacity=0,IsHitTestVisible=false};
@@ -43,11 +44,10 @@ public sealed class IntroView:Grid
     private readonly List<(System.Windows.Shapes.Path core,System.Windows.Shapes.Path bloom)> leds=new();
     private Grid stage=null!;
     private readonly Grid controllerGroup=new(){IsHitTestVisible=false};
-    private readonly IntroParticleBurst energy=new(){IsHitTestVisible=false};
+    private readonly IntroBladeFormation formation=new(){IsHitTestVisible=false};
     private readonly IntroContourFlow contours=new(){IsHitTestVisible=false};
     private readonly System.Windows.Shapes.Path morphGhost=new(){Stroke=new SolidColorBrush(Color.FromArgb(70,200,215,245)),StrokeThickness=8,StrokeLineJoin=PenLineJoin.Round,Opacity=0,IsHitTestVisible=false};
     private readonly Point[][] from=new Point[2][], to=new Point[2][];
-    private double lastMorph=-1;
     // Owner direction 10 Oct 2026 (latest): the outline is blue and orange - a blue pencil with an orange trail and a
     // blue-and-orange heartbeat - the side dots are orange, and the X with its glow and aura is white, a touch brighter
     private static readonly Color Glow=Color.FromRgb(214,222,236), GlowHi=Color.FromRgb(236,241,250), Orange=Color.FromRgb(255,140,38), Blue=Color.FromRgb(60,132,255), BlueHi=Color.FromRgb(160,200,255);
@@ -99,6 +99,8 @@ public sealed class IntroView:Grid
         SizeChanged+=(_,_)=>{dotsLeft.Width=dotsRight.Width=ActualWidth/2;};
         backLayer.Children.Add(dark); // the opening darkness; it lifts as the body appears
         backLayer.Children.Add(haze);backLayer.Children.Add(dust); // above the darkness: seen from the first moment
+        stabilizationBackground.Visibility=reduced?Visibility.Collapsed:Visibility.Visible;
+        backLayer.Children.Add(stabilizationBackground);
 
         // the controller and the X share one stage, both centred on it, so the line reshapes in place
         double s=PadWidth/(2*(PadMidX-PadLeft)), stageW=StageW, stageH=StageH; var mid=new Point(stageW/2,stageH/2);
@@ -118,6 +120,7 @@ public sealed class IntroView:Grid
 
 
         contours.SetPoints(from[0].Concat(from[1].Reverse()).ToArray(),to);
+        formation.Configure(from,to,markPx);
 
         // both halves are figures of one geometry: the dash runs down each from the top centre at once, and where they
         // meet (top and bottom centre) the caps and glow are painted once, so there is no seam or bright spot
@@ -183,7 +186,7 @@ public sealed class IntroView:Grid
         stage=new Grid{Width=stageW,Height=stageH,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,RenderTransformOrigin=new(.5,.5),RenderTransform=new ScaleTransform(1,1)};
         // the stage is designed for a 1200-pixel-tall screen and scales with the window, so the mark stays about half its height
         SizeChanged+=(_,_)=>{double z=Math.Clamp(ActualHeight/1200,.55,1.8);((ScaleTransform)stage.RenderTransform).ScaleX=((ScaleTransform)stage.RenderTransform).ScaleY=z;};
-        stage.Children.Add(energy);stage.Children.Add(contours);
+        stage.Children.Add(contours);stage.Children.Add(formation);
         controllerGroup.RenderTransform=new ScaleTransform(1,1,stageW/2,stageH/2);
         foreach(var e in new UIElement[]{floor,body,beat,glow,trail,line,tracer})controllerGroup.Children.Add(e);
         foreach(var (core,bloom) in leds){controllerGroup.Children.Add(bloom);controllerGroup.Children.Add(core);}
@@ -200,7 +203,7 @@ public sealed class IntroView:Grid
         SizeChanged+=(_,_)=>{double z=Math.Clamp(ActualHeight/1200,.55,1.8);slogan.FontSize=28*z;sloganBox.Margin=new(0,2*(289+62)*z,0,0);sloganBox.RenderTransformOrigin=new(.5,.5);};
         Skip=new Button{Content="Skip · Esc / B",HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Bottom,Margin=new(0,0,36,36),Style=DS.Style("DS.Secondary"),Opacity=.8};Skip.Click+=(_,_)=>Finish();
         // mute (owner request 12 Oct 2026): beside Skip, remembered for the next launch; reduced motion has no sound to mute
-        Mute=new Button{HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Bottom,Margin=new(0,0,36,36),Style=DS.Style("DS.Secondary"),Opacity=.8,Visibility=reduced?Visibility.Collapsed:Visibility.Visible};
+        Mute=new Button{HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Bottom,Margin=new(0,0,36,36),Style=DS.Style("DS.Secondary"),Opacity=.8,Visibility=reduced||!HasIntroScore?Visibility.Collapsed:Visibility.Visible};
         Mute.Click+=(_,_)=>ToggleMute();ShowMute();
         Children.Add(new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Bottom,Children={Mute,Skip}});
         Mute.Margin=new(0,0,12,36);
@@ -343,36 +346,7 @@ public sealed class IntroView:Grid
     }
     private void Morph(double t)
     {
-        if(Reduced)return;double key=Math.Round(Math.Clamp((t-MorphAt)/MorphFor,0,1),3);if(key==lastMorph)return;lastMorph=key;
-        // the two halves of the line are open strokes that close as they land on the outline
-        StreamGeometry Shape(params int[] figures)
-        {
-            var g=new StreamGeometry{FillRule=FillRule.Nonzero};
-            using(var c=g.Open())foreach(int f in figures)
-            {
-                double raw=Math.Clamp((t-MorphAt)/MorphFor,0,1);
-                double u=Smooth(raw);
-                var a=from[f];var b=to[f];
-                Point At(int i)
-                {
-                    var centre=new Point(StageW/2,StageH/2);
-                    var start=centre+(a[i]-centre)*1.10;
-                    double angle=-Math.PI/2+(f==0?-1:1)*Math.PI*i/(a.Length-1)+.24*Math.Sin(Math.PI*raw);
-                    double radius=230+45*Math.Sin(Math.PI*raw);
-                    var arc=centre+new Vector(Math.Cos(angle)*radius,Math.Sin(angle)*radius*.9);
-                    if(raw<.48)return start+(arc-start)*Smooth(raw/.48);
-                    return arc+(b[i]-arc)*Smooth((raw-.48)/.52);
-                }
-                c.BeginFigure(At(0),false,u>=.999);
-                var r=new Point[a.Length-1];for(int i=1;i<a.Length;i++)r[i-1]=At(i);c.PolyLineTo(r,true,true);
-            }
-            g.Freeze();return g;
-        }
-        morph.Data=Shape(0,1);morphGhost.Data=morph.Data;
-        double progress=Math.Clamp((t-MorphAt)/MorphFor,0,1);
-        double strength=Math.Sin(Math.PI*progress);
-        morph.StrokeThickness=Line+3*strength;
-        morph.StrokeDashArray=null; morph.StrokeDashOffset=0;
+        morph.Visibility=morphGhost.Visibility=Visibility.Collapsed;
     }
     private static double Length(PathFigure f)
     {
@@ -384,16 +358,17 @@ public sealed class IntroView:Grid
     private DateTime beganAt=DateTime.UtcNow;
     public void Start(){startRequested=true;PrepareSound();if(IsLoaded)Begin();}
     /// <summary>Original oscillator and noise sound design; no sampled recording. Off for reduced motion, development fixtures and mute.</summary>
-    public static bool SoundEnabled {get;set;}=true;
+    public static bool HasIntroScore => false;
+    public static bool SoundEnabled {get;set;}=false;
     private System.Windows.Media.MediaPlayer? sound;
     private bool soundReady,soundWanted;
     /// <summary>Opens the sound before the intro starts (opening it on demand made the LED pings lag their lights).</summary>
     private void PrepareSound()
     {
-        if(sound!=null||!SoundEnabled||Muted||Reduced||ReviewSandbox.Active)return;
-        string path=System.IO.Path.Combine(AppContext.BaseDirectory,"Brand","original-intro.wav");if(!System.IO.File.Exists(path))return;
+        if(!HasIntroScore||sound!=null||!SoundEnabled||Muted||Reduced||ReviewSandbox.Active)return;
+        string path=System.IO.Path.Combine(AppContext.BaseDirectory,"Brand","licensed-intro.wav");if(!System.IO.File.Exists(path))return;
         // a player muted before it opened must not mark its replacement ready
-        try{var player=new System.Windows.Media.MediaPlayer{Volume=.85};soundReady=false;sound=player;player.MediaOpened+=(_,_)=>{if(player!=sound)return;soundReady=true;if(soundWanted)PlayInSync();};player.Open(new Uri(path));}
+        try{var player=new System.Windows.Media.MediaPlayer{Volume=.65};soundReady=false;sound=player;player.MediaOpened+=(_,_)=>{if(player!=sound)return;soundReady=true;if(soundWanted)PlayInSync();};player.Open(new Uri(path));}
         catch(Exception error) when(error is InvalidOperationException or System.IO.IOException or UriFormatException){sound=null;}
     }
     private void PlaySound(){PrepareSound();soundWanted=true;if(soundReady)PlayInSync();}
@@ -413,7 +388,7 @@ public sealed class IntroView:Grid
     /// <summary>Mute fades the sound out at once; unmuting picks it up again at the picture's moment.</summary>
     public void ToggleMute()
     {
-        if(Reduced||finished)return;Muted=!Muted;ShowMute();
+        if(!HasIntroScore||Reduced||finished)return;Muted=!Muted;ShowMute();
         if(Muted){soundWanted=false;soundReady=false;StopSound();}else if(begun)PlaySound();else PrepareSound();
         MutedChanged?.Invoke(Muted);
     }
@@ -426,9 +401,10 @@ public sealed class IntroView:Grid
     private void Tick(object? s,EventArgs e)=>Frame(Elapsed);
     private void Frame(double t)
     {
+        if(!Reduced)stabilizationBackground.SetTime(t-(MorphAt+MorphFor));
         Morph(t);
         markAura.SetTime(Reduced ? -1 : t-4.0);
-        energy.SetTime(Reduced ? -1 : t-MorphAt);
+        formation.SetTime(Reduced ? -1 : t-MorphAt);
         contours.SetTime(Reduced ? -1 : t);
         if(Reduced)
         {
@@ -504,36 +480,6 @@ public sealed class IntroView:Grid
 
 
 /// <summary>A single deterministic particle release, drawn in one visual with no per-particle controls or timers.</summary>
-internal sealed class IntroParticleBurst : FrameworkElement
-{
-    private double time=-1;
-    private readonly (double Angle,double Distance,double Depth)[] points;
-    public IntroParticleBurst()
-    {
-        var random=new Random(20261015);
-        points=Enumerable.Range(0,240).Select(i=>(i*2.399963229728653,70+Math.Sqrt((i+.5)/240)*310,.4+random.NextDouble()*.6)).ToArray();
-    }
-    public void SetTime(double value)
-    {
-        if((value<0 || value>2.0) && (time<0 || time>2.0)){time=value;return;}
-        time=value;InvalidateVisual();
-    }
-    protected override void OnRender(DrawingContext dc)
-    {
-        if(time<0 || time>2.0)return;
-        double rise=Math.Clamp(time/.28,0,1),fall=1-Math.Clamp((time-.35)/1.65,0,1);
-        double travel=1-Math.Pow(1-Math.Clamp(time/2,0,1),3);
-        foreach(var (angle,distance,depth) in points)
-        {
-            double r=distance*(.3+travel*1.25);
-            var at=new Point(390+Math.Cos(angle)*r,320+Math.Sin(angle)*r*.72);
-            var colour=Color.FromArgb((byte)(235*rise*fall*depth),(byte)(65+80*depth),(byte)(125+55*depth),255);
-            var brush=new SolidColorBrush(colour);brush.Freeze();dc.DrawEllipse(brush,null,at,.9+depth, .9+depth);
-        }
-    }
-}
-
-
 /// <summary>Travelling tapered fragments and delayed white recognition on the original controller contour.</summary>
 internal sealed class IntroContourFlow:FrameworkElement
 {
@@ -583,51 +529,37 @@ internal sealed class IntroContourFlow:FrameworkElement
 /// <summary>Light follows the original X geometry; no replacement logo or external artwork.</summary>
 internal sealed class IntroMarkAura : FrameworkElement
 {
-    private Geometry mark = Geometry.Empty;
-    private double time = -1;
-    private readonly List<Point[]> contours = new();
-    public IntroMarkAura() { IsHitTestVisible = false; }
-    public void SetGeometry(Geometry geometry)
-    {
-        mark = geometry; contours.Clear();
-        foreach (var figure in geometry.GetFlattenedPathGeometry(.6, ToleranceType.Absolute).Figures) {
-            var points = new List<Point> { figure.StartPoint };
-            foreach (var segment in figure.Segments) {
-                if (segment is PolyLineSegment line) points.AddRange(line.Points);
-                else if (segment is LineSegment edge) points.Add(edge.Point);
-            }
-            if (figure.IsClosed) points.Add(figure.StartPoint);
-            contours.Add(points.ToArray());
-        }
-    }
-    public void SetTime(double value) { time = value; InvalidateVisual(); }
+    private Geometry mark=Geometry.Empty;
+    private double time=-1;
+    public void SetGeometry(Geometry geometry)=>mark=geometry;
+    public void SetTime(double value){time=value;InvalidateVisual();}
     protected override void OnRender(DrawingContext dc)
     {
-        if (time < 0 || time > 2.85 || mark.IsEmpty()) return;
-        double appear = Math.Clamp(time/.35,0,1), fade = 1-Math.Clamp((time-2.15)/.7,0,1);
-        double envelope = appear*fade;
-        var bounds=mark.Bounds;var center=new Point(bounds.X+bounds.Width/2,bounds.Y+bounds.Height/2);
-        var gradient=new LinearGradientBrush(Color.FromRgb(35,185,255),Color.FromRgb(164,98,255),new Point(0,0),new Point(1,1));
-        gradient.RelativeTransform=new RotateTransform(12*Math.Sin(time*1.4),.5,.5);gradient.Freeze();
-        // Broad low-opacity light under a narrow coloured rim keeps the X's interior crisp.
-        for(int layer=16;layer>=1;layer--) {
-            double width=4+layer*3.4, alpha=.012+(.025*Math.Pow(1-layer/16d,2));
-            dc.PushOpacity(envelope*alpha);var pen=new Pen(gradient,width){LineJoin=PenLineJoin.Round};pen.Freeze();dc.DrawGeometry(null,pen,mark);dc.Pop();
-        }
-        dc.PushOpacity(envelope*.65);dc.DrawGeometry(null,new Pen(gradient,2.4),mark);dc.Pop();
-        // One expanding contour release, fading as it moves away from the mark.
-        double release=Math.Clamp(time/1.15,0,1), scale=1+.12*release;
-        dc.PushTransform(new ScaleTransform(scale,scale,center.X,center.Y));dc.PushOpacity(.20*envelope*Math.Pow(1-release,2));
-        dc.DrawGeometry(null,new Pen(gradient,2),mark);dc.Pop();dc.Pop();
-        foreach(var points in contours) {
-            double length=0;var distances=new double[points.Length];for(int i=1;i<points.Length;i++){length+=(points[i]-points[i-1]).Length;distances[i]=length;}
-            if(length<=0)continue;
-            Point At(double u){double d=(u-Math.Floor(u))*length;int j=1;while(j<distances.Length-1&&distances[j]<d)j++;double span=distances[j]-distances[j-1];return points[j-1]+(points[j]-points[j-1])*(span>0?(d-distances[j-1])/span:0);}
-            for(int i=0;i<48;i++) {
-                double u=i/48d, strength=Math.Sin(Math.PI*u);var colour=Color.FromArgb((byte)(230*envelope*strength),180,225,255);
-                var pen=new Pen(new SolidColorBrush(colour),2.6){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};pen.Freeze();
-                double head=time*.32;dc.DrawLine(pen,At(head+u*.22),At(head+(i+1)/48d*.22));
+        if(time<0||time>2.0||mark.IsEmpty())return;
+        double enter=Math.Clamp(time/.16,0,1),release=1-Math.Clamp((time-.55)/1.45,0,1);
+        double power=enter*release;
+        for(int side=0;side<2;side++)
+        {
+            var colour=side==0?Color.FromRgb(65,177,255):Color.FromRgb(255,154,70);
+            double sign=side==0?-1:1;
+            for(int layer=7;layer>=1;layer--)
+            {
+                double separation=layer*3*(1-Math.Clamp(time/1.25,0,1));
+                dc.PushTransform(new TranslateTransform(sign*separation,-sign*separation));
+                dc.PushOpacity(power*(.035+.065*(1-layer/8d)));
+                dc.DrawGeometry(null,new Pen(new SolidColorBrush(colour),layer*2.8+1){LineJoin=PenLineJoin.Miter},mark);
+                dc.Pop();dc.Pop();
             }
         }
+        dc.PushClip(mark);
+        for(int side=0;side<2;side++)
+        {
+            double p=Math.Clamp((time-side*.16)/.9,0,1),x=side==0?-120+p*1000:900-p*1000;
+            var colour=side==0?Color.FromArgb(210,110,210,255):Color.FromArgb(180,255,185,105);
+            var light=new LinearGradientBrush(new GradientStopCollection{new(Colors.Transparent,0),new(colour,.32),new(Colors.White,.5),new(colour,.68),new(Colors.Transparent,1)},0);
+            dc.PushOpacity(power);dc.PushTransform(new RotateTransform(-43,390,320));
+            dc.DrawRectangle(light,null,new Rect(x,0,80,700));dc.Pop();dc.Pop();
+        }
+        dc.Pop();
     }
 }
