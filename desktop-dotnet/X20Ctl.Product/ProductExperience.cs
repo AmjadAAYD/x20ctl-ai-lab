@@ -47,9 +47,6 @@ public sealed class IntroView:Grid
     private readonly Grid controllerGroup=new(){IsHitTestVisible=false};
     private readonly IntroBladeFormation formation=new(){IsHitTestVisible=false};
     private readonly IntroContourFlow contours=new(){IsHitTestVisible=false};
-    // cold mist pushed out of the seam as the blades lock (owner 17 Oct 2026): most behind the mark, a faint veil in front
-    private readonly IntroFog fogBack=new(false){IsHitTestVisible=false}, fogFront=new(true){IsHitTestVisible=false};
-    private const double LockAt=MorphAt+1.08;
     private readonly System.Windows.Shapes.Path morphGhost=new(){Stroke=new SolidColorBrush(Color.FromArgb(70,200,215,245)),StrokeThickness=8,StrokeLineJoin=PenLineJoin.Round,Opacity=0,IsHitTestVisible=false};
     private readonly Point[][] from=new Point[2][], to=new Point[2][];
     // Owner direction 10 Oct 2026 (latest): the outline is blue and orange - a blue pencil with an orange trail and a
@@ -198,7 +195,7 @@ public sealed class IntroView:Grid
         // the X's heartbeat (owner 12 Oct 2026): the mark swells about its own centre, so every piece of it shares one scale
         var xBounds=Rect.Union(forward.Bounds,back.Bounds);var xBeat=new ScaleTransform(1,1,xBounds.X+xBounds.Width/2,xBounds.Y+xBounds.Height/2);
         foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,formation})e.RenderTransform=xBeat;
-        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,shine})xGroup.Children.Add(e);xGroup.Children.Insert(0,markAura); markAura.SetGeometry(markPx); aura.Visibility=Visibility.Collapsed; dotsLeft.Visibility=dotsRight.Visibility=Visibility.Collapsed; stage.Children.Add(fogBack);stage.Children.Add(xGroup);stage.Children.Add(fogFront);this.xBounds=xBounds;
+        foreach(var e in new UIElement[]{morphGhost,morph,filled,filledBack,shine})xGroup.Children.Add(e);xGroup.Children.Insert(0,markAura); markAura.SetGeometry(markPx); aura.Visibility=Visibility.Collapsed; dotsLeft.Visibility=dotsRight.Visibility=Visibility.Collapsed; stage.Children.Add(xGroup);this.xBounds=xBounds;
         Children.Add(stage);sloganBox.Children.Add(slogan);Children.Add(sloganBox);Children.Add(fade);
         // WPF has no letter-spacing: hair spaces between the letters track it out, a wider gap between words
         slogan.Text=string.Join("\u200A",SloganText.Select(c=>c==' '?"\u2009\u2009":c.ToString()));
@@ -415,7 +412,6 @@ public sealed class IntroView:Grid
         markAura.SetTime(Reduced ? -1 : t-4.0);
         formation.SetTime(Reduced ? -1 : t-MorphAt);
         contours.SetTime(Reduced ? -1 : t);
-        fogBack.SetTime(Reduced ? -1 : t-LockAt);fogFront.SetTime(Reduced ? -1 : t-LockAt);
         if(Reduced)
         {
             double start=Duration-.5,amount=Math.Clamp((t-start)/.5,0,1);amount=1-Math.Pow(1-amount,3);

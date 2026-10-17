@@ -50,8 +50,7 @@ Console.WriteLine($"PASS: no controller photo; intro score packaged (stereo 48 k
  if(new[]{1.9,5.4}.Contains(t)){
  var reference=System.IO.Path.Combine(Environment.CurrentDirectory,"artifacts","intro-shared-video-reference",$"intro-{t:0.00}.png");
  var expected=new BitmapImage();expected.BeginInit();expected.UriSource=new Uri(reference);expected.CacheOption=BitmapCacheOption.OnLoad;expected.EndInit();
- var fog=new[]{"fogBack","fogFront"}.Select(n=>(FrameworkElement)typeof(IntroView).GetField(n,BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(intro)!).ToArray();foreach(var veil in fog)veil.Visibility=Visibility.Collapsed;
- backgroundImpact.Visibility=Visibility.Collapsed;var baseline=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32);baseline.Render(intro);backgroundImpact.Visibility=Visibility.Visible;foreach(var veil in fog)veil.Visibility=Visibility.Visible;
+ backgroundImpact.Visibility=Visibility.Collapsed;var baseline=new RenderTargetBitmap(1280,800,96,96,PixelFormats.Pbgra32);baseline.Render(intro);backgroundImpact.Visibility=Visibility.Visible;
  var expectedPixels=new byte[1280*800*4];var actualPixels=new byte[1280*800*4];
  new FormatConvertedBitmap(expected,PixelFormats.Pbgra32,null,0).CopyPixels(expectedPixels,1280*4,0);baseline.CopyPixels(actualPixels,1280*4,0);
  double error=Enumerable.Range(0,1280*680*4).Average(i=>Math.Abs(actualPixels[i]-expectedPixels[i]));
