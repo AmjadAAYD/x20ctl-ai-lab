@@ -1,17 +1,25 @@
 # Intro audio - 17 October 2026
 
-`intro.wav` (stereo, 48 kHz, 16-bit, 7.1 s) is made entirely by `tools/build_intro_sound.py` from sine waves. It contains no samples, recordings or sound kits, and nothing taken from another product. Running the script again rebuilds the file.
+`intro.wav` (stereo, 48 kHz, 16-bit, 7.1 s) is made entirely by `tools/build_intro_sound.py`, and running the script again rebuilds the file. It contains no samples, recordings or sound kits, and nothing taken from another product.
+
+The script builds every sound itself:
+
+- **A soft FM electric piano.**
+- **Plucked strings** (Karplus-Strong). Each starts from a short random burst inside a tuned loop.
+- **A pad** whose filter opens and closes while its pitch stays put.
+- **A stereo room reverb**, made from decaying filtered random noise. The noise is only the room; it is never heard as a sound of its own.
+
+It is in D minor and stays in the middle register.
 
 What it plays, in time with the picture:
 
-- **The LED eyes** (0.18, 0.36 and 0.54 s): soft D5, F#5 and A5 felt-mallet sines.
-- **The outline being drawn**: a short pad of D3 and A3.
-- **The blades sliding in**: the same low notes, swelling in volume only.
-- **The lock** (4.03 s) **and the heartbeat**: two round 70 Hz thumps with a muffled knock, "dug dug". The mark swells on the second one.
-- **The slogan**: one soft D4.
-- **The landing in the header**: a faint knock.
-
-Everything sits below 2 kHz. There is no noise, no pitch glide, no drone and no closing chord.
+- **The LED eyes** (0.18 to 0.54 s): D4, F4 and A4 on the piano.
+- **The outline being drawn**: a quiet plucked figure, alternating left and right.
+- **The blades sliding in**: one plucked A that speeds up and brightens. The lock chord swells in backwards out of its own reverb.
+- **The lock** (4.03 s): D minor with a ninth, rolled on the piano, a soft low body and the pad opening.
+- **The second heartbeat** (4.23 s): a low A. The mark swells with it.
+- **The slogan**: E4, then D4.
+- **The landing**: a last plucked D.
 
 The sound is off with reduced motion, in development fixtures and when the player mutes it (M, Y or the button beside Skip). Tools → Opening intro → Sound turns it off for every launch.
 

@@ -1,13 +1,19 @@
-"""The X20CTL opening sound, synthesised from sine waves (owner request 17 Oct 2026: "a good sound effect").
+"""The X20CTL opening sound, synthesised here (owner requests 17 Oct 2026: "a good sound effect", then "cleaner,
+smoother, high quality, more life, an intro feel - not VMMMM, DOK DOK, BMMMM, and not happy, 90s retro or high pitched").
 
-Every sound is made here from oscillators: no samples, recordings or third-party kits, and nothing copied from another
-product. It follows what the owner approved and refused in earlier passes:
-  kept     soft D5/F#5/A5 sine notes for the three LED eyes, a short soft pad under the outline, volume-only swells
-           under 900 Hz, the "dug dug" heartbeat of two low thumps with a muffled knock as the X locks
-  refused  noise layers, pitch glides and sirens, detuned drones, bright bell partials, a chord at the end
+Everything is made in this file: soft FM electric-piano tones, plucked strings (Karplus-Strong), a pad whose filter
+breathes, and a stereo room. No samples, recordings or third-party kits, nothing copied from another product. The key
+is D minor, kept in the middle register (no lead above D5), so it reads as a cinematic opening, not a jingle.
 
-Cues follow IntroView and IntroBladeFormation: LEDs .18/.36/.54 s, outline drawn .75-2.0 s, blades slide in 3.45-4.03 s,
-lock 4.03 s (impact pulse 4.10 s), second beat 4.23 s, slogan 5.10 s, the X lands in the header at 6.85 s.
+The story, in time with IntroView and IntroBladeFormation:
+  0.18-0.54  the three LED eyes: D4, F4, A4 on the electric piano, left to right
+  0.75-2.45  the outline being drawn: a quiet plucked figure, panned left and right as the pencil travels
+  2.95-4.03  the blades sliding in: one repeated pluck that speeds up and brightens, and the lock chord swelling in
+             backwards out of its own reverb
+  4.03       the lock: the chord (D minor with a ninth) on the piano, a soft low body under it, the pad opening up
+  4.23       the second heartbeat: a low A, as a note, not a thump
+  5.12-5.34  the slogan: two soft falling notes, E4 then D4
+  6.85       the landing: a last plucked D
 
     python tools/build_intro_sound.py [output.wav]
 """
@@ -16,91 +22,188 @@ import wave
 from pathlib import Path
 
 import numpy as np
-from scipy.signal import butter, sosfilt
+from scipy.signal import butter, fftconvolve, lfilter, sosfilt
 
 RATE = 48000
 TOTAL = 7.1
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[1] / "desktop-dotnet/X20Ctl.Product/Brand/intro.wav"
+rng = np.random.default_rng(20261017)
 
-t = np.arange(int(RATE * TOTAL)) / RATE
-left = np.zeros_like(t)
-right = np.zeros_like(t)
-
-
-def note(hz):
-    return 440.0 * 2 ** ((hz - 69) / 12)
+N = int(RATE * TOTAL)
+dry = np.zeros((N, 2))
+send = np.zeros((N, 2))  # what goes to the room
 
 
-def lowpass(x, cutoff, order=2):
-    return sosfilt(butter(order, cutoff, fs=RATE, output="sos"), x)
-
-
-def place(signal, at, gain=1.0, pan=0.0):
-    """Mix a mono signal in at a time, equal-power panned (-1 left, +1 right)."""
-    start = int(at * RATE)
-    end = min(len(t), start + len(signal))
-    angle = (pan + 1) * np.pi / 4
-    left[start:end] += signal[: end - start] * gain * np.cos(angle)
-    right[start:end] += signal[: end - start] * gain * np.sin(angle)
+def hz(name):
+    """A note name ("D4", "F#3") as a frequency."""
+    steps = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+    semis = steps[name[0]] + (1 if "#" in name else -1 if name[1] == "b" else 0)
+    octave = int(name[-1])
+    return 440.0 * 2 ** ((semis + 12 * (octave + 1) - 69) / 12)
 
 
 def span(seconds):
     return np.arange(int(seconds * RATE)) / RATE
 
 
-def felt(hz, length=1.4, decay=.38):
-    """A felt-mallet sine: a soft 6 ms attack, a quick settle into a long gentle decay, a whisper of second harmonic."""
+def lowpass(x, cutoff, order=2):
+    return sosfilt(butter(order, cutoff, fs=RATE, output="sos"), x)
+
+
+def highpass(x, cutoff, order=2):
+    return sosfilt(butter(order, cutoff, btype="high", fs=RATE, output="sos"), x)
+
+
+def place(signal, at, gain=1.0, pan=0.0, wet=.3):
+    """Mix a mono signal in at a time: equal-power pan (-1 left, +1 right), and a share of it into the room."""
+    start = int(at * RATE)
+    if start >= N:
+        return
+    end = min(N, start + len(signal))
+    angle = (pan + 1) * np.pi / 4
+    part = signal[: end - start] * gain
+    for channel, weight in ((0, np.cos(angle)), (1, np.sin(angle))):
+        dry[start:end, channel] += part * weight
+        send[start:end, channel] += part * weight * wet
+
+
+def piano(note, length=2.4, velocity=.6):
+    """A soft FM electric piano: the modulation (the bark) blooms with velocity and fades fast, leaving a round tone that
+    rings out; low notes ring longer. A touch of octave body under it, a lowpass that keeps it warm."""
+    f = hz(note) if isinstance(note, str) else note
     s = span(length)
-    tone = np.sin(2 * np.pi * hz * s) + .06 * np.sin(2 * np.pi * 2 * hz * s)
-    envelope = np.minimum(s / .006, 1) * (.55 * np.exp(-s / .05) + .45) * np.exp(-s / decay)
-    return lowpass(tone * envelope, 1800)
+    index = (.25 + 1.5 * velocity) * np.exp(-s / .18) + .06
+    tone = np.sin(2 * np.pi * f * s + index * np.sin(2 * np.pi * f * s))
+    tone += .18 * np.sin(2 * np.pi * 2 * f * s) * np.exp(-s / .12)
+    # a quick fall after the strike, then a long quiet ring, the way a struck tine dies away; low notes ring longer
+    ring = 1.1 * (220 / f) ** .4
+    envelope = np.minimum(s / .004, 1) * (.6 * np.exp(-s / .28) + .4 * np.exp(-s / ring)) * np.clip((length - s) / .08, 0, 1)
+    return lowpass(tone * envelope, 2600 + 1400 * velocity) * velocity
 
 
-def swell(hzs, length, rise, fall, cutoff=900):
-    """Near-pure sines that only change in volume: a slow rise, a hold and a fall, never in pitch."""
+def pluck(note, length=1.4, brightness=.5, sustain=.996):
+    """A plucked string (Karplus-Strong): a short burst through a tuned feedback loop that loses a little of its top on
+    every pass, so it starts woody and mellows. Brightness shapes the burst; the loop does the rest."""
+    f = hz(note) if isinstance(note, str) else note
+    delay = max(2, int(round(RATE / f - .5)))
+    burst = lowpass(rng.standard_normal(delay + 1), 600 + 5000 * brightness, 1)
+    burst -= burst.mean()
+    x = np.zeros(int(length * RATE))
+    x[: delay + 1] = burst * np.hanning(delay + 1)
+    a = np.zeros(delay + 2)
+    a[0], a[delay], a[delay + 1] = 1, -sustain / 2, -sustain / 2
+    y = lfilter([1], a, x)
     s = span(length)
-    tone = sum(np.sin(2 * np.pi * hz * s) * w for hz, w in hzs)
-    envelope = np.clip(s / rise, 0, 1) ** 2 * np.clip((length - s) / fall, 0, 1) ** 1.5
-    return lowpass(tone * envelope, cutoff)
+    y *= np.minimum(s / .002, 1) * np.clip((length - s) / .1, 0, 1)
+    return lowpass(y / (np.max(np.abs(y)) + 1e-9), 1800 + 3000 * brightness)
 
 
-def thump(strength=1.0):
-    """One beat of the heart: a round 70 Hz body (it settles from just above, inside 25 ms, the weight of a kick, not a
-    glide), an octave above so laptop speakers carry it, and a muffled knock of two low sines on top."""
-    s = span(.6)
-    settle = 70 + 22 * np.exp(-s / .008)
-    phase = 2 * np.pi * np.cumsum(settle) / RATE
-    body = (np.sin(phase) + .38 * np.sin(2 * phase)) * np.minimum(s / .003, 1) * np.exp(-s / .13)
-    knock = (np.sin(2 * np.pi * 180 * s) + .6 * np.sin(2 * np.pi * 265 * s)) * np.minimum(s / .002, 1) * np.exp(-s / .022)
-    return lowpass(body + .45 * knock, 1200) * strength
+def pad(notes, length, opening, attack, release):
+    """A pad built from harmonics, each one let through by a filter that opens and closes over time (opening(s) gives the
+    cutoff in Hz), so the sound breathes without its pitch ever moving. A slow, slight swell in volume keeps it alive."""
+    s = span(length)
+    cutoff = opening(s)
+    out = np.zeros_like(s)
+    for note in notes:
+        f = hz(note)
+        for k in range(1, 40):
+            if k * f > 5000:
+                break
+            gate = 1 / (1 + np.exp(-(cutoff - k * f) / 120))
+            out += gate * np.sin(2 * np.pi * k * f * s + k * 1.7) / k ** 1.3
+    envelope = np.clip(s / attack, 0, 1) ** 2 * np.clip((length - s) / release, 0, 1) ** 1.5
+    breathe = 1 + .08 * np.sin(2 * np.pi * .35 * s)
+    return highpass(out * envelope * breathe / len(notes), 180)
 
 
-# 1. the LED eyes, left to right: D5, F#5, A5
-for at, midi, pan in ((.18, 74, -.18), (.36, 78, 0), (.54, 81, .18)):
-    place(felt(note(midi)), at, .2, pan)
+def room(seconds=2.6, size=.32):
+    """A stereo room: a few early reflections, then a smooth tail that darkens as it fades, different in each ear."""
+    s = span(seconds)
+    ir = np.zeros((len(s), 2))
+    for channel in range(2):
+        tail = rng.standard_normal(len(s)) * np.exp(-6.9 * s / seconds)
+        dark = lowpass(tail, 2400, 2) * np.exp(-s / 1.2) + lowpass(tail, 900, 2) * (1 - np.exp(-s / 1.2))
+        dark = highpass(dark, 160)
+        dark[: int(.018 * RATE)] = 0  # pre-delay
+        for at, gain in ((.011, .5), (.019, .35), (.027, .28), (.041, .2)):
+            ir[int((at + .004 * channel) * RATE), channel] += gain
+        ir[:, channel] += dark * size
+    return ir / np.sqrt(np.sum(ir ** 2, axis=0, keepdims=True))
 
-# 2. the outline being drawn: a short soft pad, D3 and A3 with a breath of D4, gone before the controller leans in
-place(swell([(note(50), 1), (note(57), .7), (note(62), .25)], 1.85, .55, .8), .72, .09)
 
-# 3. the blades sliding in: the same low notes swelling, only in volume, cut off by the lock
-pull = swell([(note(45), .8), (note(50), 1), (note(57), .5)], .62, .55, .03)
-place(pull, 3.42, .1)
+# 1. the eyes open: D4, F4, A4, left to right, soft
+for at, note, pan in ((.18, "D4", -.35), (.36, "F4", 0), (.54, "A4", .35)):
+    place(piano(note, 2.2, .42), at, .22, pan, wet=.5)
 
-# 4. the lock, then the heart: dug ... dug
-place(thump(1.0), 4.03, .42)
-place(thump(.72), 4.23, .42)
+# 2. the outline: a plucked figure follows the pencil, quiet, alternating sides, thinning out as the line closes
+figure = ["D3", "A3", "F4", "A3", "E4", "A3", "D4", "C4", "D3", "A3", "F4", "A3", "G4", "A3", "F4", "E4"]
+for i, note in enumerate(figure):
+    at = .78 + i * .105 * 2
+    if at > 2.5:
+        break
+    fade = 1 - max(0, at - 2.0) / .6
+    place(pluck(note, 1.2, .35), at, .12 * fade * (1.15 if note.endswith("3") else 1), -.45 if i % 2 else .45, wet=.5)
+# under it, a pad on D minor that opens as the controller is drawn and settles as it leans in
+place(pad(["A3", "D4", "F4"], 2.4, lambda s: 250 + 900 * np.sin(np.pi * np.clip(s / 2.4, 0, 1)) ** 2, .7, .7), .7, .045, 0, wet=.7)
 
-# 5. the slogan: one soft note, the eyes' D an octave lower, a rounded answer and no chord
-place(felt(note(62), 1.6, .6), 5.12, .11)
+# 3. the blades slide in: one A, plucked faster and faster, brighter and louder, stopping just before the lock
+at, gap, i = 2.98, .2, 0
+while at < 3.98:
+    progress = (at - 2.98) / 1.0
+    place(pluck("A3" if i % 2 == 0 else "A4", .5, .25 + .55 * progress), at, .12 + .26 * progress ** 1.5, (-.25 if i % 2 else .25) * (1 - progress), wet=.35)
+    at += gap
+    gap = max(.045, gap * .86)
+    i += 1
 
-# 6. the X lands in the header: the faintest knock
-place(thump(.35), 6.85, .22)
+# the lock chord, D minor with a ninth, voiced low to middle
+chord = ["D3", "A3", "E4", "F4"]
 
-# gentle edges and a peak that leaves headroom
-mix = np.stack([left, right], axis=1)
-mix *= .5 / np.max(np.abs(mix))
-fade = np.minimum(1, (len(t) - np.arange(len(t))) / (.05 * RATE))
-mix *= fade[:, None]
+
+def strike(velocity):
+    """The chord, rolled bottom to top by 12 ms a note, the way a hand plays it."""
+    out = np.zeros(int(3.1 * RATE))
+    for k, n in enumerate(chord):
+        tone = piano(n, 3.0, velocity * (1 - .08 * k))
+        offset = int(k * .012 * RATE)
+        out[offset:offset + len(tone)] += tone
+    return out / len(chord) * 2
+
+
+# ... swelling in backwards out of its own reverb, so the room breathes in before the lock
+mono_room = room(2.2, .4)[:, 0]
+swell = fftconvolve(strike(.5), mono_room)[: int(1.1 * RATE)][::-1]
+swell *= np.linspace(0, 1, len(swell)) ** 2.2
+place(swell / np.max(np.abs(swell)), 4.03 - len(swell) / RATE, .22, 0, wet=.2)
+
+# 4. the lock: the chord, a soft low body under it (felt more than heard), and the pad opening wide
+place(strike(.75), 4.03, .55, 0, wet=.4)
+body = span(1.2)
+place(np.sin(2 * np.pi * hz("D2") * body) * np.minimum(body / .006, 1) * np.exp(-body / .35), 4.03, .22, 0, wet=.05)
+place(pad(["A3", "D4", "E4"], 3.07, lambda s: 300 + 1500 * np.clip(s / .9, 0, 1) ** .7 * np.exp(-np.clip(s - .9, 0, None) / 1.6), .25, 1.4), 4.03, .06, 0, wet=.7)
+
+# the second heartbeat, as a note: a low A an octave under, with the mark's swell
+place(piano("A2", 2.0, .45), 4.23, .32, -.1, wet=.4)
+place(piano("A3", 2.0, .3), 4.235, .14, .15, wet=.5)
+
+# 5. the slogan: two soft falling notes
+place(piano("E4", 1.8, .35), 5.12, .2, .2, wet=.55)
+place(piano("D4", 1.8, .32), 5.34, .2, -.15, wet=.55)
+
+# 6. the landing: a last plucked D, low and gentle
+place(pluck("D3", 1.2, .3), 6.85, .22, 0, wet=.5)
+place(piano("D4", 1.0, .25), 6.86, .12, 0, wet=.5)
+
+# the room, then the master: clean lows, a little warmth, gentle edges, headroom
+ir = room()
+wet = np.stack([fftconvolve(send[:, c], ir[:, c])[:N] for c in range(2)], axis=1)
+mix = dry + .55 * wet
+mix = np.stack([highpass(mix[:, c], 32) for c in range(2)], axis=1)
+mix /= np.max(np.abs(mix))
+mix = np.tanh(1.15 * mix) / np.tanh(1.15)  # soft saturation: glues the layers, rounds the peaks
+mix = np.stack([lowpass(mix[:, c], 9000, 2) for c in range(2)], axis=1)
+mix *= .7 / np.max(np.abs(mix))
+s = np.arange(N) / RATE
+mix *= (np.minimum(s / .01, 1) * np.clip((TOTAL - s) / .25, 0, 1))[:, None]
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 with wave.open(str(OUT), "wb") as w:
@@ -116,5 +219,5 @@ def rms(a, b):
 
 
 print(f"{OUT} {TOTAL}s peak {np.max(np.abs(mix)):.2f}")
-for name, a, b in (("eyes", .15, .75), ("outline", .75, 2.6), ("pull", 3.42, 4.03), ("dug dug", 4.03, 4.6), ("slogan", 5.1, 6.0), ("land", 6.85, 7.05)):
+for name, a, b in (("eyes", .15, .75), ("outline", .75, 2.6), ("slide", 2.95, 4.03), ("lock", 4.03, 5.0), ("slogan", 5.1, 6.0), ("land", 6.85, 7.05)):
     print(f"  {name:8} rms {rms(a, b):.3f}")
