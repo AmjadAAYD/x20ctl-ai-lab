@@ -83,7 +83,23 @@ public sealed class OfflineAgent : IAgentModel
                 return (a.Action, a.Target, (object)string.Join(",", p));
             }).ToArray());
         }
+        // a question the docs answer by name ("I closed the app but it's still running"): a short answer from that section,
+        // cited. Only when the section's own heading matches the question, so an unrelated request never gets a README dump
+        string? docs = messages.LastOrDefault(m => m.Role == "system" && m.Content.StartsWith("From the X20CTL docs", StringComparison.Ordinal))?.Content;
+        if (docs != null && plan.Actions.Count == 0 && plan.Question.Length == 0
+            && Regex.Match(docs, @"^\[1\] (?<where>.+?) › (?<section>.+?): (?<text>.+)$", RegexOptions.Multiline) is { Success: true } top
+            && Answers(top.Groups["section"].Value, sentence))
+            plan = OfflinePlan.Say($"From {top.Groups["section"].Value}:", Sentences(top.Groups["text"].Value, 3)) with { Sources = [1] };
         return Task.FromResult(new ModelReply(Json(plan), 0, 0, 0, clock.Elapsed.TotalMilliseconds));
+    }
+
+    /// <summary>A doc heading names the question: most of its words (three letters or more, not filler) are in the sentence.</summary>
+    static bool Answers(string heading, string sentence)
+    {
+        static HashSet<string> Words(string t) => Regex.Matches(t.ToLowerInvariant().Replace("'", ""), @"[a-z]{3,}").Select(m => m.Value)
+            .Where(w => w is not ("the" or "and" or "but" or "you" or "your" or "its" or "for" or "with" or "what" or "when" or "only" or "this" or "that")).ToHashSet();
+        var head = Words(heading); var said = Words(sentence);
+        return head.Count >= 2 && head.Count(said.Contains) * 2 >= head.Count + 1;
     }
 
     /// <summary>The intent closest to a sentence, and how close (cosine, 0 to 1).</summary>
