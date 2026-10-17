@@ -13,7 +13,7 @@ The story, in time with IntroView and IntroBladeFormation:
   4.03       the lock: the chord (D minor with a ninth) on the piano, a soft low body under it, the pad opening up
   4.23       the second heartbeat: a low A, as a note, not a thump
   5.12-5.34  the slogan: two soft falling notes, E4 then D4
-  6.85       the landing: a last plucked D
+  6.85       the landing: a quiet open fifth, D3 and A3, on the piano
 
     python tools/build_intro_sound.py [output.wav]
 """
@@ -146,13 +146,14 @@ for i, note in enumerate(figure):
 # under it, a pad on D minor that opens as the controller is drawn and settles as it leans in
 place(pad(["A3", "D4", "F4"], 2.4, lambda s: 250 + 900 * np.sin(np.pi * np.clip(s / 2.4, 0, 1)) ** 2, .7, .7), .7, .045, 0, wet=.7)
 
-# 3. the blades slide in: one A, plucked faster and faster, brighter and louder, stopping just before the lock
+# 3. the blades slide in: one soft A, plucked a little faster each time and set back in the room; it stays under the
+#    swell (owner 17 Oct: the louder, octave-jumping version was too loud and unappealing)
 at, gap, i = 2.98, .2, 0
-while at < 3.98:
+while at < 3.9:
     progress = (at - 2.98) / 1.0
-    place(pluck("A3" if i % 2 == 0 else "A4", .5, .25 + .55 * progress), at, .12 + .26 * progress ** 1.5, (-.25 if i % 2 else .25) * (1 - progress), wet=.35)
+    place(pluck("A3", .6, .15 + .2 * progress), at, .05 + .06 * progress, (-.2 if i % 2 else .2) * (1 - progress), wet=.6)
     at += gap
-    gap = max(.045, gap * .86)
+    gap = max(.085, gap * .9)
     i += 1
 
 # the lock chord, D minor with a ninth, voiced low to middle
@@ -189,9 +190,9 @@ place(piano("A3", 2.0, .3), 4.235, .14, .15, wet=.5)
 place(piano("E4", 1.8, .35), 5.12, .2, .2, wet=.55)
 place(piano("D4", 1.8, .32), 5.34, .2, -.15, wet=.55)
 
-# 6. the landing: a last plucked D, low and gentle
-place(pluck("D3", 1.2, .3), 6.85, .22, 0, wet=.5)
-place(piano("D4", 1.0, .25), 6.86, .12, 0, wet=.5)
+# 6. the landing: a quiet open fifth on the piano, mostly room (owner 17 Oct: the plucked D was funny, not cool)
+place(piano("D3", 1.0, .22), 6.85, .1, -.1, wet=.75)
+place(piano("A3", 1.0, .2), 6.87, .08, .1, wet=.75)
 
 # the room, then the master: clean lows, a little warmth, gentle edges, headroom
 ir = room()
