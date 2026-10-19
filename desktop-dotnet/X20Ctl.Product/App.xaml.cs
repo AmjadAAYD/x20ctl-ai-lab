@@ -58,6 +58,12 @@ public partial class App : Application
                 ShutdownMode = ShutdownMode.OnExplicitShutdown; IntroView.SoundEnabled = false;
                 if(e.Args[0]=="--review-readme")await Development.ReadmeReview.Run(e.Args[1]); else if(e.Args[0]=="--review-scanflow")await Development.ScanFlowReview.Run(e.Args[1]); else if(e.Args[0]=="--review-agent-look")await Development.AgentLookReview.Run(e.Args[1]);
                 else if(e.Args[0]=="--review-talk")await Development.TalkReview.Run(e.Args[1]);
+                else if(e.Args[0]=="--agent-bakeoff")await Development.AgentBakeoff.Run(e.Args[1]);
+                else if(e.Args[0]=="--agent-drift")await Development.AgentBakeoff.Run(e.Args[1], X20Ctl.Zone.Agent.AgentBench.DriftCases);
+                else if(e.Args[0]=="--agent-m3")await Development.AgentBakeoff.Run(e.Args[1], X20Ctl.Zone.Agent.AgentBench.M3Cases);
+                else if(e.Args[0]=="--agent-phrasebook-clean")Development.AgentPhrasebookClean.Run(e.Args[1]);
+                else if(e.Args[0]=="--agent-m5")await Development.AgentDocsBakeoff.Run(e.Args[1]);
+                else if(e.Args[0]=="--agent-phrasebook")await Development.AgentPhrasebook.Run(e.Args[1], X20Ctl.Zone.Agent.AgentBench.OfflineHeldOut.Concat(X20Ctl.Zone.Agent.AgentBench.OfflineFinal).Select(c => c.Sentence).ToHashSet());
             else if(e.Args[0]=="--review-models")await Development.ModelAudit.Run(e.Args[1]);
                 else if(e.Args[0]=="--review-live")await Development.LiveReview.Run(e.Args[1]);
                 else if(e.Args[0]=="--review-design")await Development.DesignReview.Run(e.Args[1]);

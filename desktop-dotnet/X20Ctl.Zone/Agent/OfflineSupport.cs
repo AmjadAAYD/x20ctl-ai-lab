@@ -24,8 +24,8 @@ public static class OfflineSupport
             return Info("Understood. I changed nothing.","Tell me explicitly when you want a setting changed.");
         if (Regex.IsMatch(t,@"\b(won't connect|will not connect|not detected|not recognized|not recognised|no controller found|keeps disconnecting|connection keeps dropping)\b"))
             return Info("Let's check the connection first.","Try USB or your receiver, confirm the controller is powered on, and run Diagnostics or Tools → Controller Check. A generic Windows gamepad name does not prove which model it is. I cannot pair Bluetooth or change firmware for you.");
-        if (Regex.IsMatch(t,@"\b(need|requires?|without|install|download)\b.*\b(internet|network|model)\b|\b(offline mode|work offline|data private|send my data|privacy)\b") && !Regex.IsMatch(t,@"\b(turn|switch)\b"))
-            return Info("I run right here on your PC.","No internet, account, API key or download is needed. I understand controller topics and ask for missing details; I am not a general chatbot. App updates and game art are separate network features.");
+        if (Regex.IsMatch(t,@"\b(need|requires?|without|install|download)\b.*\b(ollama|qwen|internet|network|model)\b|\b(offline mode|work offline|data private|send my data|privacy)\b") && !Regex.IsMatch(t,@"\b(turn|switch)\b"))
+            return Info("Offline means my phrasebook runs right here.","No Ollama, downloaded chat model, API key or internet is needed for offline replies. I understand controller topics and ask for missing details; I am not a general-purpose language model. App updates and game art are separate network features.");
         if (Regex.IsMatch(t,@"\b(vigembus|hidhide|virtual controller|double input|two controllers in game)\b"))
             return Info("PC mode uses a virtual controller.","ViGEmBus supplies the virtual Xbox pad. HidHide can hide the physical pad so a game does not read both. Open PC mode or Tools to check setup; I cannot claim a driver is installed or working without a real check.");
         if (Regex.IsMatch(t,@"\b(settings|changes)\b.*\b(not saved|disappear|lost|not sticking)\b"))

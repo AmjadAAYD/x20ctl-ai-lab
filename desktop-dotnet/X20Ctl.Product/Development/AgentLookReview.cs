@@ -21,6 +21,7 @@ internal static class AgentLookReview
             window.Show(); window.WindowState = WindowState.Maximized; await Task.Delay(500);
             window.Scene.AssignController(0, window.Host.Catalog.Get("x20_pro")); window.Host.EnterStudio(0); await Task.Delay(1400);
             var studio = window.Host.Studio!; studio.ShowButtons();
+            AgentPanel.UseOffline(true);
             await Shot("0-closed");
             int stop = 0;
             studio.AgentTourStarted += tour => tour.Held += step => _ = Shot($"3-tour-{++stop}-{step.Target}");
@@ -41,7 +42,7 @@ internal static class AgentLookReview
                 studio = window.Host.Studio!; studio.OpenAgent(); await Shot("6-skin-" + model);
             }
         }
-        finally { window.Close(); }
+        finally { AgentPanel.UseOffline(false); window.Close(); }
 
         async Task Shot(string name)
         {

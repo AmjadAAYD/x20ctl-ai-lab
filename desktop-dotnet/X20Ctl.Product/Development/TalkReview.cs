@@ -37,7 +37,8 @@ internal static class TalkReview
         {
             window.Scene.AssignController(player, window.Host.Catalog.Get(model)); window.Host.EnterStudio(player); await Task.Delay(1400);
             var studio = window.Host.Studio!; studio.ShowButtons();
-            log.AppendLine($"#### {model}");
+            for (int i = 0; i < 600 && AgentPanel.State is ModelState.Starting or ModelState.Loading; i++) await Task.Delay(250);
+            log.AppendLine($"#### {model} · model state {AgentPanel.State}");
             await Shot(prefix + "-0-closed");
             int stop = 0;
             // the walk-through: a capture of each step once it has finished moving (the card holds it for a few seconds)

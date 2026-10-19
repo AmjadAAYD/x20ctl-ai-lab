@@ -588,7 +588,7 @@ public sealed class OfflineAgent : IAgentModel
                     ? Plan(s, (AgentVocabulary.OpenPage, AgentVocabulary.PageTarget, page)) : OfflinePlan.Say("Which page should I open?")),
             new("greeting", "hello, help, or what can you do",
                 ["Hi", "Hello", "What can you do", "Help", "Hey there", "Who are you"],
-                _ => OfflinePlan.Say("I'm Agent XCTL. I can set stick and trigger dead zones and curves, hair triggers, turbo, remaps, paddles, reset, switch PC mode, and measure stick drift. Tell me how you play.")),
+                _ => OfflinePlan.Say("I'm Agent XCTL, in offline mode. I can set stick and trigger dead zones and curves, hair triggers, turbo, remaps, paddles, reset, switch PC mode, and measure stick drift. Tell me how you play.")),
         ];
     }
 }

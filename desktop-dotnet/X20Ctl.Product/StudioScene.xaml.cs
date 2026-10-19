@@ -130,6 +130,7 @@ public partial class StudioScene : UserControl
     public bool AgentOpen => agentPanel?.IsShown == true;
     private void BuildAgent()
     {
+        Agent.AgentPanel.Prepare();
     }
     public void OpenAgent()
     {

@@ -79,6 +79,10 @@ Console.WriteLine("PASS: artwork copied, stable after rename, failed replacement
  Console.WriteLine("PASS: setup chooser filters model and invokes selected setup load.");
  Console.WriteLine("PASS: Dashboard populated with 18 games at 1500x740 and 1100x520; lower row stays inside viewport.");
  Console.WriteLine("PASS: isolated intro keyframes; normal/reduced construction; skip completion exactly once; header handoff completes. No window, audio playback or hardware.");var panelType=typeof(X20Ctl.Product.Agent.AgentPanel);
+var preparing=panelType.GetField("preparing",BindingFlags.Static|BindingFlags.NonPublic)!;
+var stateType=preparing.FieldType.GenericTypeArguments[0];
+preparing.SetValue(null,typeof(Task).GetMethod("FromResult")!.MakeGenericMethod(stateType).Invoke(null,[Enum.GetValues(stateType).GetValue(0)]));
+X20Ctl.Product.Agent.AgentPanel.UseOffline(true);
 var agent=new X20Ctl.Product.Agent.AgentPanel("x20_pro","EasySMX X20 Pro",null,_=>{},reducedMotion:true);
 agent.Body.Width=1400;agent.Body.Height=560;agent.Show();agent.Body.Measure(new Size(1400,560));agent.Body.Arrange(new Rect(0,0,1400,560));agent.Body.UpdateLayout();
 if(agent.Body.Child is not System.Windows.Controls.Viewbox)throw new Exception("Agent lost controller silhouette");
