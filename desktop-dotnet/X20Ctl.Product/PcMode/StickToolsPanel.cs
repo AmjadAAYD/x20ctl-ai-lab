@@ -135,9 +135,6 @@ public sealed partial class StickToolsPanel : Border
         else if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightAdvanced(close, reset);
         else if (ThemeCatalog.Current.Id == "nexus") BuildNexusAdvanced(close, reset);
         else if (ThemeCatalog.Current.Id == "tide") BuildTideAdvanced(close, reset);
-        else if (ThemeCatalog.Current.Id == "hollow") BuildHollowAdvanced(close, reset);
-        else if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneAdvanced(close, reset);
-        else if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseAdvanced(close, reset);
         else if (ThemeCatalog.Current.Id == "rebel") BuildRebelAdvanced(close, reset);
     }
 

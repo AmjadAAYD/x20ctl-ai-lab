@@ -25,7 +25,7 @@ public partial class StudioScene
         board.Children.Add(sidebar);
 
         // Title Block
-        var title = NocturneKit.NocturneTitle("MOTOR", "VIBRATION", "Asymmetric haptic feedback engines and trigger rumble sensitivity.");
+        var title = NocturneKit.NocturneTitle("MOTOR", "VIBRATION", "Vibration strength · Local draft");
         Canvas.SetLeft(title, 300);
         Canvas.SetTop(title, 70);
         board.Children.Add(title);
@@ -139,7 +139,7 @@ public partial class StudioScene
 
         var vibNote = new TextBlock
         {
-            Text = "Vibration strength is tested live on the controller · Hardware settings remain locked.",
+            Text = "Changes affect the local draft.",
             FontFamily = NocturneKit.Body,
             FontSize = 12,
             Foreground = NocturneKit.CobaltBrush,

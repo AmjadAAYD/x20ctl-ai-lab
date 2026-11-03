@@ -419,9 +419,6 @@ public sealed partial class ControllerCheckView : Grid
         if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightReadWarning(cards, systemRow, choices, linux);
         if (ThemeCatalog.Current.Id == "nexus") BuildNexusReadWarning(cards, systemRow, choices, linux);
         if (ThemeCatalog.Current.Id == "tide") BuildTideReadWarning(cards, systemRow, choices, linux);
-        if (ThemeCatalog.Current.Id == "hollow") BuildHollowReadWarning(cards, systemRow, choices, linux);
-        if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneReadWarning(cards, systemRow, choices, linux);
-        if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseReadWarning(cards, systemRow, choices, linux);
         if (ThemeCatalog.Current.Id == "rebel") BuildRebelReadWarning(cards, systemRow, choices, linux);
     }
     /// <summary>For a controller on a Linux PC: the bundled Linux Controller Check (tools/linux_controller_check), the same

@@ -333,9 +333,6 @@ public sealed partial class AgentPanel
         if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightAgent();
         if (ThemeCatalog.Current.Id == "nexus") BuildNexusAgent();
         if (ThemeCatalog.Current.Id == "tide") BuildTideAgent();
-        if (ThemeCatalog.Current.Id == "hollow") BuildHollowAgent();
-        if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneAgent();
-        if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseAgent();
         Say(greeting, null);
         ShowSettings(new HashSet<string>());
         Body.Unloaded += (_, _) => StopCharacterMotion();

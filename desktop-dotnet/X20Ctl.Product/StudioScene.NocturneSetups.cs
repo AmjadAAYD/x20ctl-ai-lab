@@ -26,7 +26,7 @@ public partial class StudioScene
         board.Children.Add(sidebar);
 
         // Title Block
-        var title = NocturneKit.NocturneTitle("LOCAL", "SETUPS", "Stored calibration profiles, custom mappings, and tournament presets.");
+        var title = NocturneKit.NocturneTitle("LOCAL", "SETUPS", "Saved setups stay on this PC.");
         Canvas.SetLeft(title, 300);
         Canvas.SetTop(title, 70);
         board.Children.Add(title);
@@ -148,7 +148,7 @@ public partial class StudioScene
 
         rightStack.Children.Add(new TextBlock
         {
-            Text = "Contains dedicated trigger calibrations, stick deadzones, RGB lighting, and custom button layouts.",
+            Text = "Saved on this PC.",
             FontFamily = NocturneKit.Body,
             FontSize = 12.5,
             Foreground = NocturneKit.InkBrush,

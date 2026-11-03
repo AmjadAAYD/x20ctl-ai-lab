@@ -27,7 +27,7 @@ public partial class StudioScene
         board.Children.Add(sidebar);
 
         // Title Block
-        var title = NocturneKit.NocturneTitle("MACRO", "SEQUENCES", "Automate complex inputs and chained button combos on rear paddles.");
+        var title = NocturneKit.NocturneTitle("MACRO", "SEQUENCES", "Record and edit macro sequences · Local draft");
         Canvas.SetLeft(title, 300);
         Canvas.SetTop(title, 70);
         board.Children.Add(title);
@@ -241,7 +241,7 @@ public partial class StudioScene
         {
             var macroNote = new TextBlock
             {
-                Text = "Macros edit in local draft · Apply to controller is active on supported devices.",
+                Text = "Macros edit the local draft.",
                 FontFamily = NocturneKit.Body,
                 FontSize = 12,
                 Foreground = NocturneKit.InkBrush,

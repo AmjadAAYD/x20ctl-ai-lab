@@ -91,9 +91,6 @@ public sealed partial class FeedbackPage : Border
         if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightFeedback(back, kinds);
         if (ThemeCatalog.Current.Id == "nexus") BuildNexusFeedback(back, kinds);
         if (ThemeCatalog.Current.Id == "tide") BuildTideFeedback(back, kinds);
-        if (ThemeCatalog.Current.Id == "hollow") BuildHollowFeedback(back, kinds);
-        if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneFeedback(back, kinds);
-        if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseFeedback(back, kinds);
         if (ThemeCatalog.Current.Id == "rebel") BuildRebelFeedback(back, kinds);
     }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,10 +10,20 @@ namespace X20Ctl.Product;
 
 public partial class StudioScene
 {
+    private TesterWorkbench? nocturneTesterBench;
+    private Action? nocturneTesterRefresh;
+
     private void NocturneShowTester()
     {
         if (nocturnePageHost == null) return;
         nocturnePageHost.Children.Clear();
+        var tester = Tester;
+        Action refreshTester = () => { };
+        if (tester != null && !ReferenceEquals(tester, nocturneTesterBench))
+        {
+            nocturneTesterBench = tester;
+            tester.Updated += () => { if (CurrentPage == "Tester" && ReferenceEquals(nocturneTesterBench, Tester)) nocturneTesterRefresh?.Invoke(); };
+        }
 
         var board = new Canvas { Width = 1600, Height = 900, ClipToBounds = true };
         board.Children.Add(NocturneKit.CreateCityBackdrop());
@@ -29,7 +40,7 @@ public partial class StudioScene
         Canvas.SetLeft(content, 286);
         Canvas.SetTop(content, 80);
 
-        var titleSp = NocturneKit.NocturneTitle("HARDWARE", "LIVE TESTER", "Interactive hardware visualizer for analog sticks, triggers, and digital inputs.");
+        var titleSp = NocturneKit.NocturneTitle("HARDWARE", "LIVE TESTER", "Sticks, triggers and buttons as the game sees them.");
         Canvas.SetLeft(titleSp, 20);
         Canvas.SetTop(titleSp, 10);
         content.Children.Add(titleSp);
@@ -37,7 +48,7 @@ public partial class StudioScene
         // ==========================================
         // LEFT CARD: Analog Sticks & Triggers
         // ==========================================
-        var leftSp = new StackPanel { Width = 590 };
+        var leftSp = new StackPanel { Width = 540 };
 
         var scopeTitle = new TextBlock
         {
@@ -53,7 +64,7 @@ public partial class StudioScene
 
         var scopeCanvas = new Canvas
         {
-            Width = 570,
+            Width = 540,
             Height = 280,
             Background = NocturneKit.NightBrush,
             ClipToBounds = true
@@ -83,7 +94,7 @@ public partial class StudioScene
 
         var lsLabel = new TextBlock
         {
-            Text = "LEFT STICK (0, 0)",
+            Text = "LEFT STICK",
             FontFamily = NocturneKit.Display,
             FontWeight = FontWeights.Bold,
             FontStyle = FontStyles.Italic,
@@ -91,7 +102,7 @@ public partial class StudioScene
             Foreground = NocturneKit.WhiteBrush,
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        Canvas.SetLeft(lsLabel, 80);
+        Canvas.SetLeft(lsLabel, 20); lsLabel.Width = 220; lsLabel.TextAlignment = TextAlignment.Center;
         Canvas.SetTop(lsLabel, 235);
         scopeCanvas.Children.Add(lsLabel);
 
@@ -103,23 +114,23 @@ public partial class StudioScene
             Stroke = new SolidColorBrush(Color.FromArgb(0x80, 0x5c, 0x80, 0xc8)),
             StrokeThickness = 1.5
         };
-        Canvas.SetLeft(rsBorder, 320);
+        Canvas.SetLeft(rsBorder, 300);
         Canvas.SetTop(rsBorder, 40);
         scopeCanvas.Children.Add(rsBorder);
 
-        var rsCrossH = new Line { X1 = 320, Y1 = 130, X2 = 500, Y2 = 130, Stroke = new SolidColorBrush(Color.FromArgb(0x40, 0x5c, 0x80, 0xc8)), StrokeThickness = 1 };
-        var rsCrossV = new Line { X1 = 410, Y1 = 40, X2 = 410, Y2 = 220, Stroke = new SolidColorBrush(Color.FromArgb(0x40, 0x5c, 0x80, 0xc8)), StrokeThickness = 1 };
+        var rsCrossH = new Line { X1 = 300, Y1 = 130, X2 = 480, Y2 = 130, Stroke = new SolidColorBrush(Color.FromArgb(0x40, 0x5c, 0x80, 0xc8)), StrokeThickness = 1 };
+        var rsCrossV = new Line { X1 = 390, Y1 = 40, X2 = 390, Y2 = 220, Stroke = new SolidColorBrush(Color.FromArgb(0x40, 0x5c, 0x80, 0xc8)), StrokeThickness = 1 };
         scopeCanvas.Children.Add(rsCrossH);
         scopeCanvas.Children.Add(rsCrossV);
 
         var rsDot = new Rectangle { Width = 14, Height = 14, Fill = NocturneKit.AccentBrush, Stroke = NocturneKit.WhiteBrush, StrokeThickness = 2 };
-        Canvas.SetLeft(rsDot, 403);
+        Canvas.SetLeft(rsDot, 383);
         Canvas.SetTop(rsDot, 123);
         scopeCanvas.Children.Add(rsDot);
 
         var rsLabel = new TextBlock
         {
-            Text = "RIGHT STICK (0, 0)",
+            Text = "RIGHT STICK",
             FontFamily = NocturneKit.Display,
             FontWeight = FontWeights.Bold,
             FontStyle = FontStyles.Italic,
@@ -127,17 +138,17 @@ public partial class StudioScene
             Foreground = NocturneKit.WhiteBrush,
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        Canvas.SetLeft(rsLabel, 355);
+        Canvas.SetLeft(rsLabel, 280); rsLabel.Width = 220; rsLabel.TextAlignment = TextAlignment.Center;
         Canvas.SetTop(rsLabel, 235);
         scopeCanvas.Children.Add(rsLabel);
 
         leftSp.Children.Add(scopeCanvas);
 
         // Trigger bars
-        var trigSp = new StackPanel { Margin = new Thickness(0, 16, 0, 0) };
+        var trigSp = new StackPanel { Width = 470, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 16, 0, 0) };
         trigSp.Children.Add(new TextBlock
         {
-            Text = "HALL EFFECT TRIGGERS",
+            Text = "TRIGGERS",
             FontFamily = NocturneKit.Display,
             FontWeight = FontWeights.Black,
             FontStyle = FontStyles.Italic,
@@ -190,15 +201,15 @@ public partial class StudioScene
 
         leftSp.Children.Add(trigSp);
 
-        var leftCard = NocturneKit.NocturneWhiteCard(leftSp, 610, 520);
+        var leftCard = NocturneKit.NocturneWhiteCard(leftSp, 590, 520);
         Canvas.SetLeft(leftCard, 20);
-        Canvas.SetTop(leftCard, 130);
+        Canvas.SetTop(leftCard, 150);
         content.Children.Add(leftCard);
 
         // ==========================================
         // RIGHT CARD: Digital Switch Grid & Actions
         // ==========================================
-        var rightSp = new StackPanel { Width = 590 };
+        var rightSp = new StackPanel { Width = 520 };
 
         var btnTitle = new TextBlock
         {
@@ -212,14 +223,15 @@ public partial class StudioScene
         };
         rightSp.Children.Add(btnTitle);
 
-        var btnGrid = new WrapPanel { Width = 570 };
-        var buttonKeys = new[] { "A", "B", "X", "Y", "LB", "RB", "DPAD UP", "DPAD DOWN", "DPAD LEFT", "DPAD RIGHT", "START", "BACK", "GUIDE", "L3", "R3", "M1", "M2", "M3", "M4" };
+        var btnGrid = new WrapPanel { Width = 520 };
+        var buttonKeys = new (string Key, string Label)[] { ("A", "A"), ("B", "B"), ("X", "X"), ("Y", "Y"), ("LB", "LB"), ("RB", "RB"), ("DPAD_UP", "DPAD UP"), ("DPAD_DOWN", "DPAD DOWN"), ("DPAD_LEFT", "DPAD LEFT"), ("DPAD_RIGHT", "DPAD RIGHT"), ("START", "START"), ("SELECT", "BACK"), ("L3", "L3"), ("R3", "R3") };
+        var keyCells = new List<(string Key, Border Cell)>();
 
-        foreach (var bKey in buttonKeys)
+        foreach (var (bKey, bLabel) in buttonKeys)
         {
             var btnBorder = new Border
             {
-                Width = 100,
+                Width = 92,
                 Height = 44,
                 Background = NocturneKit.NightBrush,
                 BorderBrush = NocturneKit.RuleBrush,
@@ -230,7 +242,7 @@ public partial class StudioScene
             };
             var btnText = new TextBlock
             {
-                Text = bKey,
+                Text = bLabel,
                 FontFamily = NocturneKit.Display,
                 FontWeight = FontWeights.Bold,
                 FontStyle = FontStyles.Italic,
@@ -240,6 +252,7 @@ public partial class StudioScene
                 VerticalAlignment = VerticalAlignment.Center
             };
             btnBorder.Child = btnText;
+            keyCells.Add((bKey, btnBorder));
             btnGrid.Children.Add(btnBorder);
         }
         rightSp.Children.Add(btnGrid);
@@ -252,28 +265,57 @@ public partial class StudioScene
             RenderTransform = NocturneKit.CreateSlant(-12),
             RenderTransformOrigin = new Point(0.5, 0.5)
         };
-        hintBox.Child = new TextBlock
+        var hintText = new TextBlock
         {
-            Text = "Press any button or actuate any stick on the controller to verify response latency and switch contact.",
+            Text = "",
             FontFamily = NocturneKit.Body,
             FontSize = 12,
             Foreground = NocturneKit.SoftBrush,
             TextWrapping = TextWrapping.Wrap
         };
+        hintBox.Child = hintText;
         rightSp.Children.Add(hintBox);
 
-        var resetBtn = NocturneKit.NocturneButton("Reset Test Matrix", () =>
-        {
-            NocturneShowTester();
-        }, isPrimary: false, width: 200, height: 40);
-        resetBtn.HorizontalAlignment = HorizontalAlignment.Right;
-        resetBtn.Margin = new Thickness(0, 10, 4, 0);
-        rightSp.Children.Add(resetBtn);
+        var exitBtn = NocturneKit.NocturneButton("Exit tester", () => tester?.ClickExit(), isPrimary: true, width: 160, height: 40);
+        var keysBtn = NocturneKit.NocturneButton(tester?.KeyboardText ?? "Keyboard Test", () => { tester?.ClickKeyboard(); refreshTester(); }, isPrimary: false, width: 200, height: 40);
+        var btnRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 4, 0) };
+        keysBtn.Margin = new Thickness(0, 0, 12, 0);
+        btnRow.Children.Add(keysBtn);
+        btnRow.Children.Add(exitBtn);
+        rightSp.Children.Add(btnRow);
 
-        var rightCard = NocturneKit.NocturneWhiteCard(rightSp, 610, 520);
-        Canvas.SetLeft(rightCard, 650);
-        Canvas.SetTop(rightCard, 130);
+        var rightCard = NocturneKit.NocturneWhiteCard(rightSp, 590, 520);
+        Canvas.SetLeft(rightCard, 625);
+        Canvas.SetTop(rightCard, 150);
         content.Children.Add(rightCard);
+
+                refreshTester = () =>
+        {
+            var w = Tester;
+            void Stick(Rectangle dot, TextBlock label, string name, double cx, double? x, double? y)
+            {
+                Canvas.SetLeft(dot, cx - 7 + (x ?? 0) * 72); Canvas.SetTop(dot, 123 - (y ?? 0) * 72);
+                label.Text = x.HasValue && y.HasValue ? $"{name}  ·  X {x:0.00}  Y {y:0.00}" : name + "  ·  WAITING FOR INPUT";
+            }
+            Stick(lsDot, lsLabel, "LEFT STICK", 130, w?.LeftX, w?.LeftY);
+            Stick(rsDot, rsLabel, "RIGHT STICK", 390, w?.RightX, w?.RightY);
+            void Trig(Border track, Border fill, TextBlock val, double? v)
+            {
+                double d = Math.Clamp(v ?? 0, 0, 1);
+                fill.Width = (track.ActualWidth > 0 ? track.ActualWidth : 440) * d;
+                val.Text = v.HasValue ? $"{(int)Math.Round(d * 100)}%" : "—";
+            }
+            Trig(ltTrack, ltFill, ltVal, w?.LeftTrigger);
+            Trig(rtTrack, rtFill, rtVal, w?.RightTrigger);
+            foreach (var (key, cell) in keyCells)
+            {
+                bool on = w?.State.Pressed(key) == true;
+                cell.Background = on ? NocturneKit.AccentBrush : NocturneKit.NightBrush;
+            }
+            hintText.Text = (w?.SourceText ?? "Gameplay input unavailable") + Environment.NewLine + (w?.PressedText ?? "") + Environment.NewLine + (w?.OwnershipText ?? "");
+        };
+        nocturneTesterRefresh = refreshTester;
+        refreshTester();
 
         board.Children.Add(content);
         nocturnePageHost.Children.Add(board);

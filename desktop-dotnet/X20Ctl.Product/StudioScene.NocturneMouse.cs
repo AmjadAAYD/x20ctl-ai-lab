@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,6 +11,7 @@ namespace X20Ctl.Product;
 public partial class StudioScene
 {
     private string nocturneMouseGroup = "Mouse";
+    private bool nocturneMouseWired;
 
     private void NocturneShowMouse()
     {
@@ -28,13 +29,27 @@ public partial class StudioScene
         board.Children.Add(sidebar);
 
         // Title Block
-        var title = NocturneKit.NocturneTitle("MOUSE", "EMULATION", "Desktop cursor control and customizable button assignment mappings.");
+        var title = NocturneKit.NocturneTitle("MOUSE", "EMULATION", "Controller desktop mouse emulation and custom button mapping · Local draft");
         Canvas.SetLeft(title, 300);
         Canvas.SetTop(title, 70);
         board.Children.Add(title);
 
         var mouse = Mouse;
-        if (mouse == null) return;
+        if (mouse == null)
+        {
+            var none = new TextBlock { Text = "Mouse emulation unavailable for this device.", FontFamily = NocturneKit.Body, FontSize = 15, Foreground = NocturneKit.InkBrush, TextWrapping = TextWrapping.Wrap, Width = 520 };
+            var noneCard = NocturneKit.NocturneWhiteCard(none, width: 620, height: 200);
+            Canvas.SetLeft(noneCard, 320);
+            Canvas.SetTop(noneCard, 260);
+            board.Children.Add(noneCard);
+            nocturnePageHost.Children.Add(board);
+            return;
+        }
+        if (!nocturneMouseWired)
+        {
+            nocturneMouseWired = true;
+            mouse.Watch(() => NocturneLater());
+        }
 
         // ==========================================
         // LEFT STAGE: Inputs List on Slanted White Card
@@ -200,6 +215,7 @@ public partial class StudioScene
         // Speed Slider
         rightStack.Children.Add(new TextBlock { Text = "POINTER SPEED", FontFamily = NocturneKit.Display, FontWeight = FontWeights.Bold, FontSize = 12, Foreground = NocturneKit.InkBrush, Margin = new Thickness(0, 4, 0, 4) });
         var speedSlider = mouse.SpeedSlider;
+        if (speedSlider.Parent is Panel sp0) sp0.Children.Remove(speedSlider); else if (speedSlider.Parent is ContentControl sc0) sc0.Content = null; else if (speedSlider.Parent is Decorator sd0) sd0.Child = null;
         speedSlider.Width = 480;
         speedSlider.HorizontalAlignment = HorizontalAlignment.Left;
         speedSlider.Margin = new Thickness(0, 0, 0, 16);

@@ -33,7 +33,7 @@ public partial class StudioScene
         var curSetting = Curves.Draft[curChannel];
 
         // Title Block
-        var title = NocturneKit.NocturneTitle("RESPONSE", "CURVES", "Hardware hall sensor mapping with sub-millisecond dynamic contour interpolation.");
+        var title = NocturneKit.NocturneTitle("RESPONSE", "CURVES", "Response curve for each stick and trigger · Local draft");
         Canvas.SetLeft(title, 300);
         Canvas.SetTop(title, 70);
         board.Children.Add(title);

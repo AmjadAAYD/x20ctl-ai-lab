@@ -411,7 +411,7 @@ public partial class StudioScene
         Canvas.SetTop(content, 74);
 
         // Big two-line title
-        var title = NocturneKit.NocturneTitle("NOCTURNE", "DASHBOARD", "Overview of active gamepad calibrations and hardware modules.");
+        var title = NocturneKit.NocturneTitle("NOCTURNE", "DASHBOARD", "Controller overview · Local draft");
         Canvas.SetLeft(title, 10);
         Canvas.SetTop(title, 10);
         content.Children.Add(title);
@@ -425,10 +425,10 @@ public partial class StudioScene
         // 4 Skewed Quick Tiles
         var tiles = new (string Name, string Val, string Action, Action Click)[]
         {
-            ("BUTTONS MAPPED", "17 / 17", "Configure Buttons", () => NocturneSelectPage("Buttons")),
-            ("RESPONSE CURVES", "LINEAR 1:1", "Tune Curves", () => NocturneSelectPage("Curves")),
-            ("MACRO SEQUENCES", "4 SLOTS", "Manage Macros", () => NocturneSelectPage("Macros")),
-            ("MOTOR VIBRATION", "75% ACTIVE", "Calibrate Haptics", () => NocturneSelectPage("Vibration"))
+            ("BUTTONS", "", "Open Buttons", () => NocturneSelectPage("Buttons")),
+            ("CURVES", "", "Open Curves", () => NocturneSelectPage("Curves")),
+            ("MACROS", "", "Open Macros", () => NocturneSelectPage("Macros")),
+            ("VIBRATION", "", "Open Vibration", () => NocturneSelectPage("Vibration"))
         };
 
         double tileW = 280;
@@ -455,9 +455,9 @@ public partial class StudioScene
                 RenderTransform = NocturneKit.CreateSlant(12),
                 RenderTransformOrigin = new Point(0.5, 0.5)
             };
-            tStack.Children.Add(new TextBlock { Text = t.Name, FontFamily = NocturneKit.Display, FontWeight = FontWeights.Bold, FontSize = 11.5, Foreground = NocturneKit.CoolGreyBrush });
-            tStack.Children.Add(new TextBlock { Text = t.Val, FontFamily = NocturneKit.Display, FontWeight = FontWeights.Black, FontStyle = FontStyles.Italic, FontSize = 22, Foreground = NocturneKit.WhiteBrush, Margin = new Thickness(0, 4, 0, 4) });
-            tStack.Children.Add(new TextBlock { Text = "▸ " + t.Action.ToUpperInvariant(), FontFamily = NocturneKit.Display, FontWeight = FontWeights.Bold, FontSize = 11, Foreground = NocturneKit.CobaltBrush });
+            tStack.Children.Add(new TextBlock { Text = t.Name, FontFamily = NocturneKit.Display, FontWeight = FontWeights.Black, FontStyle = FontStyles.Italic, FontSize = 22, Foreground = NocturneKit.WhiteBrush, Margin = new Thickness(0, 6, 0, 8) });
+            if (t.Val.Length > 0) tStack.Children.Add(new TextBlock { Text = t.Val, FontFamily = NocturneKit.Display, FontWeight = FontWeights.Black, FontStyle = FontStyles.Italic, FontSize = 22, Foreground = NocturneKit.WhiteBrush, Margin = new Thickness(0, 4, 0, 4) });
+            tStack.Children.Add(new TextBlock { Text = "▸ " + t.Action.ToUpperInvariant(), FontFamily = NocturneKit.Display, FontWeight = FontWeights.Bold, FontSize = 12, Foreground = NocturneKit.LightBlueBrush });
             tileBorder.Child = tStack;
 
             tileBorder.MouseLeftButtonUp += (_, e) =>

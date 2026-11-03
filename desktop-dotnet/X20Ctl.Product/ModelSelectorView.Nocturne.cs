@@ -32,7 +32,7 @@ public sealed partial class ModelSelectorView
 
         var canvas = frame.ContentArea;
 
-        var listSp = new StackPanel { Width = 960 };
+        var listSp = new StackPanel { Width = 900 };
         for (int i = 0; i < chooseItems.Length; i++)
         {
             var item = chooseItems[i];
@@ -83,7 +83,7 @@ public sealed partial class ModelSelectorView
         }
 
         var framed = NocturneKit.NocturneWhiteCard(listSp, 1020, 520);
-        Canvas.SetLeft(framed, 290);
+        Canvas.SetLeft(framed, 262);
         Canvas.SetTop(framed, 40);
         canvas.Children.Add(framed);
 

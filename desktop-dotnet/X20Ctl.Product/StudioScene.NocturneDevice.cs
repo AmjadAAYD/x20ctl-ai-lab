@@ -36,7 +36,7 @@ public partial class StudioScene
         board.Children.Add(sidebar);
 
         // Title Block
-        var title = NocturneKit.NocturneTitle("DEVICE", "INFORMATION", "Hardware identity, telemetry status, and maintenance options.");
+        var title = NocturneKit.NocturneTitle("DEVICE", "INFORMATION", "Hardware identity and maintenance.");
         Canvas.SetLeft(title, 300);
         Canvas.SetTop(title, 70);
         board.Children.Add(title);

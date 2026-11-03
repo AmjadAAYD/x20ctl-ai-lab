@@ -44,7 +44,7 @@ internal static class ThemeReview
             host.EnterStudio(0); await Shot("3-dashboard", 1400);
             var studio = host.Studio!;
             studio.ShowButtons(); studio.SelectControl("A"); await Shot("4-buttons");
-            if (id is "dusk" or "volt" or "blossom" or "nexus" or "tide" or "spotlight" or "hollow" or "nocturne" or "sunrise")
+            if (id is "dusk" or "volt" or "blossom" or "nexus" or "tide" or "spotlight" or "nocturne")
             {
                 var row = Descendants(studio).OfType<System.Windows.Controls.Button>().First(b => b.Tag as string == "theme:input:A");
                 row.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
@@ -322,15 +322,6 @@ internal static class ThemeReview
                 await Shot("14-notice-drivers");
                 host.DismissVoltNotice();
             }
-            if (id == "hollow")
-            {
-                host.ShowHollowThemeRestartNotice("Hollow");
-                await Shot("13-notice-restart");
-                host.DismissHollowNotice();
-                host.ShowHollowDriverNotice(new[] { "ViGEmBus", "HidHide" });
-                await Shot("14-notice-drivers");
-                host.DismissHollowNotice();
-            }
             if (id == "nocturne")
             {
                 host.ShowNocturneThemeRestartNotice("Nocturne");
@@ -340,16 +331,7 @@ internal static class ThemeReview
                 await Shot("14-notice-drivers");
                 host.DismissNocturneNotice();
             }
-            if (id == "sunrise")
-            {
-                host.ShowSunriseThemeRestartNotice("Sunrise");
-                await Shot("13-notice-restart");
-                host.DismissSunriseNotice();
-                host.ShowSunriseDriverNotice(new[] { "ViGEmBus", "HidHide" });
-                await Shot("14-notice-drivers");
-                host.DismissSunriseNotice();
-            }
-            if (id is "spotlight" or "nexus" or "tide" or "dusk" or "volt" or "blossom" or "hollow" or "nocturne" or "sunrise")
+            if (id is "spotlight" or "nexus" or "tide" or "dusk" or "volt" or "blossom" or "nocturne")
             {
                 bool? consent = null;
                 void Answer(bool value) => consent = value;
@@ -361,9 +343,7 @@ internal static class ThemeReview
                     case "dusk": host.ShowDuskDriverNotice(["ViGEmBus"], Answer); break;
                     case "volt": host.ShowVoltDriverNotice(["ViGEmBus"], Answer); break;
                     case "blossom": host.ShowBlossomDriverNotice(["ViGEmBus"], Answer); break;
-                    case "hollow": host.ShowHollowDriverNotice(["ViGEmBus"], Answer); break;
                     case "nocturne": host.ShowNocturneDriverNotice(["ViGEmBus"], Answer); break;
-                    case "sunrise": host.ShowSunriseDriverNotice(["ViGEmBus"], Answer); break;
                 }
                 await host.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle);
                 var notice = host.ActiveThemeNotice ?? throw new InvalidOperationException("Driver consent notice is missing.");

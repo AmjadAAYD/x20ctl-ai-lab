@@ -69,7 +69,7 @@ public partial class StudioScene : UserControl
     private Point? lastFocusCenter;
     public StudioScene(int player, ControllerModel model, ButtonDraft draft, bool reducedMotion = false, CurveDraft? curveDraft = null,MacroDraft? macros = null,VibrationDraft? vibration = null,SetupStore? setups=null,IReadOnlyList<string>? legacy=null,string? activeId=null)
     {
-        InitializeComponent(); Player = player; Model = model; Draft = draft; PadColours.ActivePlayer = player; Loaded += (_, _) => { if (!IsRebel) BuildRebelStudio(); if (ThemeCatalog.Current.Id == "pulse") BuildPulseStudio(); if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightStudio(); if (ThemeCatalog.Current.Id == "nexus") BuildNexusStudio(); if (ThemeCatalog.Current.Id == "tide") BuildTideStudio(); if (ThemeCatalog.Current.Id == "dusk") BuildDuskStudio(); if (ThemeCatalog.Current.Id == "volt") BuildVoltStudio(); if (ThemeCatalog.Current.Id == "blossom") BuildBlossomStudio(); if (ThemeCatalog.Current.Id == "hollow") BuildHollowStudio(); if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneStudio(); if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseStudio(); };
+        InitializeComponent(); Player = player; Model = model; Draft = draft; PadColours.ActivePlayer = player; Loaded += (_, _) => { if (!IsRebel) BuildRebelStudio(); if (ThemeCatalog.Current.Id == "pulse") BuildPulseStudio(); if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightStudio(); if (ThemeCatalog.Current.Id == "nexus") BuildNexusStudio(); if (ThemeCatalog.Current.Id == "tide") BuildTideStudio(); if (ThemeCatalog.Current.Id == "dusk") BuildDuskStudio(); if (ThemeCatalog.Current.Id == "volt") BuildVoltStudio(); if (ThemeCatalog.Current.Id == "blossom") BuildBlossomStudio(); if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneStudio(); };
         setupStore=setups??new(Path.Combine(Path.GetTempPath(),"x20ctl-render-setup-"+Guid.NewGuid().ToString("N")+".json"));legacySources=legacy??Array.Empty<string>();activeSetup=activeId;
         Unloaded+=(_,_)=>{SuspendMacroActivity();StopTry();Tester?.ExitCapture();Diagnostics?.Stop();};
         IsEnabledChanged += (_, _) => { if (!IsEnabled) SuspendMacroActivity(); };
@@ -538,7 +538,7 @@ public partial class StudioScene : UserControl
     }
     private void RefreshEditor()
     {
-        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); HollowLater(); NocturneLater(); SunriseLater();
+        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); NocturneLater();
         updating = true; var region = layout.Controls.FirstOrDefault(r => r.Key == SelectedControl);
         bool macro = region?.Role == "macro", editable = region != null && Draft.CanEdit(SelectedControl);
         SelectedName.Text = region == null ? "Choose a control" : Label(SelectedControl);
@@ -648,7 +648,7 @@ public partial class StudioScene : UserControl
     }
     public void ShowCurves(bool value)
     {
-        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater();
+        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); NocturneLater();
         // a page this model cannot use is refused before anything changes (it used to drop a Device or Setups
         // page onto Buttons with no tab lit, found by the stress run on 10 Oct 2026)
         HideManagement();
@@ -765,13 +765,13 @@ public partial class StudioScene : UserControl
         if (Macros is { IsRecording: true } recording) recording.ToggleRecording();
         Macros?.StopPreview();
     }
-    public void ShowButtons() { RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); ShowCurves(false);if(IsMacros)ShowMacros(false);if(IsVibration)ShowVibration(false);HideManagement();ButtonsNav.IsChecked=true;FrontChoice.IsEnabled=true;RearChoice.IsEnabled=HasRearArtwork;UpdateButtonsPage(); }
+    public void ShowButtons() { RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); NocturneLater(); ShowCurves(false);if(IsMacros)ShowMacros(false);if(IsVibration)ShowVibration(false);HideManagement();ButtonsNav.IsChecked=true;FrontChoice.IsEnabled=true;RearChoice.IsEnabled=HasRearArtwork;UpdateButtonsPage(); }
     public DashboardConsolePage? Dashboard {get;private set;}
     private DashboardConsolePage CreateDashboard(){var page=new DashboardConsolePage(Model,Player,Draft.UnsentChanges,setupStore.Items.Count(s=>s.ModelId==Model.Id),!animate,setupStore.Items.Where(s=>s.ModelId==Model.Id).ToArray(),id=>LoadSetup(setupStore.NativeSnapshot(id)));if(currentTransport!=null)page.SetTransport(currentTransport);if(currentFirmware!=null)page.SetFirmware(currentFirmware);page.SetBatteryLevel(currentBatteryLevel,currentTransport);if(gameplayConnected is bool connected)page.SetInputConnected(connected);page.TelemetryUpdated+=ApplyTelemetry;page.ConfigureRequested+=ShowButtons;page.PageRequested+=target=>{if(target=="Buttons")ShowButtons();else if(target=="Curves")ShowCurves(true);else if(target=="Macros")ShowMacros(true);else ShowManagement(target);};return page;}
     private void DashboardTab(object sender,RoutedEventArgs e)=>ShowManagement("Dashboard");
     public void ShowMacros(bool value)
     {
-        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater();
+        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); NocturneLater();
         HideManagement();
         if(IsVibration)ShowVibration(false);
         if(value==IsMacros)return;
@@ -796,7 +796,7 @@ public partial class StudioScene : UserControl
     private void MacrosTab(object sender,RoutedEventArgs e)=>ShowMacros(true);
     public void ShowVibration(bool value)
     {
-        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater();
+        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); NocturneLater();
         HideManagement();
         if(value==IsVibration)return;
         if(value && IsCurves)ShowCurves(false);if(value && IsMacros)ShowMacros(false);
@@ -813,7 +813,8 @@ public partial class StudioScene : UserControl
     private void ResetVibration(object sender,RoutedEventArgs e)=>Vibration?.Reset();
     public void ShowManagement(string page)
     {
-        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater();
+        NocturneRelease();
+        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); NocturneLater();
         DraftBar.Visibility=page=="Dashboard"?Visibility.Collapsed:Visibility.Visible;RootLayout.RowDefinitions[2].Height=new(page=="Dashboard"?0:40);
         Apply.Visibility=StatusNote.Visibility=page=="Dashboard"?Visibility.Collapsed:Visibility.Visible;ChangeCount.Visibility=page=="Dashboard"?Visibility.Collapsed:Visibility.Visible;
         if(page is not ("Dashboard" or "PcMode" or "Device" or "RGB" or "Screen" or "Diagnostics" or "Mouse" or "Tester" or "Setups"))throw new ArgumentException("Unknown Studio page.");

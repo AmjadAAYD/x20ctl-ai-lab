@@ -275,7 +275,7 @@ public partial class ZoneScene
         });
         titleBlock.Children.Add(new TextBlock
         {
-            Text = modelName.ToUpperInvariant() + "  ·  LOCAL PROFILE ACTIVE",
+            Text = modelName.ToUpperInvariant(),
             FontFamily = NocturneKit.Body,
             FontSize = 13,
             Foreground = NocturneKit.SoftBrush,
