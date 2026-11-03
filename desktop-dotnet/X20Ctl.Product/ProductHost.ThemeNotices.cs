@@ -8,7 +8,7 @@ namespace X20Ctl.Product;
 
 public sealed partial class ProductHost
 {
-    internal FrameworkElement? ActiveThemeNotice => (FrameworkElement?)ActiveSpotlightNotice ?? (FrameworkElement?)ActiveNexusNotice ?? (FrameworkElement?)ActiveTideNotice ?? (FrameworkElement?)ActiveDuskNotice ?? (FrameworkElement?)ActiveVoltNotice ?? ActiveBlossomNotice;
+    internal FrameworkElement? ActiveThemeNotice => (FrameworkElement?)ActiveSpotlightNotice ?? (FrameworkElement?)ActiveNexusNotice ?? (FrameworkElement?)ActiveTideNotice ?? (FrameworkElement?)ActiveDuskNotice ?? (FrameworkElement?)ActiveVoltNotice ?? (FrameworkElement?)ActiveBlossomNotice ?? (FrameworkElement?)ActiveHollowNotice ?? (FrameworkElement?)ActiveNocturneNotice ?? ActiveSunriseNotice;
     private IInputElement? themeNoticePreviousFocus;
     private static IEnumerable<DependencyObject> NoticeChildren(DependencyObject root)
     {
@@ -54,6 +54,9 @@ public sealed partial class ProductHost
             case "dusk": ShowDuskDriverNotice(names, Answer); break;
             case "volt": ShowVoltDriverNotice(names, Answer); break;
             case "blossom": ShowBlossomDriverNotice(names, Answer); break;
+            case "hollow": ShowHollowDriverNotice(names, Answer); break;
+            case "nocturne": ShowNocturneDriverNotice(names, Answer); break;
+            case "sunrise": ShowSunriseDriverNotice(names, Answer); break;
             default: return false;
         }
         if (ReviewSandbox.Active) { ThemeNoticeButton(ActiveThemeNotice!, "no")?.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); return false; }

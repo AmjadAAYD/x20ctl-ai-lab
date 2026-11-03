@@ -69,7 +69,7 @@ public partial class StudioScene : UserControl
     private Point? lastFocusCenter;
     public StudioScene(int player, ControllerModel model, ButtonDraft draft, bool reducedMotion = false, CurveDraft? curveDraft = null,MacroDraft? macros = null,VibrationDraft? vibration = null,SetupStore? setups=null,IReadOnlyList<string>? legacy=null,string? activeId=null)
     {
-        InitializeComponent(); Player = player; Model = model; Draft = draft; PadColours.ActivePlayer = player; Loaded += (_, _) => { if (!IsRebel) BuildRebelStudio(); if (ThemeCatalog.Current.Id == "pulse") BuildPulseStudio(); if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightStudio(); if (ThemeCatalog.Current.Id == "nexus") BuildNexusStudio(); if (ThemeCatalog.Current.Id == "tide") BuildTideStudio(); if (ThemeCatalog.Current.Id == "dusk") BuildDuskStudio(); if (ThemeCatalog.Current.Id == "volt") BuildVoltStudio(); if (ThemeCatalog.Current.Id == "blossom") BuildBlossomStudio(); };
+        InitializeComponent(); Player = player; Model = model; Draft = draft; PadColours.ActivePlayer = player; Loaded += (_, _) => { if (!IsRebel) BuildRebelStudio(); if (ThemeCatalog.Current.Id == "pulse") BuildPulseStudio(); if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightStudio(); if (ThemeCatalog.Current.Id == "nexus") BuildNexusStudio(); if (ThemeCatalog.Current.Id == "tide") BuildTideStudio(); if (ThemeCatalog.Current.Id == "dusk") BuildDuskStudio(); if (ThemeCatalog.Current.Id == "volt") BuildVoltStudio(); if (ThemeCatalog.Current.Id == "blossom") BuildBlossomStudio(); if (ThemeCatalog.Current.Id == "hollow") BuildHollowStudio(); if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneStudio(); if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseStudio(); };
         setupStore=setups??new(Path.Combine(Path.GetTempPath(),"x20ctl-render-setup-"+Guid.NewGuid().ToString("N")+".json"));legacySources=legacy??Array.Empty<string>();activeSetup=activeId;
         Unloaded+=(_,_)=>{SuspendMacroActivity();StopTry();Tester?.ExitCapture();Diagnostics?.Stop();};
         IsEnabledChanged += (_, _) => { if (!IsEnabled) SuspendMacroActivity(); };
@@ -538,7 +538,7 @@ public partial class StudioScene : UserControl
     }
     private void RefreshEditor()
     {
-        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater();
+        RebelLater(); PulseLater(); SpotlightLater(); NexusLater(); TideLater(); DuskLater(); VoltLater(); BlossomLater(); HollowLater(); NocturneLater(); SunriseLater();
         updating = true; var region = layout.Controls.FirstOrDefault(r => r.Key == SelectedControl);
         bool macro = region?.Role == "macro", editable = region != null && Draft.CanEdit(SelectedControl);
         SelectedName.Text = region == null ? "Choose a control" : Label(SelectedControl);

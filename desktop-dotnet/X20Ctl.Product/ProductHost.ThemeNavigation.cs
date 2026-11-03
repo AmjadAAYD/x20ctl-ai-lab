@@ -53,6 +53,9 @@ public sealed partial class ProductHost
             case "dusk": ShowDuskThemeRestartNotice(); break;
             case "volt": ShowVoltThemeRestartNotice(); break;
             case "blossom": ShowBlossomThemeRestartNotice(); break;
+            case "hollow": ShowHollowThemeRestartNotice(); break;
+            case "nocturne": ShowNocturneThemeRestartNotice(); break;
+            case "sunrise": ShowSunriseThemeRestartNotice(); break;
             default: if (!ReviewSandbox.Active) ThemeCatalog.Restart(); break;
         }
     }

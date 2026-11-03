@@ -70,6 +70,18 @@ public static class ThemeCatalog
             C(0x160A16), C(0x200D1E), C(0x2C1328), C(0xFFB56B), C(0xFFD2A0), C(0x4A140F),
             C(0xF6E9EC), C(0xD7C1C8), C(0xA8909B), C(0x5A3550), C(0xC24A7E), C(0x5A2458),
             "Sitka Heading, Georgia", "Sitka Text, Georgia", 8),
+        new AppTheme("hollow", "Hollow", "Gothic ink-blue cavern, ivory filigree",
+            C(0x01050A), C(0x040D15), C(0x0B141F), C(0xB8CCE0), C(0xE6EEF5), C(0x040A11),
+            C(0xE6E3DA), C(0xB6BCC6), C(0x8D97A5), C(0x38414E), C(0x1E2B38), C(0x0B141F),
+            "Georgia, Palatino Linotype", "Georgia, Palatino Linotype", 2),
+        new AppTheme("nocturne", "Nocturne", "Electric blue, slanted, dramatic",
+            C(0x00103A), C(0x01154A), C(0x011D69), C(0x0056FB), C(0x5C80C8), C(0xFFFFFF),
+            C(0xF2F8FE), C(0xCCD3E7), C(0x7F98D0), C(0x2C53A9), C(0x0572F9), C(0x01154A),
+            "Segoe UI Black, Impact, Arial Black", "Segoe UI Variable Text, Segoe UI", 0),
+        new AppTheme("sunrise", "Sunrise", "Golden amber, retro-TV halftone, bright and punchy",
+            C(0xFEDB0C), C(0xFDF3D2), C(0xFFF6DF), C(0xF87B09), C(0xFDC713), C(0x1E1D1A),
+            C(0x1E1D1A), C(0x7D7652), C(0x9E946A), C(0xFDC713), C(0xF87B09), C(0x1E1D1A),
+            "Arial Black, Segoe UI Black", "Segoe UI Variable Text, Segoe UI", 8),
     };
 
     /// <summary>Written by previews/console-concepts/themes/app_films.py: where each film's logo settles.</summary>
@@ -83,6 +95,9 @@ public static class ThemeCatalog
         ["dusk"] = new("dusk", 2.80, 2.74, 2.89, new(624.0, 272.68, 672.0, 459.32), new(752, 523), new(0, 0, 752, 514)),
         ["volt"] = new("volt", 2.67, 2.62, 2.77, new(600.0, 289.63, 720.0, 477.77), new(752, 523), new(0, 0, 752, 499)),
         ["blossom"] = new("blossom", 2.67, 2.62, 2.77, new(600.0, 265.63, 720.0, 488.3), new(752, 523), new(0, 0, 752, 510)),
+        ["hollow"] = new("hollow", 2.67, 2.62, 2.77, new(806.81, 366.35, 307.34, 294.89), new(752, 523), new(216, 80, 321, 308)),
+        ["nocturne"] = new("nocturne", 2.67, 2.62, 2.77, new(806.81, 366.35, 307.34, 294.89), new(752, 523), new(216, 80, 321, 308)),
+        ["sunrise"] = new("sunrise", 2.67, 2.62, 2.77, new(806.81, 366.35, 307.34, 294.89), new(752, 523), new(216, 80, 321, 308)),
     };
 
     /// <summary>The theme in use for this run (set once at startup).</summary>

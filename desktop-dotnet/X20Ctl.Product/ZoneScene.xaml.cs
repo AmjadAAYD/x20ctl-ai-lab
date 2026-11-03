@@ -43,7 +43,7 @@ public partial class ZoneScene : UserControl
         Surface.SizeChanged += (_, _) => Surface.Clip = new RectangleGeometry(new Rect(0, 0, Surface.ActualWidth, Surface.ActualHeight), OuterFrame.CornerRadius.TopLeft, OuterFrame.CornerRadius.TopLeft);
         if (ReducedMotion) MotionHint.Text = "F8 Demo assignments · Reduced motion";
         LoadScenario(ZoneScenario.Empty);
-        if (ThemeCatalog.Current.Id == "rebel") BuildRebel(); else if (ThemeCatalog.Current.Id == "pulse") BuildPulse(); else if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlight(); else if (ThemeCatalog.Current.Id == "nexus") BuildNexus(); else if (ThemeCatalog.Current.Id == "tide") BuildTide(); else if (ThemeCatalog.Current.Id == "dusk") BuildDusk(); else if (ThemeCatalog.Current.Id == "volt") BuildVolt(); else if (ThemeCatalog.Current.Id == "blossom") BuildBlossom();
+        if (ThemeCatalog.Current.Id == "rebel") BuildRebel(); else if (ThemeCatalog.Current.Id == "pulse") BuildPulse(); else if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlight(); else if (ThemeCatalog.Current.Id == "nexus") BuildNexus(); else if (ThemeCatalog.Current.Id == "tide") BuildTide(); else if (ThemeCatalog.Current.Id == "dusk") BuildDusk(); else if (ThemeCatalog.Current.Id == "volt") BuildVolt(); else if (ThemeCatalog.Current.Id == "blossom") BuildBlossom(); else if (ThemeCatalog.Current.Id == "hollow") BuildHollow(); else if (ThemeCatalog.Current.Id == "nocturne") BuildNocturne(); else if (ThemeCatalog.Current.Id == "sunrise") BuildSunrise();
     }
     public void LoadScenario(ZoneScenario value)
     {
@@ -61,20 +61,20 @@ public partial class ZoneScene : UserControl
         ProvenanceText.Text = value == ZoneScenario.Empty ? "LIVE INPUT" : "DEMO";
         ScenarioHint.Text = value switch { ZoneScenario.OneController => "One mock assignment · F9 changes fixture", ZoneScenario.MultipleControllers => "Three mock assignments · F9 changes fixture", _ => "Waiting for controller input" };
         FeedbackText.Text = "Select any player. All four docks begin equal.";
-        if (IsRebel) { foreach (var d in docks) HookRebelDock(d); RebelSync(); } else if (IsPulse) { foreach (var d in docks) HookPulseDock(d); PulseSync(); } else if (IsSpotlight) { SpotlightSync(); } else if (IsNexus) { NexusSync(); } else if (IsTide) { TideSync(); } else if (IsDusk) { DuskSync(); } else if (IsVolt) { VoltSync(); } else if (IsBlossom) { BlossomSync(); } else SnapLayout();
+        if (IsRebel) { foreach (var d in docks) HookRebelDock(d); RebelSync(); } else if (IsPulse) { foreach (var d in docks) HookPulseDock(d); PulseSync(); } else if (IsSpotlight) { SpotlightSync(); } else if (IsNexus) { NexusSync(); } else if (IsTide) { TideSync(); } else if (IsDusk) { DuskSync(); } else if (IsVolt) { VoltSync(); } else if (IsBlossom) { BlossomSync(); } else if (IsHollow) { HollowSync(); } else if (IsNocturne) { NocturneSync(); } else if (IsSunrise) { SunriseSync(); } else SnapLayout();
     }
     public void RestoreAssignments(IReadOnlyList<string?> ids, ControllerCatalog catalog)
     {
         State.Restore(ids, catalog);
         for (int i = 0; i < 4; i++) docks[i].RefreshPlayer(State.Players[i]);
-        SnapLayout(); RebelSync(); PulseSync(); SpotlightSync(); NexusSync(); TideSync(); DuskSync(); VoltSync(); BlossomSync();
+        SnapLayout(); RebelSync(); PulseSync(); SpotlightSync(); NexusSync(); TideSync(); DuskSync(); VoltSync(); BlossomSync(); HollowSync(); NocturneSync(); SunriseSync();
         ScenarioHint.Text = "Saved models · connection checked separately";
     }
     public void AssignController(int index, ControllerModel model)
     {
         State.Assign(index, model);
         docks[index].RefreshPlayer(State.Players[index]);
-        SnapLayout(); RebelSync(); PulseSync(); SpotlightSync(); NexusSync(); TideSync(); DuskSync(); VoltSync(); BlossomSync();
+        SnapLayout(); RebelSync(); PulseSync(); SpotlightSync(); NexusSync(); TideSync(); DuskSync(); VoltSync(); BlossomSync(); HollowSync(); NocturneSync(); SunriseSync();
         FeedbackText.Text = $"{model.Name} assigned to Player {index + 1}. Hardware connection is separate.";
         ScenarioHint.Text = "Assigned models · connection checked separately";
     }
@@ -144,7 +144,7 @@ public partial class ZoneScene : UserControl
     public async Task FocusPlayerAsync(int? index)
     {
         if (index == State.FocusedPlayer) return;
-        if (IsRebel) { await RebelFocus(index); return; } if (IsPulse) { await PulseFocus(index); return; } if (IsSpotlight) { await SpotlightFocus(index); return; } if (IsNexus) { await NexusFocus(index); return; } if (IsTide) { await TideFocus(index); return; } if (IsDusk) { await DuskFocus(index); return; } if (IsVolt) { await VoltFocus(index); return; } if (IsBlossom) { await BlossomFocus(index); return; }
+        if (IsRebel) { await RebelFocus(index); return; } if (IsPulse) { await PulseFocus(index); return; } if (IsSpotlight) { await SpotlightFocus(index); return; } if (IsNexus) { await NexusFocus(index); return; } if (IsTide) { await TideFocus(index); return; } if (IsDusk) { await DuskFocus(index); return; } if (IsVolt) { await VoltFocus(index); return; } if (IsBlossom) { await BlossomFocus(index); return; } if (IsHollow) { await HollowFocus(index); return; } if (IsNocturne) { await NocturneFocus(index); return; } if (IsSunrise) { await SunriseFocus(index); return; }
         transition?.Cancel();
         // Freeze the displayed rectangles before retracting for a new selection.
         CompositionTarget.Rendering -= MoveFrame; moveClock.Stop();

@@ -193,6 +193,9 @@ public sealed partial class ProductSettings : Grid
         if (ThemeCatalog.Current.Id == "dusk") BuildDusk();
         if (ThemeCatalog.Current.Id == "volt") BuildVolt();
         if (ThemeCatalog.Current.Id == "blossom") BuildBlossom();
+        if (ThemeCatalog.Current.Id == "hollow") BuildHollow();
+        if (ThemeCatalog.Current.Id == "nocturne") BuildNocturne();
+        if (ThemeCatalog.Current.Id == "sunrise") BuildSunrise();
     }
 
     public void ShowAbout(bool on)
@@ -200,7 +203,7 @@ public sealed partial class ProductSettings : Grid
         hub.Visibility = on ? Visibility.Collapsed : Visibility.Visible; about.Visibility = on ? Visibility.Visible : Visibility.Collapsed; footer.Visibility = hub.Visibility; RebelSync();
         if (DS.Motion) Enter(on ? about : hub);
         (on ? aboutBack : About).Focus();
-        PulseSync(); SpotlightSync(); NexusSync(); TideSync(); DuskSync(); VoltSync(); BlossomSync();
+        PulseSync(); SpotlightSync(); NexusSync(); TideSync(); DuskSync(); VoltSync(); BlossomSync(); HollowSync(); NocturneSync(); SunriseSync();
     }
     /// <summary>B / Esc: from About back to the hub, from the hub back to the Zone.</summary>
     private FeedbackPage BuildFeedback()

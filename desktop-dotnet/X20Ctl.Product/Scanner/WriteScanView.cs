@@ -119,6 +119,9 @@ public sealed partial class WriteScanView : Grid
         if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightWriteWarning(cards, go, leave);
         if (ThemeCatalog.Current.Id == "nexus") BuildNexusWriteWarning(cards, go, leave);
         if (ThemeCatalog.Current.Id == "tide") BuildTideWriteWarning(cards, go, leave);
+        if (ThemeCatalog.Current.Id == "hollow") BuildHollowWriteWarning(cards, go, leave);
+        if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneWriteWarning(cards, go, leave);
+        if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseWriteWarning(cards, go, leave);
         if (ThemeCatalog.Current.Id == "rebel") BuildRebelWriteWarning(cards, go, leave);
     }
 

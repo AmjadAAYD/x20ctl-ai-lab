@@ -83,6 +83,9 @@ public sealed partial class ModelSelectorView : Grid
         if (ThemeCatalog.Current.Id == "spotlight") BuildSpotlightSelector(catalog, facts);
         if (ThemeCatalog.Current.Id == "nexus") BuildNexusSelector(catalog, facts);
         if (ThemeCatalog.Current.Id == "tide") BuildTideSelector(catalog, facts);
+        if (ThemeCatalog.Current.Id == "hollow") BuildHollowSelector(catalog, facts);
+        if (ThemeCatalog.Current.Id == "nocturne") BuildNocturneSelector(catalog, facts);
+        if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseSelector(catalog, facts);
         Loaded += (_, _) =>
         {
             if (cards.Count > 0) cards[0].Focus();
