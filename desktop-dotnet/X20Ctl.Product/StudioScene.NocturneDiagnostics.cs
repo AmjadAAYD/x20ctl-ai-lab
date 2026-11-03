@@ -15,6 +15,8 @@ public partial class StudioScene
     private void NocturneRelease()
     {
         if (nocturneDiagPanel?.Child is ScrollViewer sv) sv.Content = null;
+        if (nocturneLightingPanel != null) nocturneLightingPanel.Child = null;
+        if (nocturneScreenPanel != null) nocturneScreenPanel.Child = null;
     }
 
     private void NocturneShowDiagnostics()

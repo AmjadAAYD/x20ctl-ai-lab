@@ -135,7 +135,7 @@ public partial class StudioScene
         // 5. List Panel "All assignments (Face)" (x=300, y=620, w=640)
         var listCard = new Border
         {
-            Width = 660,
+            Width = 610,
             Height = 220,
             Background = new SolidColorBrush(Color.FromArgb(0xf0, 0x01, 0x12, 0x3e)),
             BorderBrush = new SolidColorBrush(Color.FromArgb(0x80, 0x00, 0x56, 0xfb)),
@@ -447,7 +447,7 @@ public partial class StudioScene
         string unsavedText = unsentCount == 1 ? "1 unsaved local change" : $"{unsentCount} unsaved local changes";
         var dsRight = new TextBlock
         {
-            Text = unsentCount > 0 ? unsavedText : "Showing what's on the controller.",
+            Text = unsentCount > 0 ? unsavedText : "",
             FontFamily = NocturneKit.Display,
             FontWeight = FontWeights.Bold,
             FontStyle = FontStyles.Italic,

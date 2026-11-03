@@ -148,6 +148,7 @@ public partial class StudioScene
             case "Diagnostics":
                 NocturneShowDiagnostics();
                 break;
+            case "RGB":
             case "Lighting":
                 NocturneShowLighting();
                 break;
@@ -231,7 +232,7 @@ public partial class StudioScene
                 e.Handled = true;
                 if (tab == "Controller Zone") BackRequested?.Invoke();
                 else if (tab == "Tools") ToolsRequested?.Invoke();
-                else if (tab == "Agent XCTL") NocturneSelectPage("Dashboard");
+                else if (tab == "Agent XCTL") OpenAgent();
                 else NocturneSelectPage("Buttons");
             };
             centerTabs.Children.Add(tabBorder);
@@ -326,7 +327,7 @@ public partial class StudioScene
 
         // Left telemetry chips
         var leftSp = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        string connStr = Device?.ConnectionText ?? (gameplayConnected == true ? "Gameplay input detected" : "Not detected");
+        string connStr = Device?.ConnectionText ?? (gameplayConnected == true ? "Gameplay input detected" : gameplayConnected == false ? "Not detected" : "Not reported");
         string battStr = Device?.BatteryText ?? (currentBatteryLevel != null ? $"{currentBatteryLevel}%" : "Not reported");
         string fwStr = Device?.FirmwareText ?? (currentFirmware ?? "Not reported");
 

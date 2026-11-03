@@ -53,14 +53,14 @@ public sealed partial class ProductSettings
 
         var items = new (string Title, string Desc, string ActionLabel, Action Action, string Icon)[]
         {
-            ("CONTROLLER CHECK", "Verify button inputs, triggers, and sensor diagnostics over Bluetooth or USB.", "Run Diagnostic Check", () => Check.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)), ""),
-            ("WRITE SCAN", "Inspect controller registers and compare stored profiles with local firmware records.", "Inspect Firmware Scan", () => WriteScan.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)), ""),
-            ("VISUAL THEMES", "Choose the app theme.", "Browse Themes", () => ShowThemes(true), ""),
-            ("FEEDBACK & SUPPORT", "Report bugs, propose new feature requests, or view diagnostic logs.", "Open Feedback Form", () => ShowFeedback(true), ""),
-            ("SOFTWARE UPDATES", "Check for newer preview builds and driver package updates on GitHub.", "Check for Updates", () => ShowAbout(true), ""),
-            ("OPENING CINEMATIC", "Replay the theme opening intro film and brand animation.", "Replay Intro", () => Replay.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)), ""),
-            ("APPLICATION SOUNDS", "Configure interface feedback chime volume and audio effects.", "Sound Settings", () => ShowAbout(true), ""),
-            ("ABOUT & CREDITS", "License terms, third-party libraries, privacy policies, and release notes.", "View Release Notes", () => ShowAbout(true), "")
+            ("CONTROLLER CHECK", "", "Controller Check", () => Check.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)), ""),
+            ("WRITE SCAN", "", "Write Scan", () => WriteScan.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)), ""),
+            ("VISUAL THEMES", "", "Browse Themes", () => ShowThemes(true), ""),
+            ("FEEDBACK & SUPPORT", "", "Open Feedback Form", () => ShowFeedback(true), ""),
+            ("SOFTWARE UPDATES", "", "Check for Updates", () => ShowAbout(true), ""),
+            ("OPENING CINEMATIC", "", "Replay Intro", () => Replay.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)), ""),
+            ("APPLICATION SOUNDS", "", "Sound Settings", () => ShowAbout(true), ""),
+            ("ABOUT & CREDITS", "", "About", () => ShowAbout(true), "")
         };
 
         var grid = new UniformGrid { Columns = 4, Rows = 2, Width = 1440, Height = 640 };
@@ -90,19 +90,7 @@ public sealed partial class ProductSettings
         var frame = new NocturneToolFrame("VISUAL THEMES", "Choose the app theme", () => ShowThemes(false));
         var canvas = frame.ContentArea;
 
-        var allThemes = new (string Id, string Name, string Accent, string Sub)[]
-        {
-            ("default", "DEFAULT", "#2563EB", "Classic Studio"),
-            ("nocturne", "NOCTURNE", "#0056FB", "Electric Cobalt"),
-            ("tide", "TIDE", "#28B6F0", "Persona 3 Blue"),
-            ("pulse", "PULSE", "#00FFCC", "Cyber Waveform"),
-            ("spotlight", "SPOTLIGHT", "#EAB308", "Noir Warm Glow"),
-            ("nexus", "NEXUS", "#38BDF8", "Holo Matrix"),
-            ("rebel", "REBEL", "#F43F5E", "Cyberpunk Edge"),
-            ("volt", "VOLT", "#FACC15", "High Voltage"),
-            ("blossom", "YOZAKURA", "#F472B6", "Night Blossom"),
-            ("dusk", "DUSK", "#FB923C", "Twilight Orange")
-        };
+        var allThemes = ThemeCatalog.All.Select(theme => (Id: theme.Id, Name: theme.Name, Accent: theme.Accent.ToString())).ToArray();
 
         var grid = new UniformGrid { Columns = 4, Rows = 3, Width = 1360, Height = 640 };
         string curTheme = ThemeCatalog.Current.Id;
@@ -124,7 +112,6 @@ public sealed partial class ProductSettings
             sp.Children.Add(bar);
 
             sp.Children.Add(new TextBlock { Text = t.Name, FontFamily = NocturneKit.Display, FontWeight = FontWeights.Black, FontStyle = FontStyles.Italic, FontSize = 14, Foreground = NocturneKit.VoidTextBrush, HorizontalAlignment = HorizontalAlignment.Center });
-            sp.Children.Add(new TextBlock { Text = t.Sub, FontFamily = NocturneKit.Body, FontSize = 11.5, Foreground = NocturneKit.SoftBrush, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 4, 0, 10) });
 
             string targetId = t.Id;
             var selBtn = NocturneKit.NocturneButton(isActive ? "CURRENT THEME" : "SELECT", () =>

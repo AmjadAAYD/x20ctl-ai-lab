@@ -16,14 +16,9 @@ public sealed partial class ModelSelectorView
     {
         var models = catalog.Models.ToDictionary(model => model.Id);
 
-        var chooseItems = new (string Key, string Name, string Specs, string Status)[]
-        {
-            ("x20", "EasySMX X20", "Hall sticks · Hall triggers · RGB · 4 macro paddles", "Full configuration"),
-            ("x20_pro", "EasySMX X20 Pro", "TMR sticks · Hall / microswitch triggers · RGB · screen · trigger haptics · 6 macro paddles", "Full configuration"),
-            ("x05_pro", "EasySMX X05 Pro", "Hall sticks · Hall / microswitch triggers · RGB · trigger haptics · 2 macro paddles", "Not available yet"),
-            ("x10", "EasySMX X10", "Hall sticks · Hall triggers · 2 macro paddles", "Input testing · experimental"),
-            ("d10", "EasySMX D10", "TMR sticks · Hall / microswitch triggers · RGB · 2 macro paddles", "Input testing · experimental")
-        };
+        var chooseItems = catalog.Models.Select(model => (Key: model.Id, Name: model.Name,
+            Specs: facts.GetValueOrDefault(model.Id)?.Description ?? "",
+            Status: facts.GetValueOrDefault(model.Id)?.SupportLine ?? "")).ToArray();
 
         var frame = new NocturneToolFrame(
             "CHOOSE CONTROLLER MODEL",
@@ -82,7 +77,7 @@ public sealed partial class ModelSelectorView
             listSp.Children.Add(itemCard);
         }
 
-        var framed = NocturneKit.NocturneWhiteCard(listSp, 1020, 520);
+        var framed = NocturneKit.NocturneWhiteCard(new ScrollViewer { Content = listSp, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }, 1020, 620);
         Canvas.SetLeft(framed, 262);
         Canvas.SetTop(framed, 40);
         canvas.Children.Add(framed);

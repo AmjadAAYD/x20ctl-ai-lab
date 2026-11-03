@@ -55,7 +55,7 @@ public partial class StudioScene
         // ==========================================
         // LEFT STAGE: Timeline on Slanted White Card
         // ==========================================
-        var leftSp = new StackPanel { Width = 640 };
+        var leftSp = new StackPanel();
 
         leftSp.Children.Add(new TextBlock
         {
@@ -71,18 +71,18 @@ public partial class StudioScene
         // Timeline Ruler with a row of skewed blocks
         var timelineCanvas = new Canvas
         {
-            Width = 620,
+            Width = 550,
             Height = 120,
             Background = new SolidColorBrush(Color.FromArgb(0x18, 0x01, 0x00, 0x42)),
             ClipToBounds = true
         };
 
         var events = Macros != null ? Macros.Draft[curSlot] : null;
-        int stepCount = Math.Max(4, events?.Count ?? 4);
+        int stepCount = events?.Count ?? 0;
 
         for (int i = 0; i < stepCount; i++)
         {
-            double stepX = 20 + i * (560.0 / Math.Max(1, stepCount - 1));
+            double stepX = 20 + i * (500.0 / Math.Max(1, stepCount - 1));
 
             // Skewed block for each macro event
             var block = new Border
@@ -134,7 +134,7 @@ public partial class StudioScene
         var capFill = new Border
         {
             Height = 6,
-            Width = Math.Clamp(620 * (entryCount / 47.0), 0, 620),
+            Width = Math.Clamp(550 * (entryCount / 47.0), 0, 550),
             HorizontalAlignment = HorizontalAlignment.Left,
             Background = NocturneKit.ActiveBlueBrush,
             CornerRadius = new CornerRadius(1)
@@ -151,14 +151,14 @@ public partial class StudioScene
         {
             Macros?.ToggleRecording();
             NocturneShowMacros();
-        }, isPrimary: isRecording, isDanger: isRecording, width: 150, height: 36, tag: "theme:macro:record");
+        }, isPrimary: isRecording, isDanger: isRecording, width: 125, height: 36, tag: "theme:macro:record");
         recordBtn.Margin = new Thickness(0, 0, 10, 0);
 
         var addEventBtn = NocturneKit.NocturneButton("+ Add Event", () =>
         {
             Macros?.Add();
             NocturneShowMacros();
-        }, isPrimary: false, width: 156, height: 36, tag: "theme:macro:add");
+        }, isPrimary: false, width: 125, height: 36, tag: "theme:macro:add");
         addEventBtn.Margin = new Thickness(0, 0, 10, 0);
 
         bool isPreviewing = Macros?.IsPreviewing ?? false;
@@ -166,14 +166,14 @@ public partial class StudioScene
         {
             if (isPreviewing) Macros?.StopPreview(); else Macros?.Preview();
             NocturneShowMacros();
-        }, isPrimary: false, width: 130, height: 36, tag: "theme:macro:preview");
+        }, isPrimary: false, width: 115, height: 36, tag: "theme:macro:preview");
         prevBtn.Margin = new Thickness(0, 0, 10, 0);
 
         var clearBtn = NocturneKit.NocturneButton("Clear Slot", () =>
         {
             Macros?.Clear();
             NocturneShowMacros();
-        }, isPrimary: false, width: 130, height: 36, tag: "theme:macro:clear");
+        }, isPrimary: false, width: 115, height: 36, tag: "theme:macro:clear");
 
         toolRow.Children.Add(recordBtn);
         toolRow.Children.Add(addEventBtn);

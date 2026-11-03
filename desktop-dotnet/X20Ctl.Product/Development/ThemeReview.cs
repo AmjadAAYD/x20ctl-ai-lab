@@ -249,6 +249,23 @@ internal static class ThemeReview
             await studio.AgentWindow!.Ask("what does the dead zone do"); await Shot("8i-agent-answer");
             studio.AgentWindow.ShowSettingsPage(true); await Shot("8j-agent-settings"); studio.AgentWindow.ShowSettingsPage(false);
             studio.CloseAgent();
+            host.ReturnToZone(); host.Zone.AssignController(0, host.Catalog.Get("x20_pro")); host.EnterStudio(0);
+            var pro = host.Studio!;
+            await Idle(); await Idle();
+            pro.ShowManagement("RGB"); await Shot("8k-rgb", 1400);
+            File.WriteAllText(Path.Combine(directory, "rgb-tree.txt"), string.Join(Environment.NewLine, Descendants(pro).OfType<FrameworkElement>().Select(e => $"{e.GetType().Name} {e.Name} {e.Visibility} {e.ActualWidth}x{e.ActualHeight} opacity={e.Opacity}")));
+            if (pro.CurrentPage != "RGB") throw new InvalidOperationException("RGB navigation failed.");
+            pro.ShowManagement("Screen"); await Shot("8l-screen");
+            if (pro.CurrentPage != "Screen") throw new InvalidOperationException("Screen navigation failed.");
+            pro.ShowManagement("Device"); await Shot("8m-device-pro");
+            // Only reveal/cancel confirmation. Never invoke the confirm-reset action.
+            if (id == "nocturne")
+            {
+                ClickTag("theme:device:reset"); await Shot("8n-reset-confirm");
+                ClickTag("theme:device:cancel-reset"); await Shot("8o-reset-cancel");
+            }
+            host.ReturnToZone(); host.Zone.AssignController(0, host.Catalog.Get("x20")); host.EnterStudio(0);
+            studio = host.Studio!;
             if (id != "default")
             {
                 host.ShowSettings(); await host.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle);
@@ -411,6 +428,8 @@ internal static class ThemeReview
             var filter = Environment.GetEnvironmentVariable("X20CTL_REVIEW_SHOTS");
             if (!string.IsNullOrEmpty(filter) && !filter.Split(',').Contains(name))
             { stage.Measure(new Size(1600, 900)); stage.Arrange(new Rect(0, 0, 1600, 900)); stage.UpdateLayout(); await Task.Delay(60); return; }
+            stage.Measure(new Size(1600, 900)); stage.Arrange(new Rect(0, 0, 1600, 900)); stage.UpdateLayout();
+            await host.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle);
             await Task.Delay(settle);
             var variants = new[] { (1600, 900, 96, ""), (1040, 700, 96, "-minimum"), (1600, 900, 120, "-dpi125"), (1600, 900, 144, "-dpi150") };
             if (Environment.GetEnvironmentVariable("X20CTL_REVIEW_BASE_ONLY") == "1") variants = variants.Take(1).ToArray();

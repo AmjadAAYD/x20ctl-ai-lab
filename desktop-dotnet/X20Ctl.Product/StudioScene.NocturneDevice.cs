@@ -57,7 +57,7 @@ public partial class StudioScene
         var padArt = NocturneKit.ControllerArt(Model.Id, 380);
         leftStack.Children.Add(padArt);
 
-        var statsGrid = new UniformGrid { Columns = 2, Rows = 2, Margin = new Thickness(0, 14, 0, 0) };
+        var statsGrid = new UniformGrid { Columns = 2, Rows = 2, Margin = new Thickness(0, 14, 40, 0) };
         var stats = new (string K, string V)[]
         {
             ("Battery Level", Device?.BatteryText ?? "Not reported"),

@@ -24,8 +24,8 @@ public partial class StudioScene
         LayoutUpdated+=(_,_)=>
         {
             bool themed=ThemeCatalog.Current.Id is "rebel" or "pulse" or "spotlight" or "nexus" or "tide" or "dusk" or "volt" or "blossom" or "nocturne";
-            bool feature=ManagementPage is "RGB" or "Screen";
-            var target=themed&&!feature&&tabs.Children.Count>0?Visibility.Visible:Visibility.Collapsed;
+            bool feature=ThemeCatalog.Current.Id != "nocturne" && (ManagementPage is "RGB" or "Screen");
+            var target=themed&&ThemeCatalog.Current.Id!="nocturne"&&!feature&&tabs.Children.Count>0?Visibility.Visible:Visibility.Collapsed;
             if(tabs.Visibility!=target)tabs.Visibility=target;
             if(themed&&feature)
             {
