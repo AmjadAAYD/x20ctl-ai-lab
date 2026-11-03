@@ -67,8 +67,8 @@ public sealed partial class ProductSettings
         foreach (var item in items)
         {
             var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-            sp.Children.Add(new TextBlock { Text = item.Icon, FontFamily = new FontFamily("Segoe Fluent Icons"), FontSize = 28, Foreground = NocturneKit.VoidTextBrush, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 8) });
-            sp.Children.Add(new TextBlock { Text = item.Title, FontFamily = NocturneKit.Display, FontWeight = FontWeights.Black, FontStyle = FontStyles.Italic, FontSize = 13.5, Foreground = NocturneKit.VoidTextBrush, HorizontalAlignment = HorizontalAlignment.Center });
+            // No icons: the glyphs here did not match their tools (a play arrow for Controller Check, blanks for Updates and Feedback).
+            sp.Children.Add(new TextBlock { Text = item.Title, FontFamily = NocturneKit.Display, FontWeight = FontWeights.Black, FontStyle = FontStyles.Italic, FontSize = 17, Foreground = NocturneKit.VoidTextBrush, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 12) });
 
             var btn = NocturneKit.NocturneButton(item.ActionLabel, item.Action, isPrimary: false, height: 32);
             sp.Children.Add(btn);

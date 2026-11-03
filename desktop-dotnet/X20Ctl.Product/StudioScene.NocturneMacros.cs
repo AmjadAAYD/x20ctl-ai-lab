@@ -158,7 +158,7 @@ public partial class StudioScene
         {
             Macros?.Add();
             NocturneShowMacros();
-        }, isPrimary: false, width: 130, height: 36, tag: "theme:macro:add");
+        }, isPrimary: false, width: 156, height: 36, tag: "theme:macro:add");
         addEventBtn.Margin = new Thickness(0, 0, 10, 0);
 
         bool isPreviewing = Macros?.IsPreviewing ?? false;
@@ -192,7 +192,7 @@ public partial class StudioScene
         var rightSp = new StackPanel { Width = 460 };
         rightSp.Children.Add(new TextBlock
         {
-            Text = "MACRO ENGINE SPECS",
+            Text = "MACRO LIMITS",
             FontFamily = NocturneKit.Display,
             FontWeight = FontWeights.Black,
             FontStyle = FontStyles.Italic,
@@ -204,10 +204,7 @@ public partial class StudioScene
         var specs = new (string K, string V)[]
         {
             ("Profile Capacity", Macros?.CapacityDescription ?? "0 / 47 inputs"),
-            ("Step Resolution", "1 millisecond"),
-            ("Max Chained Inputs", "47 discrete inputs"),
-            ("Trigger Mode", "Hardware loop playback"),
-            ("Paddle Target", $"{curSlot} Rear Microswitch")
+            ("Max Chained Inputs", "47 discrete inputs")
         };
 
         foreach (var (k, v) in specs)
