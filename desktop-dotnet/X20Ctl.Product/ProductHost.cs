@@ -27,6 +27,9 @@ public sealed partial class ProductHost : Grid
         if(refresh)_=RefreshBleTelemetryAsync();
     }
     private string? currentTransport;
+    // A Studio is disposable presentation; the gameplay session belongs to the host.
+    private readonly Dictionary<(int Player, string Model), int> connectedControllers = new();
+    private int? lastGameplaySlot;
     public string?[] BatteryLevels => batteryLevels;
     private readonly Dictionary<(int Player,string Model),TelemetryData> latestTelemetry=[];
     private readonly string?[] measuredBatteryModels=new string?[4];
@@ -138,7 +141,7 @@ public sealed partial class ProductHost : Grid
         try { var ids = store.Load(); if (assignmentPath != null && ids.Any(id => id != null)) Zone.RestoreAssignments(ids, Catalog); }
         catch (Exception error) when (error is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
         { Zone.FeedbackText.Text = "Saved assignments could not be read. Original file preserved; new choices will be session-only."; }
-        Zone.ControllerRemoved += index => {try{store.Save(Zone.State.Players.Select(p=>p.ModelId).ToArray());}catch(Exception error)when(error is IOException or UnauthorizedAccessException or InvalidOperationException){Zone.FeedbackText.Text="Removed for this session; saved assignments could not be updated.";}};
+        Zone.ControllerRemoved += index => {ForgetController(index);try{store.Save(Zone.State.Players.Select(p=>p.ModelId).ToArray());}catch(Exception error)when(error is IOException or UnauthorizedAccessException or InvalidOperationException){Zone.FeedbackText.Text="Removed for this session; saved assignments could not be updated.";}};
         Zone.StudioPageRequested += (index, page) => { if (Zone.State.Players[index].Model == null) return; pendingPage = page; VerifyThenEnter(index); };
         Zone.ControllerActionRequested += (index, change) => { if (change || Zone.State.Players[index].Model == null) OpenSelector(index); else VerifyThenEnter(index); };
     }
@@ -153,6 +156,7 @@ public sealed partial class ProductHost : Grid
     public void AssignSelection(ControllerModel model)
     {
         int player = selectorPlayer; CloseSelector(); ReturnToZone();
+        ForgetController(player);
         Zone.AssignController(player, model);
         try { store.Save(Zone.State.Players.Select(p => p.ModelId).ToArray()); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -171,6 +175,7 @@ public sealed partial class ProductHost : Grid
         var assigned = Zone.State.Players[player];
         studioPlayer = player;
         var model = assigned.ModelId != null ? Catalog.Find(assigned.ModelId) : Catalog.Models.FirstOrDefault(m => m.Name == assigned.Model);
+        if (model != null && connectedControllers.ContainsKey((player, model.Id))) { EnterStudio(player); return; }
         if (model == null || ReviewSandbox.Active || verifyLayer != null) { EnterStudio(player); return; }
         int token = ++verifyToken;
         var view = new ControllerVerifyView(model.Id, model.Name, Zone.ReducedMotion == false);
@@ -237,6 +242,7 @@ public sealed partial class ProductHost : Grid
         };
 
         if (currentTransport != null) Studio.SetTransport(currentTransport);
+        if (connectedControllers.ContainsKey((player, model.Id))) Studio.SetGameplayConnected(true);
         if(latestTelemetry.TryGetValue((player,model.Id),out var rememberedTelemetry))Studio.ApplyTelemetry(rememberedTelemetry);
         else if(measuredBatteryModels[player]!=model.Id){measuredBatteryLevels[player]=null;batteryLevels[player]=null;Studio.SetBatteryLevel(null);}
         RequestAutomaticTelemetryRefresh();
@@ -255,6 +261,7 @@ public sealed partial class ProductHost : Grid
         Studio.Opacity=1;Studio.IsHitTestVisible=true;Zone.Visibility=Visibility.Collapsed;
         Studio.Dashboard?.CompleteEntryTransition();
         if (pendingPage != null) { var page = pendingPage; pendingPage = null; Studio?.ShowManagement(page); }
+        _=UpdateNativeContext();
     }
 
     public void ReturnToZone()
@@ -266,6 +273,22 @@ public sealed partial class ProductHost : Grid
         Zone.Visibility = Visibility.Visible;
         if (back) Fx.Appear(Zone, .94, 380);
         _=UpdateNativeContext();
+    }
+    private void ForgetController(int player)
+    {
+        foreach (var key in connectedControllers.Keys.Where(key => key.Player == player).ToArray())
+            connectedControllers.Remove(key);
+    }
+    private void ObserveGameplayConnection(int slot, bool connected)
+    {
+        lastGameplaySlot = slot;
+        if (!connected)
+        {
+            foreach (var key in connectedControllers.Where(pair => pair.Value == slot).Select(pair => pair.Key).ToArray())
+                connectedControllers.Remove(key);
+        }
+        else if (Studio is {} studio)
+            connectedControllers[(studio.Player, studio.Model.Id)] = slot;
     }
     // every launch opens with the intro, like Steam Big Picture (owner direction 10 Oct 2026), unless the player turned it
     // off in Tools (owner request 12 Oct 2026); Replay Intro still plays it
@@ -282,7 +305,7 @@ public sealed partial class ProductHost : Grid
     public async Task InitializeNativeEngineAsync()
     {
         if(Engine!=null)return;
-        try{Engine=new();Engine.EventReceived+=QueueNativeEvent;Engine.Disconnected+=reason=>Dispatcher.BeginInvoke(new Action(()=>{nativeSubscription=null;nativeArmed=false;NativeEngineStatus="Native core disconnected · Configuration unavailable";if(Studio!=null){Studio.NativeEngineStatus=NativeEngineStatus;Studio.Device?.UpdateEngineStatus(NativeEngineStatus);Studio.Tester?.ExitCapture();}}));var hello=await Engine.Request("handshake",new{});if(!hello.TryGetProperty("engineEpoch",out var epoch))throw new InvalidDataException("Native handshake omitted epoch.");nativeEpoch=epoch.GetString();NativeEngineStatus="Native C++ core running · Configuration locked";Zone.ProvenanceText.Text="LIVE INPUT";await RefreshNativeCapabilities(Studio?.Model.Id??"x20");await UpdateNativeContext();}
+        try{Engine=new();Engine.EventReceived+=QueueNativeEvent;Engine.Disconnected+=reason=>Dispatcher.BeginInvoke(new Action(()=>{nativeSubscription=null;nativeArmed=false;connectedControllers.Clear();lastGameplaySlot=null;Studio?.SetGameplayConnected(false);NativeEngineStatus="Native core disconnected · Configuration unavailable";if(Studio!=null){Studio.NativeEngineStatus=NativeEngineStatus;Studio.Device?.UpdateEngineStatus(NativeEngineStatus);Studio.Tester?.ExitCapture();}}));var hello=await Engine.Request("handshake",new{});if(!hello.TryGetProperty("engineEpoch",out var epoch))throw new InvalidDataException("Native handshake omitted epoch.");nativeEpoch=epoch.GetString();NativeEngineStatus="Native C++ core running · Configuration locked";Zone.ProvenanceText.Text="LIVE INPUT";await RefreshNativeCapabilities(Studio?.Model.Id??"x20");await UpdateNativeContext();}
         catch(Exception error){Zone.ProvenanceText.Text="INPUT UNAVAILABLE";NativeEngineStatus="Native core unavailable · "+error.Message;if(Studio!=null){Studio.NativeEngineStatus=NativeEngineStatus;Studio.Device?.UpdateEngineStatus(NativeEngineStatus);}Zone.FeedbackText.Text="Native connection unavailable; local previews remain available.";}
     }
     private async Task RefreshNativeCapabilities(string model)
@@ -290,15 +313,18 @@ public sealed partial class ProductHost : Grid
         try{if(Engine==null)return;NativeCapabilities=await Engine.Request("capabilities",new{model});if(Studio!=null){Studio.NativeEngineStatus=NativeEngineStatus;Studio.Device?.UpdateEngineStatus(NativeEngineStatus);}}
         catch(Exception error){NativeEngineStatus="Native capability query unavailable · "+error.Message;}
     }
-    public async Task StopNativeEngineAsync(){nativeSubscription=null;if(Engine!=null){var owned=Engine;Engine=null;await owned.DisposeAsync();}}
+    public async Task StopNativeEngineAsync(){nativeSubscription=null;connectedControllers.Clear();lastGameplaySlot=null;Studio?.SetGameplayConnected(false);if(Engine!=null){var owned=Engine;Engine=null;await owned.DisposeAsync();}}
     private async Task UpdateNativeContext()
     {
         if(Engine==null||nativeEpoch==null)return;await nativeContextLock.WaitAsync();
         try{if(Engine==null)return;nativeSubscription=null;nativeArmed=false;lastNativeButtons.Clear();lastNativeSequence=-1;string context=ExpectedNativeContext;
             var sources=await Engine.Request("listGameplaySources",new{});
             var slots=sources.GetProperty("sources").EnumerateArray().Select(s=>s.GetProperty("slot").GetInt32()).Where(s=>!PcModeService.IsVirtual(s)).ToArray();
-            int preferred=Studio?.Player??Zone.State.FocusedPlayer??0;
-            int slot=slots.Contains(preferred)?preferred:slots.FirstOrDefault(0);
+            foreach(var key in connectedControllers.Where(pair=>!slots.Contains(pair.Value)).Select(pair=>pair.Key).ToArray())connectedControllers.Remove(key);
+            int preferred = Studio is {} studio && connectedControllers.TryGetValue((studio.Player, studio.Model.Id), out int rememberedSlot)
+                ? rememberedSlot : Studio?.Player ?? lastGameplaySlot ?? Zone.State.FocusedPlayer ?? 0;
+            int slot = slots.Contains(preferred) || (Studio == null && lastGameplaySlot == preferred)
+                ? preferred : slots.FirstOrDefault(0);
             var response=await Engine.Request("subscribe",new{stream="input",slot,context});if(context==ExpectedNativeContext)nativeSubscription=response.GetProperty("subscriptionId").GetString();}
         catch(Exception error){NativeEngineStatus="Native input unavailable · "+error.Message;}finally{nativeContextLock.Release();}
     }
@@ -314,7 +340,8 @@ public sealed partial class ProductHost : Grid
             if(value.GetProperty("engineEpoch").GetString()!=nativeEpoch||value.GetProperty("subscriptionId").GetString()!=nativeSubscription||value.GetProperty("inputContext").GetString()!=ExpectedNativeContext)return;
             long sequence=value.GetProperty("sequence").GetInt64();if(sequence<=lastNativeSequence)return;lastNativeSequence=sequence;
             var payload=value.GetProperty("payload");bool connected=payload.GetProperty("connected").GetBoolean();Zone.ProvenanceText.Text=connected?"LIVE INPUT":"NO CONTROLLER";Zone.ScenarioHint.Text=connected?"XInput navigation · Model identity unverified · Configuration locked":"No gameplay source connected · Configuration locked";
-            NativeInputStudio?.SetGameplayConnected(connected);
+            ObserveGameplayConnection(payload.GetProperty("slot").GetInt32(),connected);
+            Studio?.SetGameplayConnected(connected);
             RequestAutomaticTelemetryRefresh(connected);
             if(connected)NativeInputStudio?.ObserveLiveInput(payload.GetProperty("leftX").GetDouble(),payload.GetProperty("leftY").GetDouble(),payload.GetProperty("rightX").GetDouble(),payload.GetProperty("rightY").GetDouble(),payload.GetProperty("lt").GetDouble(),payload.GetProperty("rt").GetDouble());
             // virtual buttons: triggers and left stick become digital presses with a threshold

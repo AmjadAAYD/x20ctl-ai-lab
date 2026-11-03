@@ -8,6 +8,13 @@ public partial class App : Application
     {
         try
         {
+            if(e.Args.Length==2 && e.Args[0]=="--review-connection")
+            {
+                ShutdownMode=ShutdownMode.OnExplicitShutdown;
+                try{await Development.ConnectionReview.Run(e.Args[1]);Shutdown(0);}
+                catch(Exception failure){Directory.CreateDirectory(e.Args[1]);File.WriteAllText(Path.Combine(e.Args[1],"failure.txt"),failure.ToString());Shutdown(1);}
+                return;
+            }
             if(e.Args.Length==2 && e.Args[0]=="--review-device-telemetry")
             {
                 ShutdownMode=ShutdownMode.OnExplicitShutdown;
