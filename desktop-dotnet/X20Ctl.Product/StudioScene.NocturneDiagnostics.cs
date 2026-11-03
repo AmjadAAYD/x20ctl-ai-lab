@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -41,6 +42,11 @@ public partial class StudioScene
         else
         {
             if (diagnostics.Body.Parent is Panel owner) owner.Children.Remove(diagnostics.Body);
+            // The header docks its buttons right and squeezes the intro into a narrow column; stack them in this wider panel instead.
+            if (diagnostics.Body.Children.OfType<ScrollViewer>().FirstOrDefault()?.Content is StackPanel diagPage
+                && diagPage.Children.OfType<DockPanel>().FirstOrDefault() is { } diagHead)
+                foreach (UIElement part in diagHead.Children)
+                    if (DockPanel.GetDock(part) == Dock.Right) { DockPanel.SetDock(part, Dock.Bottom); ((FrameworkElement)part).Margin = new Thickness(0, 10, 0, 0); }
             body = new ScrollViewer { Content = diagnostics.Body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         }
 

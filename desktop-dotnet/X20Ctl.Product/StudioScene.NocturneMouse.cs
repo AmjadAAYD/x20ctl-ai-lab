@@ -96,13 +96,13 @@ public partial class StudioScene
 
             var keyBadge = new Border
             {
-                Width = 28,
+                MinWidth = 34,
                 Height = 20,
                 Background = isSelected ? NocturneKit.WhiteBrush : new SolidColorBrush(Color.FromArgb(0xbb, 0x00, 0x56, 0xfb)),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            keyBadge.Child = new TextBlock { Text = inKey, FontFamily = NocturneKit.Display, FontWeight = FontWeights.Bold, FontSize = 10, Foreground = isSelected ? NocturneKit.InkBrush : NocturneKit.WhiteBrush, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            keyBadge.Child = new TextBlock { Text = inKey.Replace("DPAD_", "").Replace("SELECT", "SEL"), FontFamily = NocturneKit.Display, FontWeight = FontWeights.Bold, FontSize = 10, Foreground = isSelected ? NocturneKit.InkBrush : NocturneKit.WhiteBrush, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(keyBadge, 0);
 
             var keyName = new TextBlock { Text = mouse.LabelFor(inKey), FontFamily = NocturneKit.Display, FontWeight = FontWeights.Bold, FontSize = 12, Foreground = isSelected ? NocturneKit.WhiteBrush : NocturneKit.InkBrush, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
@@ -151,21 +151,30 @@ public partial class StudioScene
         });
 
         // Category Tabs
-        var catSp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
+        if (!mouse.Groups.Any(g => g.Group.Equals(nocturneMouseGroup, StringComparison.OrdinalIgnoreCase)))
+            nocturneMouseGroup = mouse.Groups.FirstOrDefault(g => g.Actions.Contains(mouse.CurrentAction)).Group ?? mouse.Groups[0].Group;
+        var catSp = new WrapPanel { Width = 500, Margin = new Thickness(0, 0, 0, 12) };
         foreach (var grp in mouse.Groups)
         {
-            bool isCurGrp = (grp.Group == nocturneMouseGroup);
+            bool isCurGrp = grp.Group.Equals(nocturneMouseGroup, StringComparison.OrdinalIgnoreCase);
             var gBtn = NocturneKit.NocturneChip(grp.Group, isCurGrp, () =>
             {
                 nocturneMouseGroup = grp.Group;
                 NocturneShowMouse();
             });
+            if (isCurGrp)
+            {
+                // Selected chips are white, which vanishes on this white card.
+                gBtn.Background = NocturneKit.ActiveBlueBrush;
+                gBtn.BorderBrush = NocturneKit.CobaltBrush;
+                if (gBtn.Child is TextBlock gText) gText.Foreground = NocturneKit.WhiteBrush;
+            }
             catSp.Children.Add(gBtn);
         }
         rightStack.Children.Add(catSp);
 
         // Action Chips Grid
-        var curGrp = mouse.Groups.FirstOrDefault(g => g.Group == nocturneMouseGroup);
+        var curGrp = mouse.Groups.FirstOrDefault(g => g.Group.Equals(nocturneMouseGroup, StringComparison.OrdinalIgnoreCase));
         if (curGrp.Actions != null)
         {
             var chipsWrap = new WrapPanel { Margin = new Thickness(0, 0, 0, 14), Height = 180 };
