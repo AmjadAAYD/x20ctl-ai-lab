@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -155,6 +155,9 @@ public partial class StudioScene : UserControl
             agentPanel.Body.HorizontalAlignment = HorizontalAlignment.Right; agentPanel.Body.VerticalAlignment = VerticalAlignment.Bottom; agentPanel.Body.Margin = new(0, 0, 30, 170);
             agentPanel.CloseRequested += CloseAgent; agentPanel.ChangeControllerRequested += () => { CloseAgent(); BackRequested?.Invoke(); }; agentPanel.Walkthrough = PlayAgentTour;
             agentPanel.PageRequested += AgentGoTo;
+            // the Pad target: offered only while the Studio itself writes this pad; afterwards its tabs read the pad again
+            agentPanel.ControllerWrites = () => ControllerWrites;
+            agentPanel.ControllerWritten += () => { filledFromController.Remove(Draft); _ = LoadFromController(buttonsPage.SayController); };
             agentPanel.FeedbackRequested += draft => { CloseAgent(); AgentFeedbackRequested?.Invoke(draft); };
             agentPanel.MouseSwitch = on => { if (MouseService == null) return "Mouse mode isn't available in this window."; if(on){try{MouseService.TakeControl(Player,Model.Id);}catch(InvalidOperationException error){return error.Message;}}else if(MouseService.OwnerPlayer==Player && MouseService.OwnerModel==Model.Id)MouseService.Active=false; if (ManagementPage == "Mouse") ShowManagement("Mouse"); return null; };
             Grid.SetZIndex(agentPanel.Body, 41); StudioShell.Children.Add(agentPanel.Body);

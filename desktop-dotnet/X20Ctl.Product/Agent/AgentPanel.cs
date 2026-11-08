@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using X20Ctl.Zone;
 using X20Ctl.Zone.Agent;
 using X20Ctl.Zone.PcMode;
 namespace X20Ctl.Product.Agent;
@@ -89,6 +90,11 @@ public sealed partial class AgentPanel
     }
     /// <summary>Switches mouse mode; returns why not, or null when it worked.</summary>
     public Func<bool, string?>? MouseSwitch { get; set; }
+    /// <summary>Whether the Studio writes this pad's own memory now (an X20 Pro with PC mode off): only then is a change
+    /// offered for the controller, so the pad and PC mode never both apply the same setting.</summary>
+    public Func<bool>? ControllerWrites { get; set; }
+    /// <summary>The agent wrote the controller's own records: the Studio's tabs must read them again.</summary>
+    public event Action? ControllerWritten;
     readonly string modelId, greeting;
     readonly PcModeLink? link;
     readonly AgentSession session;
@@ -988,6 +994,7 @@ public sealed partial class AgentPanel
                     await Walkthrough(before, next, turn.Measured);
                 }
                 Say(turn, before, switched: switched, mouse: mouse, step: step); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
+                if (!demoChosen && ControllerWrites?.Invoke() == true && AgentPad.Offers(modelId, turn.Verdict.Applicable)) PadOffer(turn.Verdict.Applicable.ToList(), next);
             }
             else { Say(turn, null, switched: switched, mouse: mouse); if (switched != null) ShowSettings(new HashSet<string>()); }
             Circling(false);
@@ -1138,6 +1145,59 @@ public sealed partial class AgentPanel
         if (hero) { bubble.Background = Brushes.Transparent; bubble.BorderBrush = Brushes.Transparent; bubble.Margin = new(0, 10, 12, 6); }
         scroller.ScrollToEnd();
     }
+
+    bool padBusy;
+
+    /// <summary>The Pad target (class project): the same change saved in the controller's own memory, on request. Only
+    /// what the X20 Pro's records hold with proven read-back goes there; the app reads the pad, writes the touched fields,
+    /// reads every record back, and reports what it read, never what it meant to write.</summary>
+    void PadOffer(IReadOnlyList<AgentAction> applied, PcModeProfile next)
+    {
+        var line = Wrap("PC mode is off for this controller, so this change only plays once it's saved on the controller itself.", 13, "DS.TextSoft");
+        var save = Small("Save on the controller"); register(save);
+        var undo = Small("Undo on the controller").Also(b => { b.Visibility = Visibility.Collapsed; b.Margin = new(8, 0, 0, 0); }); register(undo);
+        var bubble = Bubble("", false);
+        bubble.Child = new StackPanel { Children = { line, new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 10, 0, 0), Children = { save, undo } } } };
+        ControllerSnapshot? before = null, written = null;
+        save.Click += async (_, _) =>
+        {
+            if (padBusy || busy) return;
+            padBusy = true; save.IsEnabled = false; line.Text = "Reading the controller, then writing…";
+            try
+            {
+                AgentPadPlan? plan = null;
+                int changed = await LightingBleClient.WriteConfigAsync(held => { before = held; plan = AgentPad.Plan(held, applied, next); return plan.Next; });
+                var seen = await LightingBleClient.ReadConfigAsync();
+                var real = AgentPad.Diff(before!, seen);
+                string text = changed == 0 || real.Count == 0 ? "The controller already holds this. Nothing was written."
+                    : "Saved on the controller and read back: " + string.Join("; ", real.Select(c => $"{c.What} {c.Before} → {c.After}")) + ".";
+                if (plan!.PcOnly.Count > 0) text += " Stays in PC mode only: " + string.Join("; ", plan.PcOnly) + ".";
+                line.Text = text; line.Foreground = DS.Brush("DS.Text");
+                if (real.Count > 0) { written = seen; undo.Visibility = Visibility.Visible; save.Visibility = Visibility.Collapsed; ControllerWritten?.Invoke(); _ = Lights(AgentMood.Good); Applied(); }
+                else save.IsEnabled = true;
+            }
+            catch (Exception error) when (PadFailure(error)) { line.Text = "Couldn't save on the controller: " + error.Message; line.Foreground = DS.Brush("DS.Danger"); save.IsEnabled = true; _ = Lights(AgentMood.Failed); }
+            finally { padBusy = false; }
+        };
+        undo.Click += async (_, _) =>
+        {
+            if (padBusy || busy || before == null || written == null) return;
+            padBusy = true; undo.IsEnabled = false; line.Text = "Putting the controller back…";
+            try
+            {
+                await LightingBleClient.WriteConfigAsync(held => AgentPad.Restore(held, before, written));
+                var seen = await LightingBleClient.ReadConfigAsync();
+                var left = AgentPad.Diff(before, seen with { Remap = ControllerRecords.SameRemap(before.Remap, written.Remap) ? before.Remap : seen.Remap });
+                line.Text = left.Count == 0 ? "Undone on the controller and read back: it holds what it held before." : "Put back, but the controller now reads: " + string.Join("; ", left.Select(c => $"{c.What} {c.After}")) + ".";
+                line.Foreground = DS.Brush(left.Count == 0 ? "DS.TextSoft" : "DS.Warn");
+                undo.Visibility = Visibility.Collapsed; ControllerWritten?.Invoke();
+            }
+            catch (Exception error) when (PadFailure(error)) { line.Text = "Couldn't undo on the controller: " + error.Message; line.Foreground = DS.Brush("DS.Danger"); undo.IsEnabled = true; }
+            finally { padBusy = false; }
+        };
+        scroller.ScrollToEnd();
+    }
+    static bool PadFailure(Exception error) => error is IOException or TimeoutException or FormatException or ArgumentException or InvalidOperationException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException;
 
     /// <summary>The app's line under an answer, with the answer's Undo beside it when it changed something.</summary>
     DockPanel Footer(TextBlock verdictText, AgentStep? step)
