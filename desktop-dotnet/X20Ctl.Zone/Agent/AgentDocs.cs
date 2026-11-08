@@ -23,6 +23,13 @@ public interface IDocSearch
     Task<IReadOnlyList<DocHit>> Search(string question, int count, CancellationToken cancel);
 }
 
+/// <summary>Turns text into vectors (the embedding model). Documents and questions are embedded differently by some
+/// models, so the caller says which these are.</summary>
+public interface IEmbedder
+{
+    Task<IReadOnlyList<float[]>> Embed(IReadOnlyList<string> texts, bool questions, CancellationToken cancel);
+}
+
 /// <summary>
 /// The docs Agent XCTL answers app questions from : the user-facing guides, split by heading so every
 /// passage keeps its file and section for the source card, long sections cut into overlapping pieces of about
@@ -102,7 +109,41 @@ public static class AgentDocs
     }
 }
 
-/// <summary>Search by words: TF-IDF over each passage's words, cosine similarity with the question's.</summary>
+/// <summary>Search by meaning: every passage embedded once (kept in a cache file by its text's hash, so only changed
+/// passages are embedded again), the question embedded per turn, cosine similarity between them.</summary>
+public sealed class EmbeddingSearch(IReadOnlyList<DocChunk> chunks, IEmbedder embedder, string? cacheFile) : IDocSearch
+{
+    public string Method => "embeddings";
+    public double Enough { get; init; } = 0.5;
+    Dictionary<string, float[]>? vectors;
+
+    async Task<Dictionary<string, float[]>> Vectors(CancellationToken cancel)
+    {
+        if (vectors != null) return vectors;
+        var cache = new Dictionary<string, float[]>();
+        try { if (cacheFile != null && File.Exists(cacheFile)) cache = JsonSerializer.Deserialize<Dictionary<string, float[]>>(File.ReadAllText(cacheFile)) ?? new(); }
+        catch (Exception error) when (error is JsonException or IOException) { cache = new(); }
+        var missing = chunks.Where(c => !cache.ContainsKey(c.Key)).ToList();
+        if (missing.Count > 0)
+        {
+            var made = await embedder.Embed(missing.Select(c => c.Where + ": " + c.Text).ToList(), questions: false, cancel);
+            for (int i = 0; i < missing.Count; i++) cache[missing[i].Key] = made[i];
+            if (cacheFile != null)
+                try { Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!); File.WriteAllText(cacheFile, JsonSerializer.Serialize(chunks.ToDictionary(c => c.Key, c => cache[c.Key]))); }
+                catch (IOException) { } // a cache that can't be written only costs time next start
+        }
+        return vectors = chunks.ToDictionary(c => c.Key, c => cache[c.Key]);
+    }
+
+    public async Task<IReadOnlyList<DocHit>> Search(string question, int count, CancellationToken cancel)
+    {
+        var all = await Vectors(cancel);
+        var q = (await embedder.Embed([question], questions: true, cancel))[0];
+        return chunks.Select(c => new DocHit(c, AgentDocs.Cosine(q, all[c.Key]))).OrderByDescending(h => h.Score).Take(count).ToList();
+    }
+}
+
+/// <summary>Search by words, for offline mode: TF-IDF over each passage's words, cosine similarity with the question's.</summary>
 public sealed class KeywordSearch : IDocSearch
 {
     public string Method => "keywords";

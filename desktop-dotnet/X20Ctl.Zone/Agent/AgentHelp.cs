@@ -34,7 +34,7 @@ public static class AgentHelp
         new("You want default responses without changing buttons", "Reset curves"),
         new("Your controller is not detected", "My controller is not detected"),
         new("The game sees two controllers", "Why do I get double input?"),
-        new("You want to know if I need internet", "Does the agent need internet?"),
+        new("You want to understand offline mode", "Does offline mode need internet?"),
         new("You need to build a timed combo", "How do I create a macro?"),
         new("You want to know what a setting does", "What's good and bad about hair triggers?"),
     ];

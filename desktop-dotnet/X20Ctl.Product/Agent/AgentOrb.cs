@@ -65,7 +65,7 @@ public sealed class AgentOrb : Button
         RenderTransformOrigin = new(.5, .5); RenderTransform = scale; Content = face;
         MouseEnter += (_, _) => Grow(1.07); MouseLeave += (_, _) => Grow(1);
         PreviewMouseLeftButtonDown += (_, _) => Grow(.95); PreviewMouseLeftButtonUp += (_, _) => Grow(IsMouseOver ? 1.07 : 1);
-        dot.Fill = DS.Brush("DS.Success");
+        SetState(ModelState.Starting);
     }
 
     void Grow(double to)
@@ -74,6 +74,8 @@ public sealed class AgentOrb : Button
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, DS.To(to, 140)); scale.BeginAnimation(ScaleTransform.ScaleYProperty, DS.To(to, 140));
     }
 
+    public void SetState(ModelState state) =>
+        dot.Fill = DS.Brush(state switch { ModelState.Ready => "DS.Success", ModelState.Starting or ModelState.Loading => "DS.Warn", _ => "DS.Danger" });
 
     public void SetThinking(bool on)
     {

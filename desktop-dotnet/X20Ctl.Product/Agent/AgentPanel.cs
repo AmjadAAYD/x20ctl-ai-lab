@@ -1,4 +1,5 @@
-using System.IO;
+﻿using System.IO;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,16 +16,50 @@ namespace X20Ctl.Product.Agent;
 /// what really happened. The window can be dragged by its title and put away without losing the conversation.
 /// It is drawn as a controller (owner, 13 Oct 2026: "we are talking to a controller, it must look like one"): the
 /// conversation is its screen, its sticks are eyes that follow what it's doing, the player lights chase while it thinks,
-/// and its own buttons work it: LB start over, RB the settings, A send, B away, X start over, Y HELP, the D-pad scrolls and
+/// and its own buttons work it: LB Offline, RB the settings, A send, B away, X start over, Y HELP, the D-pad scrolls and
 /// flips through ideas. A change it applies makes the real controller rumble.
 /// </summary>
 public sealed partial class AgentPanel
 {
-    // the agent that answers: a phrasebook that runs on this PC, with nothing to install
+    // one model server and one loaded model for the whole app, however many windows open
+    static readonly OllamaClient model = new();
+    static Task<ModelState>? preparing;
+    static ModelState state = ModelState.Starting;
+    // offline mode: the phrasebook agent, chosen with the switch, or used when the model can't run on this PC at all
     static readonly OfflineAgent offlineAgent = new();
-    // the docs (M5), searched by words
+    static bool offlineChosen;
+    /// <summary>The Offline switch, for review harnesses.</summary>
+    public static void UseOffline(bool on) { offlineChosen = on; StateChanged?.Invoke(); }
+    public static bool Offline => offlineChosen || state is ModelState.NotInstalled or ModelState.Missing or ModelState.Failed;
+    /// <summary>Asks whichever agent is in use now, so the switch works mid-conversation.</summary>
+    // the docs (M5): searched by meaning with the embedding model, or by words offline or when it can't be reached
     static readonly Lazy<IReadOnlyList<DocChunk>> docs = new(() => AgentDocs.Load(Path.Combine(AppContext.BaseDirectory, "Help")));
     static readonly Lazy<KeywordSearch> keywords = new(() => new KeywordSearch(docs.Value));
+    static readonly Lazy<EmbeddingSearch> meanings = new(() => new EmbeddingSearch(docs.Value, new OllamaEmbedder(),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "x20ctl", "agent", "doc-embeddings.json")));
+    sealed class EitherDocs : IDocSearch
+    {
+        bool fellBack;
+        IDocSearch Now => Offline || fellBack ? keywords.Value : meanings.Value;
+        public string Method => Now.Method;
+        public double Enough => Now.Enough;
+        public async Task<IReadOnlyList<DocHit>> Search(string question, int count, CancellationToken cancel)
+        {
+            if (Offline || fellBack || System.Text.RegularExpressions.Regex.IsMatch(question, @"^(please\s+)?(make|set|turn|switch|enable|disable|swap|remap|reset|give|put|measure)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return await keywords.Value.Search(question, count, cancel);
+            try { return await meanings.Value.Search(question, count, cancel); }
+            catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { fellBack = true; return await keywords.Value.Search(question, count, cancel); }
+        }
+    }
+    sealed class Either : IAgentModel
+    {
+        public string Name => Offline ? offlineAgent.Name : model.Name;
+        public Task<ModelReply> Chat(IReadOnlyList<ChatMessage> messages, string schema, CancellationToken cancel) => (Offline ? offlineAgent : (IAgentModel)model).Chat(messages, schema, cancel);
+    }
+    static string stateText = "";
+    /// <summary>The model's readiness changed (starting, loading, ready, missing…).</summary>
+    public static event Action? StateChanged;
+    /// <summary>Starts Ollama and loads the model in the background, once, so the agent is ready when it's opened.</summary>
+    public static void Prepare() => preparing ??= model.Prepare((s, text) => Application.Current.Dispatcher.BeginInvoke(() => { state = s; stateText = text; StateChanged?.Invoke(); }));
 
     public Border Body { get; }
     public TextBox Input { get; }
@@ -101,10 +136,14 @@ public sealed partial class AgentPanel
     readonly TextBlock settingsToggle = Kit.Text("", 13.5, "DS.TextSoft");
     readonly TextBlock target = Kit.Text("", 13, "DS.TextMuted").Also(t => { t.TextWrapping = TextWrapping.Wrap; t.TextTrimming = TextTrimming.None; });
     readonly TranslateTransform offset = new();
+    readonly Button offlineSwitch;
     readonly ScaleTransform pop = new(1, 1);
     PcModeProfile preview = new(); // the settings when PC mode isn't reachable from this window
     bool busy;
+    bool demoChosen;
+    PcModeProfile demoPreview = new();
     readonly int player;
+    readonly Border offlineCap; readonly TextBlock offlineLabel;
     readonly Border[] leds = new Border[4];
     readonly List<(TranslateTransform Look, ScaleTransform Lid, int Inward)> eyes = [];
     readonly TranslateTransform shake = new();
@@ -124,7 +163,7 @@ public sealed partial class AgentPanel
         this.reducedMotion = reducedMotion; this.modelId = modelId; this.link = link; this.player = player; this.register = register;
         string name = controllerName.Replace("EasySMX ", ""); padName = name;
         // drift is read from the real controller; a review harness can hand in its own reading instead
-        session = new AgentSession(offlineAgent, modelId, name) { Docs = keywords.Value, Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring), ControllerFacts = Facts(modelId) };
+        session = new AgentSession(new Either(), modelId, name) { Docs = new EitherDocs(), Meter = (meter ?? (progress => new XInputDriftMeter(player, progress)))(Measuring), ControllerFacts = Facts(modelId) };
         greeting = AgentCharacter.Greeting(name);
         setups = OpenSetups(link == null || ReviewSandbox.Active ? Path.Combine(Path.GetTempPath(), "x20ctl-review-" + Environment.ProcessId, "agent-setups.json")
             : Path.Combine(Path.GetDirectoryName(link.Store.FilePath)!, Path.GetFileName(AgentSetupStore.DefaultPath)));
@@ -133,13 +172,25 @@ public sealed partial class AgentPanel
         // ---- the screen (owner's design, 19 Oct 2026): a rail of views on the left; a header with the controller and the
         // agent's state; topic pills; the conversation or the ideas; and the chat bar along the bottom ----
         var privacy = Wrap("What you type and what I answer stay on this PC.", 12.5, "DS.TextMuted", 16);
+        var lab = AgentLab.Create(session, model, modelId, name, on =>
+        {
+            demoChosen = on; session.Forget();
+            // the demo's changes and the real ones never share a history
+            ShowState(); ShowSettings(new HashSet<string>());
+            Say(on ? AgentDemo.Label : "Canned demo off", null);
+        }, () => busy);
+        offlineLabel = Kit.Icon("", 13, "DS.TextSoft");
+        offlineCap = new Border { CornerRadius = new(14), Width = 28, Height = 28, BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Child = offlineLabel };
+        offlineSwitch = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { offlineCap, Kit.Text("  Offline (phrasebook, no model)", 13, "DS.TextSoft") } }, Background = Brushes.Transparent, BorderThickness = new(0), Margin = new(0, 8, 0, 8), HorizontalAlignment = HorizontalAlignment.Left, Cursor = Cursors.Hand, ToolTip = "Offline: answers from a phrasebook, no model" };
+        offlineSwitch.Click += (_, _) => { if (busy || demoChosen) return; offlineChosen = !offlineChosen; StateChanged?.Invoke(); };
+        register(offlineSwitch);
         var backToChat = Small("← Back to chat");
         backToChat.Click += (_, _) => ShowSettingsPage(false); register(backToChat);
         var settingsHead = new DockPanel { Margin = new(0, 0, 0, 12) };
         DockPanel.SetDock(backToChat, Dock.Right); settingsHead.Children.Add(backToChat);
         settingsHead.Children.Add(Kit.Text("Agent settings", 22, "DS.Text", FontWeights.SemiBold));
         var settingsPage = new DockPanel(); DockPanel.SetDock(settingsHead, Dock.Top); settingsPage.Children.Add(settingsHead);
-        settingsPage.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 12)), settings, privacy } } });
+        settingsPage.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 12)), settings, offlineSwitch, lab, privacy } } });
         settingsBox = new Border { Visibility = Visibility.Collapsed, Padding = new(16), CornerRadius = new(12), Background = new SolidColorBrush(ScreenTop), Child = settingsPage };
         settingsToggle.Cursor = Cursors.Hand; settingsToggle.ToolTip = "Open agent settings";
         settingsToggle.MouseLeftButtonUp += (_, _) => ShowSettingsPage(true);
@@ -335,8 +386,8 @@ public sealed partial class AgentPanel
         if (ThemeCatalog.Current.Id == "sunrise") BuildSunriseAgent();
         Say(greeting, null);
         ShowSettings(new HashSet<string>());
-        Body.Unloaded += (_, _) => StopCharacterMotion();
-        ShowState(); Look(Gaze.Idle);
+        StateChanged += ShowState; Body.Unloaded += (_, _) => { StateChanged -= ShowState; StopCharacterMotion(); }; Body.Loaded += (_, _) => { StateChanged -= ShowState; StateChanged += ShowState; };
+        ShowState(); Look(Gaze.Idle); Prepare();
     }
 
     /// <summary>A control on the controller: its own drawing, a lit edge when hovered or focused.</summary>
@@ -853,21 +904,26 @@ public sealed partial class AgentPanel
         session.Forget(); transcript.Children.Clear(); undoButtons.Clear(); live.Clear(); StopLive(); Input.Text = ""; Search.Text = ""; Say(greeting, null); Input.Focus();
     }
 
-    PcModeProfile Current => link == null ? preview : link.Store.Get(PcModePage.StoreKey);
+    PcModeProfile Current => demoChosen ? demoPreview : link == null ? preview : link.Store.Get(PcModePage.StoreKey);
 
     void Store(PcModeProfile next)
     {
+        if (demoChosen) { demoPreview = next; return; }
         if (link == null) { preview = next; return; }
         link.Store.Save(PcModePage.StoreKey, next); link.Service.Reload(); PcModePage.Replaced();
     }
 
     void ShowState()
     {
-        status.Text = busy ? "Thinking" : "Ready";
-        statusDot.Background = busy ? new SolidColorBrush(Violet) : DS.Brush("DS.Success");
+        status.Text = busy ? "Thinking" : demoChosen ? AgentDemo.Label : Offline ? (offlineChosen ? "Offline · phrasebook" : "Offline · phrasebook (the model isn't available)") : state == ModelState.Starting && stateText.Length == 0 ? "Starting…" : stateText;
+        statusDot.Background = busy ? new SolidColorBrush(Violet) : DS.Brush(Offline ? "DS.AccentHi" : state switch { ModelState.Ready => "DS.Success", ModelState.Starting or ModelState.Loading => "DS.Warn", _ => "DS.Danger" });
         if (!lightsOn) SetLights(busy ? Violet : Green);
-        send.IsEnabled = !busy; sendRound.IsEnabled = !busy; sendRound.Opacity = busy ? .45 : 1;
+        send.IsEnabled = !busy && (demoChosen || Offline || state == ModelState.Ready); sendRound.IsEnabled = send.IsEnabled; sendRound.Opacity = send.IsEnabled ? 1 : .45;
+        offlineSwitch.IsEnabled = !busy && !demoChosen;
+        offlineLabel.Foreground = DS.Brush(offlineChosen ? "DS.Accent" : "DS.TextSoft");
+        offlineSwitch.ToolTip = offlineChosen ? "Back to the model (Qwen)" : "Offline: answers from a phrasebook, no model";
     }
+    public static string StateText => stateText;
 
     async void Send() { if (Input.Text.Trim() is { Length: > 0 } sentence && !busy) { Input.Text = ""; await Ask(sentence); } }
 
@@ -888,18 +944,19 @@ public sealed partial class AgentPanel
         // broken English is read as plain English first; the owner sees how (Preview 6)
         string said = sentence; sentence = AgentGrammar.Plain(said); string? reading = AgentGrammar.Reading(said, sentence);
         // the help list is the app's own answer: instant, the same online and offline
-        if (AgentHelp.Asks(sentence)) { Mine(said, reading); Search.Text = ""; ShowIdeas("", everything: true); ShowView(View.Ideas); Searching(false); Look(Gaze.Ideas); Say(AgentVariety.Pick("help", ["Here's everything I can do. Pick one, or search it. *proudly clicks every button*", "Ta-da! My whole skill list. Pick one.", "Everything I'm good at, listed. It's a long list. *ahem*"]), null); _ = Lights(AgentMood.Good); return null; }
+        if (!demoChosen && AgentHelp.Asks(sentence)) { Mine(said, reading); Search.Text = ""; ShowIdeas("", everything: true); ShowView(View.Ideas); Searching(false); Look(Gaze.Ideas); Say(AgentVariety.Pick("help", ["Here's everything I can do. Pick one, or search it. *proudly clicks every button*", "Ta-da! My whole skill list. Pick one.", "Everything I'm good at, listed. It's a long list. *ahem*"]), null); _ = Lights(AgentMood.Good); return null; }
         // a topic alone is a search: the ideas narrow to it, and the app answers itself
         // the app's own commands: the controller's name, the battery, another controller, a star, a donation
-        if (AgentCommands.Parse(sentence) is var command and not AgentCommand.None && (!session.HasPendingClarification || command != AgentCommand.AboutController)) { Mine(said, reading); session.CancelClarification(); await Do(command); return null; }
+        if (!demoChosen && AgentCommands.Parse(sentence) is var command and not AgentCommand.None && (!session.HasPendingClarification || command != AgentCommand.AboutController)) { Mine(said, reading); session.CancelClarification(); await Do(command); return null; }
         // undo, and the saved setups: the app's own, from its own records, never the model's
         if (AgentHistory.Parse(sentence) is var undo and not UndoAsk.None) { Mine(said, reading); session.CancelClarification(); UndoFromChat(undo); return null; }
-        if (AgentSetupWords.Parse(sentence, setups.Names) is { Ask: not SetupAsk.None } setupAsk) { Mine(said, reading); session.CancelClarification(); SetupFromChat(setupAsk.Ask, setupAsk.Name, said); return null; }
-        if (!session.HasPendingClarification && AgentIdeas.Topic(sentence) is { } topic)
+        if (!demoChosen && AgentSetupWords.Parse(sentence, setups.Names) is { Ask: not SetupAsk.None } setupAsk) { Mine(said, reading); session.CancelClarification(); SetupFromChat(setupAsk.Ask, setupAsk.Name, said); return null; }
+        if (!demoChosen && !session.HasPendingClarification && AgentIdeas.Topic(sentence) is { } topic)
         {
             Mine(said, reading); Search.Text = topic; ShowView(View.Ideas);
             Look(Gaze.Ideas); Say(AgentIdeas.TopicReply(topic), null); _ = Lights(AgentMood.Good); return null;
         }
+        if (!demoChosen && !Offline && state != ModelState.Ready) { Mine(said, reading); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); _ = Lights(AgentMood.Failed); return null; }
         busy = true; Searching(true); ShowState(); Thinking?.Invoke(true); Circling(true);
         Mine(said, reading);
         var thinking = Bubble("Working on your request…", mine: false);
@@ -913,7 +970,7 @@ public sealed partial class AgentPanel
         AgentMood? mood = null;
         try
         {
-            var turn = await session.Ask(sentence, before);
+            var turn = demoChosen ? AgentDemo.Run(sentence, modelId, before) : await session.Ask(sentence, before);
             mood = AgentCharacter.Mood(turn);
             transcript.Children.Remove(thinking);
             // PC mode on or off, when asked: the switch itself, not a setting
@@ -921,11 +978,11 @@ public sealed partial class AgentPanel
             string? mouse = turn.Outcome.Mouse is { } mouseOn ? (MouseSwitch == null ? "Mouse mode isn't reachable from this window." : MouseSwitch(mouseOn) ?? "") : null;
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
-                try { Store(next); Applied(); }
+                try { Store(next); if (!demoChosen) Applied(); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
                 var step = history.Add(said, turn.Outcome.Changes, before, next);
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
-                if (Walkthrough != null)
+                if (!demoChosen && Walkthrough != null)
                 {
                     waitTimer.Stop(); Circling(false); Searching(false);
                     await Walkthrough(before, next, turn.Measured);
@@ -940,10 +997,10 @@ public sealed partial class AgentPanel
             if (turn.Verdict.Valid && turn.Outcome.Page is { } page) { await Task.Delay(700); PageRequested?.Invoke(page); }
             return turn;
         }
-        catch (Exception error) when (error is TaskCanceledException or System.Text.Json.JsonException)
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
             transcript.Children.Remove(thinking);
-            Say(error is TaskCanceledException ? AgentCharacter.Dozed : "I hit a snag: " + error.Message, null);
+            Say(error is TaskCanceledException ? AgentCharacter.Dozed : "My brain isn't answering: " + error.Message, null);
             mood = AgentMood.Failed; return null;
         }
         finally { session.Progress = null; waitTimer.Stop(); busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
@@ -961,7 +1018,8 @@ public sealed partial class AgentPanel
         ((TextBlock)((StackPanel)measuring.Child).Children[0]).Text = $"{phase} · {seconds}";
         scroller.ScrollToEnd();
     }
-        public PcModeProfile Settings => Current;
+    public static ModelState State => state;
+    public PcModeProfile Settings => Current;
     /// <summary>Opens every answer's details (validation and model output), for review captures.</summary>
     public void ExpandDetails() { foreach (var b in transcript.Children.OfType<Border>()) if (b.Child is StackPanel { Children.Count: > 1 } s && s.Children[^1] is StackPanel d) d.Visibility = Visibility.Visible; }
     public void ScrollTo(double offset) { Body.UpdateLayout(); scroller.ScrollToVerticalOffset(offset); }
@@ -1007,6 +1065,7 @@ public sealed partial class AgentPanel
     {
         var stack = new StackPanel();
         var v = turn.Verdict;
+        if (demoChosen) stack.Children.Add(Wrap(AgentDemo.Label, 13, "DS.Warn"));
         var sticks = failure == null && undo != null && turn.Outcome.Next is { } curved ? AgentResponsePreview.ChangedSticks(undo, curved) : [];
         bool hero = sticks.Count > 0;
         string spoken = v.Proposal?.Speech is { Length: > 0 } speech ? speech : "I didn't give a usable answer.";
@@ -1068,12 +1127,13 @@ public sealed partial class AgentPanel
         string verdict = failure ?? (turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && switched == "" ? "Applied · PC mode switched " + (turn.Outcome.PcMode == true ? "on" : "off")
             : turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && mouse == "" ? "Applied · Mouse mode " + (turn.Outcome.Mouse == true ? "on" : "off")
             : v.Valid && turn.Outcome.Changes.Count == 0 && turn.Outcome.Page is { } goTo ? "Opening " + goTo
-            : turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(link == null ? " · preview only" : "")}"
+            : turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(demoChosen || link == null ? " · preview only" : "")}"
             : !v.Valid ? "Rejected · nothing changed · " + AgentSession.Problems(v)
             : turn.Outcome.Error != null ? "Rejected · " + turn.Outcome.Error : "No changes");
         var verdictText = Wrap(verdict, 14, failure != null || !v.Valid || turn.Outcome.Error != null ? "DS.Danger" : turn.Outcome.Changes.Count > 0 ? "DS.Success" : "DS.TextMuted").Also(t => { t.FontWeight = FontWeights.SemiBold; t.VerticalAlignment = VerticalAlignment.Center; });
         stack.Children.Add(Footer(verdictText, failure == null && turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? step : null));
 
+        stack.Children.Add(Kit.Text(demoChosen ? "Canned reply · no model metrics" : AgentSession.Stats(turn), 12, "DS.TextMuted").Also(t => t.Margin = new(0, 8, 0, 0)));
         var bubble = Bubble("", false); bubble.Child = stack; bubble.HorizontalAlignment = HorizontalAlignment.Stretch;
         if (hero) { bubble.Background = Brushes.Transparent; bubble.BorderBrush = Brushes.Transparent; bubble.Margin = new(0, 10, 12, 6); }
         scroller.ScrollToEnd();
@@ -1325,7 +1385,7 @@ public sealed partial class AgentPanel
     // ---- the settings panel ----
     void ShowSettings(IReadOnlySet<string> changed)
     {
-        target.Text = link == null ? "Preview · PC mode isn't available in this window"
+        target.Text = demoChosen ? AgentDemo.Label : link == null ? "Preview · PC mode isn't available in this window"
             : $"PC mode · Player {PcModePage.Player + 1}, {(PcModePage.ProfileKey == PcModeStore.DefaultKey ? "every game" : PcModePage.ProfileKey[PcModeStore.GamePrefix.Length..])}{(link.Service.Enabled ? "" : " · PC mode is off, so games don't see these yet")}";
         settings.Children.Clear();
         var rows = AgentApplier.Diff(new PcModeProfile(), Current);

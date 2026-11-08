@@ -4,7 +4,7 @@ namespace X20Ctl.Zone.Tests;
 public sealed class OfflineReleaseTests
 {
     [Theory]
-    [InlineData("Does the agent need internet?", "No internet")]
+    [InlineData("Does offline mode need internet?", "No Ollama")]
     [InlineData("My controller is not recognised", "USB")]
     [InlineData("Why do I get double input?", "HidHide")]
     [InlineData("What is circularity error?", "circle")]
