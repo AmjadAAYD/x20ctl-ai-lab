@@ -25,6 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="../../artifacts/product-engine-phase/native-build/Release/x20ctl-engine.exe" Link="x20ctl-engine.exe" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="$(EngineBesideExe)" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
     <ProjectReference Include="../X20Ctl.Zone/X20Ctl.Zone.csproj" />
     <!-- the managed ViGEm client only: it talks to the ViGEmBus driver, which PC mode installs on first use -->
     <PackageReference Include="Nefarius.ViGEm.Client" Version="1.21.256" />
@@ -37,6 +38,7 @@
     <EmbeddedResource Include="Themes/Colors.xaml;Themes/Typography.xaml;Themes/Controls.xaml;Themes/Design.xaml;Themes/ZoneSurfaces.xaml" LogicalName="ThemeSource/%(Filename)%(Extension)" />
     <Resource Include="Brand/x20ctl-mark.png" Link="Assets/brand.png" />
     <Resource Include="Agent/agent-shell.png" />
+    <Resource Include="Agent/handheld/*.png" />
     <Resource Include="Assets/art/*.png" Exclude="Assets/art/*-line.png;Assets/art/*-rim.png;Assets/art/*-sil.png" />
     <!-- the app icon (the logo on its white tile) as an image, for the setup -->
     <Resource Include="Brand/x20ctl-icon.png" Link="Assets/icon.png" />

@@ -26,6 +26,9 @@ public sealed class OllamaClient : IAgentModel
     /// <summary>Hold replies to the JSON schema (Ollama's "format"). Off only to measure what the schema is worth.</summary>
     public bool UseSchema { get; set; } = true;
     public OllamaClient(string model = DefaultModel) { Name = model; }
+    /// <summary>Owner, 8 Nov 2026: "make it really fast, I don't care if my PC screams". The models stay loaded on the GPU
+    /// for as long as Ollama runs (-1), so no answer ever waits for a 6 GB load again.</summary>
+    internal static JsonNode KeepAlive => JsonValue.Create(-1)!;
 
     /// <summary>Gets the server up and the model loaded, reporting each step. Returns the final state.</summary>
     public async Task<ModelState> Prepare(Action<ModelState, string> report, CancellationToken cancel = default)
@@ -44,10 +47,13 @@ public sealed class OllamaClient : IAgentModel
         try
         {
             // an empty chat loads the model into memory and keeps it there, so the first real answer is quick
-            using var warm = await http.PostAsync("api/chat", Json(new JsonObject { ["model"] = Name, ["messages"] = new JsonArray(), ["keep_alive"] = "30m", ["options"] = new JsonObject { ["num_ctx"] = Context } }), cancel);
+            using var warm = await http.PostAsync("api/chat", Json(new JsonObject { ["model"] = Name, ["messages"] = new JsonArray(), ["keep_alive"] = KeepAlive, ["options"] = new JsonObject { ["num_ctx"] = Context } }), cancel);
             warm.EnsureSuccessStatusCode();
         }
         catch (HttpRequestException) { report(ModelState.Failed, $"{Name} couldn't load"); return ModelState.Failed; }
+        // the docs' embedding model too, so the first Help question doesn't wait for it; a miss here only slows Help
+        try { using var embed = await http.PostAsync("api/embed", Json(new JsonObject { ["model"] = OllamaEmbedder.Model, ["input"] = "warm up", ["keep_alive"] = KeepAlive }), cancel); }
+        catch (HttpRequestException) { }
         report(ModelState.Ready, $"{Name} ready");
         return ModelState.Ready;
     }
@@ -56,7 +62,7 @@ public sealed class OllamaClient : IAgentModel
     {
         var body = new JsonObject
         {
-            ["model"] = Name, ["stream"] = false, ["think"] = false, ["keep_alive"] = "30m",
+            ["model"] = Name, ["stream"] = false, ["think"] = false, ["keep_alive"] = KeepAlive,
             ["options"] = new JsonObject { ["temperature"] = Temperature, ["num_predict"] = MaxTokens, ["num_ctx"] = Context },
             ["messages"] = new JsonArray(messages.Select(m => (JsonNode)new JsonObject { ["role"] = m.Role, ["content"] = m.Content }).ToArray()),
         };
@@ -110,7 +116,7 @@ public sealed class OllamaEmbedder : X20Ctl.Zone.Agent.IEmbedder
         var all = new List<float[]>();
         foreach (var batch in texts.Chunk(32))
         {
-            var body = new JsonObject { ["model"] = Model, ["keep_alive"] = "30m", ["input"] = new JsonArray(batch.Select(t => (JsonNode)((questions ? "search_query: " : "search_document: ") + t)).ToArray()) };
+            var body = new JsonObject { ["model"] = Model, ["keep_alive"] = OllamaClient.KeepAlive, ["input"] = new JsonArray(batch.Select(t => (JsonNode)((questions ? "search_query: " : "search_document: ") + t)).ToArray()) };
             using var response = await http.PostAsync("api/embed", new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"), cancel);
             string text = await response.Content.ReadAsStringAsync(cancel);
             if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Embedding failed: {text}");

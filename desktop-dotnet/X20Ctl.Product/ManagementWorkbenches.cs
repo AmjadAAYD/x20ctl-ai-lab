@@ -76,7 +76,7 @@ public sealed partial class DeviceWorkbench
         battery.Text = level switch {"full"=>"Full","medium"=>"Medium","low"=>"Low","empty"=>"Empty","wired"=>"Wired",_=>level??"Not reported"};
     }
     public void SetBatteryLevel(string? level) => SetBatteryLevel(level, null);
-    public void SetConnection(bool connected)=>connection.Text=connected?"Gameplay input detected":"Not detected";
+    public void SetConnection(bool connected, bool bluetoothOnly = false)=>connection.Text=connected?(bluetoothOnly?"Connected over Bluetooth":"Gameplay input detected"):"Not detected";
     public void UpdateEngineStatus(string status) { /* Process availability does not establish hardware configuration support. */ }
     public DeviceWorkbench(ControllerModel model,int player,FrameworkElement resources,Action<Button> register,Action tester,Action setups,Action? screen=null,Func<Action<string>,Task>? factoryReset=null)
     {

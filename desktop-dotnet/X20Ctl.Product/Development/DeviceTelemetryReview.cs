@@ -23,6 +23,9 @@ internal static class DeviceTelemetryReview
         host.Zone.AssignController(0,host.Catalog.Get("x20_pro"));host.EnterStudio(0);
         host.Studio!.SetTransport("2.4 GHz receiver");host.Studio.ShowManagement("Device");
         await ready.Task.WaitAsync(TimeSpan.FromSeconds(25));
+        await host.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ContextIdle);
+        // what the real controller gave over Bluetooth, before any fixture: the status, and the battery the agent is handed
+        File.WriteAllText(Path.Combine(directory,"bluetooth-live.txt"),$"status: {host.Studio.StatusNote.Text}\ndevice: {host.Studio.Device?.ConnectionText}\nagent battery: {host.FreshBluetoothBattery(0)??"(none)"}\nagent says: {X20Ctl.Zone.Agent.AgentCommands.Battery(host.FreshBluetoothBattery(0),"X20 Pro")}");
         // Gameplay connectivity is a presentation fixture here, not a hardware-detection claim.
         host.Studio.SetGameplayConnected(true);
         host.UpdateBatteryLevels(["receiver",null,null,null],"2.4 GHz receiver");
