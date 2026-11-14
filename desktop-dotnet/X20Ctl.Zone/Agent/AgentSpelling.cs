@@ -15,11 +15,13 @@ public static class AgentSpelling
         foreach (var i in OfflineAgent.Intents) words.UnionWith(Words(i.Meaning));
         foreach (var s in AgentHelp.Situations) { words.UnionWith(Words(s.Have)); words.UnionWith(Words(s.Say)); }
         words.UnionWith(["sticks", "stick", "triggers", "trigger", "buttons", "button", "turbo", "paddles", "paddle", "drift", "deadzone", "curves", "curve", "battery", "controller", "controllers", "donate", "star", "remap", "sensitivity",
-            "raise", "lower", "increase", "decrease", "reduce", "boost", "speed", "slower", "faster", "camera", "movement", "looking", "turning"]);
+            "raise", "lower", "increase", "decrease", "reduce", "boost", "speed", "slower", "faster", "camera", "movement", "looking", "turning",
+            "write", "writes", "writing", "reading", "access", "settings", "change", "remove", "enable", "disable", "switch",
+            "lights", "lighting", "colour", "color", "rainbow", "effect", "effects", "moonlight", "strobe", "breathe", "mouse", "output", "ratio", "square", "diagnostics", "macros", "vibration"]);
         return words;
     });
     // the words a topic search is usually about: preferred when two known words are equally close
-    static readonly HashSet<string> Preferred = ["sticks", "stick", "triggers", "trigger", "buttons", "button", "turbo", "paddles", "paddle", "drift", "deadzone", "dead", "zone", "curves", "curve", "battery", "controller", "aim", "camera", "sniping", "racing", "smooth", "swap", "reset"];
+    static readonly HashSet<string> Preferred = ["sticks", "stick", "triggers", "trigger", "buttons", "button", "turbo", "paddles", "paddle", "drift", "deadzone", "dead", "zone", "curves", "curve", "battery", "controller", "aim", "camera", "sniping", "racing", "smooth", "swap", "reset", "lights", "lighting", "colour", "color", "rainbow", "effect", "mouse", "output", "ratio", "square", "gate", "diagnostics"];
 
     static IEnumerable<string> Words(string text) => Regex.Matches(text.ToLowerInvariant(), @"[a-z]+").Select(m => m.Value);
 

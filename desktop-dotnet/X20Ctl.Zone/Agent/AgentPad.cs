@@ -33,7 +33,7 @@ public static class AgentPad
             return ControllerRecords.Remappable(a.Target) && ControllerRecords.Remappable(a.ValueText) ? null : $"{a.Target} sends {a.ValueText}: the controller's remap list has no slot for it";
         return a.Action switch
         {
-            AgentVocabulary.PcMode or AgentVocabulary.MouseMode or AgentVocabulary.OpenPage or AgentVocabulary.MeasureDrift or AgentVocabulary.LedColor => "",
+            AgentVocabulary.PcMode or AgentVocabulary.MouseMode or AgentVocabulary.OpenPage or AgentVocabulary.MeasureDrift or AgentVocabulary.LedColor or AgentVocabulary.LedEffect => "",
             AgentVocabulary.Reset => $"Reset {AgentApplier.Name(a.Target)}: the controller has no proven reset for one setting",
             _ => $"{Label(a.Action)} for {AgentApplier.Name(a.Target)}: the controller has no proven place for it",
         };

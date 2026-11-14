@@ -22,7 +22,7 @@ internal static class AgentDocsBakeoff
         File.WriteAllText(progress, "");
         void Note(string line) => File.AppendAllText(progress, $"{DateTime.Now:HH:mm:ss} {line}\n");
         var chunks = AgentDocs.Load(Path.Combine(AppContext.BaseDirectory, "Help"));
-        var report = new StringBuilder($"# M5: answers from the docs\n\n{chunks.Count} passages from {string.Join(", ", AgentDocs.Files)}.\n\n## Retrieval\n\n| Method | Answering passage in the top 3 | Best score, docs answer it (lowest) | Best score, docs don't (highest) |\n|---|---|---|---|\n");
+        var report = new StringBuilder($"# M5: answers from the docs\n\n{chunks.Count} passages from {string.Join(", ", AgentDocs.Files)}.\n\n## Retrieval\n\n| Method | Answering passage in the top {AgentSession.DocCount} | Best score, docs answer it (lowest) | Best score, docs don't (highest) |\n|---|---|---|---|\n");
         var searches = new IDocSearch[] { new KeywordSearch(chunks), new EmbeddingSearch(chunks, new OllamaEmbedder(), Path.Combine(directory, "doc-embeddings.json")) };
         foreach (var search in searches)
         {
@@ -51,7 +51,7 @@ internal static class AgentDocsBakeoff
                 var turn = await session.Ask(c.Question, new PcModeProfile());
                 bool good = AgentDocsBench.Right(c, turn); ok += good ? 1 : 0; right += good ? 1 : 0; total++;
                 cited.AddRange(turn.Cited.Select(h => h.Chunk.Section));
-                Note($"{c.Question} · run {run} · {(good ? "right" : "wrong")} · offered {turn.Docs.Count} · cited {string.Join(", ", turn.Cited.Select(h => h.Chunk.Section))} · {turn.Verdict.StructureError ?? ""} · {turn.Verdict.Proposal?.Recap.ReplaceLineEndings(" ")}");
+                Note($"{c.Question} · run {run} · {(good ? "right" : "wrong")} · offered {turn.Docs.Count} · cited {string.Join(", ", turn.Cited.Select(h => h.Chunk.Section))} · {(turn.Verdict.Valid ? "" : AgentSession.Problems(turn.Verdict))} · {turn.Verdict.Proposal?.Recap.ReplaceLineEndings(" ")}");
             }
             report.AppendLine($"| {c.Question} | {ok}/{Repeats} | {string.Join(", ", cited.Distinct())} |");
         }

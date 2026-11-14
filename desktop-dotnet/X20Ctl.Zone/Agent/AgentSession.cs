@@ -46,7 +46,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
     public IDriftMeter? Meter { get; set; }
     /// <summary>Finds the doc passages closest to the sentence (M5). None: no docs are offered.</summary>
     public IDocSearch? Docs { get; set; }
-    public const int DocCount = 3;
+    public const int DocCount = 4;
     public Action<string>? Progress { get; set; }
 
     public async Task<AgentTurn> Ask(string sentence, PcModeProfile current, CancellationToken cancel = default)
@@ -101,7 +101,8 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         }
         // owner, 14 Oct 2026: it said "I'll set smooth" and nothing changed. A reply that promises a change but makes none
         // (no action, or values I already have) gets one more go, told exactly that
-        if (resolved == null && verdict.Valid && outcome.Changes.Count == 0 && outcome.Mouse == null && outcome.Page == null && outcome.PcMode == null && measured == null
+        static bool AnyEffect(AgentOutcome o) => o.Changes.Count > 0 || o.Mouse != null || o.Page != null || o.PcMode != null || o.Lighting != null || o.LightingEffect != null;
+        if (resolved == null && verdict.Valid && !AnyEffect(outcome) && measured == null
             && verdict.Proposal!.Question.Length == 0 && verdict.Proposal.Sources.Count == 0 && (verdict.Proposal.Actions.Count == 0 && Promises(verdict.Proposal.Speech) || verdict.Proposal.Actions.Count > 0 && System.Text.RegularExpressions.Regex.IsMatch(intentSentence, @"\b(more|less|faster|slower|slight\w*|bit|little)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)))
         {
             messages.Add(new("assistant", attempts[^1].Content));
@@ -110,7 +111,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             var again = await Answer(messages, attempts, null, offered.Count, cancel);
             var retried = AgentApplier.Apply(current, again);
             // kept only when it really does something; otherwise the first answer stands, and the app line says nothing changed
-            if (again.Valid && (retried.Changes.Count > 0 || retried.Mouse != null || retried.Page != null || retried.PcMode != null)) { verdict = again; outcome = retried; }
+            if (again.Valid && AnyEffect(retried)) { verdict = again; outcome = retried; }
         }
         // owner, 14 Oct 2026: custom curves shaped for the request, not presets. A preset the owner didn't name is sent back
         // once to be shaped as points; kept only when the new answer is valid and changes something
@@ -130,7 +131,10 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         // what was said, what the app really did, and what was asked back, so the next sentence is read in context
         string done = outcome.Changes.Count > 0 ? " [applied: " + string.Join("; ", outcome.Changes.Select(c => $"{c.What} {c.Before} -> {c.After}")) + "]"
             : verdict.Valid ? "" : " [rejected: nothing changed]";
+        if (outcome.PcMode is { } pcMode) done += $" [pc mode {(pcMode ? "on" : "off")}]";
         if (outcome.Mouse is { } mouse) done += $" [mouse mode {(mouse ? "on" : "off")}]";
+        if (outcome.Lighting is { } lit) done += $" [lighting {lit}]";
+        if (outcome.LightingEffect != null) done += $" [lighting effect {verdict.Proposal?.Actions.LastOrDefault(a => a.Action == AgentVocabulary.LedEffect)?.ValueText}]";
         if (outcome.Page is { } page) done += $" [opened {page}]";
         history.Add(new("assistant", (verdict.Proposal?.Speech ?? "(no usable reply)") + done + (verdict.Proposal?.Question is { Length: > 0 } asked ? " " + asked : "")));
         return new(sentence, attempts, verdict, outcome, measured, offered, resolved == null ? "" : pending == null && !cancelled ? "Direct command" : "App clarification");
@@ -159,8 +163,8 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
         // Explicit numeric points take precedence over qualitative wording.
         if (System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+")) return null;
         if (GentleCurveProblem(sentence, current, verdict) is { } gentle) return gentle;
-        bool slower = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(snip\w*|precis\w*|twitchy|slower|progressive|too sensitive|less sensitive|less twitchy)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        bool faster = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(faster|quicker|responsive)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        bool slower = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(snip\w*|precis\w*|twitchy|slower|progressive|too\s+(?:sensitive|twitchy|jumpy|shaky|fast|touchy)|less\s+(?:sensitive|twitchy|jumpy|shaky|responsive|snappy|aggressive)|calm\w*|long\s*range|overshoot\w*|finer)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        bool faster = System.Text.RegularExpressions.Regex.IsMatch(sentence, @"\b(faster|quicker|(?<!less\s+)responsive|(?<!less\s+)snappier|(?<!less\s+)snappy|sluggish|too\s+slow|(?<!less\s+)more\s+aggressive|react\w*\s+(?:earlier|faster|sooner))\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (slower == faster) return null;
         foreach (var a in verdict.Applicable.Where(a => a.Action is AgentVocabulary.StickCurvePoints or AgentVocabulary.TriggerCurvePoints))
         {
@@ -191,7 +195,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
                 double before = old == null ? x : PadProcessor.Through(x, old.X1 / 255d, old.Y1 / 255d, old.X2 / 255d, old.Y2 / 255d);
                 double after = PadProcessor.Through(x, CurvePoints.ToByte(p.X1) / 255d, CurvePoints.ToByte(p.Y1) / 255d, CurvePoints.ToByte(p.X2) / 255d, CurvePoints.ToByte(p.Y2) / 255d);
                 if (Math.Abs(after - before) > .055)
-                    return $"You requested a small change, but {a.Target}'s curve changes output by more than five percentage points. Nothing applied.";
+                    return $"You requested a small change, but at {i}% push {a.Target}'s output changes from {before * 100:0}% to {after * 100:0}% (more than 5 percentage points; stay within ±5 of the current curve at every push, e.g. 50,47,80,77 on default). Nothing applied.";
             }
         }
         return null;
@@ -238,29 +242,29 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - "recap": why these changes fit what the owner asked, from the meanings below: what each change does, what it is good for, and what to watch out for. One short sentence with the real numbers; at most 25 words. When the owner asks a question instead (what is good or bad, what something does), answer it here, with no actions.
             - "assumptions": anything you guessed, such as which button a game uses to jump.
             - "sources": the numbers of the doc passages your recap used, or empty.
-            - "question": "" almost always. Ask one short question ONLY when you cannot act without the answer (which button to remap and to what, what a macro should press). Then make no actions.
-              Otherwise ACT: send the actions now, choosing sensible values yourself. When the owner answers your earlier question, do what they answered at once, with actions; never ask again.
+            - "question": "" almost always. Ask one short specific question ONLY when essential details are genuinely missing: which button to remap/swap/turbo, what colour or lighting effect to use when someone only says "change the lights" without naming a colour or effect (NEVER invent or pick an example colour), left vs right stick/trigger ONLY when truly ambiguous without an aim/movement clue (e.g. "set deadzone to 5"; NEVER ask which stick when the owner says aim, camera, look, turning, sniping, recoil, movement, or diagonals), or vague goals like "make my controller better" (ask whether they want steadier aim, faster turning, or help with drift). Then send "actions": [].
+              Otherwise ACT now in one reply (up to 8 actions for multi-part requests), using the exact target: aim/camera/look/turning/sniping/recoil -> ALWAYS RightStick (even for anti-deadzone); movement/walking/diagonals -> LeftStick; shooting trigger -> RightTrigger; gas/brake or racing triggers -> LeftTrigger and RightTrigger; general "my sticks" or unnamed small moves -> both sticks. When the owner answers your earlier question, act on their answer right away; never ask again.
               Never say you set or changed something unless the same reply carries the action that does it, with a value different from my settings right now. Your speech must describe exactly the values in your actions.
-              The conversation is remembered: read the earlier turns, including what was applied in [brackets], and build on them. "A bit more" means more than what you set last time.
+              The conversation is remembered: read earlier turns, including [applied: ...], [pc mode ...], and [lighting ...]. "A bit more" builds past what you set last time; "undo" / "revert" restores the previous [applied: ...] Before value when clear, otherwise ask what to revert.
 
-            Docs: when passages from the X20CTL docs are given, and the owner asks how the app works, where something is, or what to do when something fails, answer in the recap from those passages only and put their numbers in "sources". If they don't answer it, say you can't confirm that from the docs. When no passages are given and the owner asks about the app or the controller beyond the settings above (prices, other consoles, battery life, hardware facts), say you can't confirm that from the docs. Never cite a number you weren't given; never make up app features or facts.
+            Docs: when passages from the X20CTL docs are given, and the owner asks ANY question (what, how, why, where, is, does, can) about how the app works, what a tool/feature does, supported models, or what to do when something fails, answer in "recap" from those passages ONLY with "actions": [] (NEVER send open_page, measure_drift, or any other action unless explicitly told to open a page or run a scan) and put the cited passage numbers in "sources". If the passages don't state the answer (prices, PlayStation/Xbox/Switch console support, battery hours), NEVER guess or extrapolate — always set "actions": [], "sources": [], and write "I can't confirm that from my docs." in "recap". When no passages are given and the owner asks about the app or controller beyond the settings below, also write "I can't confirm that from my docs." with "actions": [] and "sources": []. Never cite a number you weren't given; never make up app features or facts.
 
             Actions (action, target, value):
             - stick_deadzone: LeftStick or RightStick, percent 0-40. How much of the centre is ignored. Drift or a stick that moves by itself: raise it a little.
             - stick_full_at: LeftStick or RightStick, percent 60-100. Where full speed is reached. Lower is faster.
             - stick_anti_deadzone: LeftStick or RightStick, percent 0-40. Cancels a game's own dead zone so small moves register.
-            - stick_curve_points: LeftStick or RightStick, text "push1,output1,push2,output2" (whole percents 0-100, push1 < push2). A custom curve that runs through these two points. Prefer this over the presets: shape it for what the owner asked and for this controller. Below the diagonal (output < push) is slower and more precise there; above is faster. Keep it gentle: a point more than 25 below the diagonal feels dead.
+            - stick_curve_points: LeftStick or RightStick, text "push1,output1,push2,output2" (four comma-separated whole percents 0-100, NEVER semicolons ';', push1 < push2). A custom curve that runs through these two points. Prefer this over the presets: shape it for what the owner asked and for this controller. Below the diagonal (output < push) is slower and more precise there; above is faster. Keep it gentle: a point more than 25 below the diagonal feels dead.
             - stick_curve: LeftStick or RightStick, one of: default, quick, slow, smooth, fine. ONLY when the owner says one of these preset words; for anything else (twitchy, slow, fast, precise, smooth aim) use stick_curve_points.
-            - stick_max_output: LeftStick or RightStick, percent 60-100. The most the game gets at full push.
+            - stick_max_output: LeftStick or RightStick, percent 60-100. The most the game gets at full push (use this when turning or aiming at full tilt feels too fast).
             - stick_axis_ratio: LeftStick or RightStick, whole percent 50-150. Vertical speed as a percent of horizontal.
             - stick_square_gate: LeftStick or RightStick, "on" or "off". Full output on diagonals.
             - trigger_deadzone: LeftTrigger or RightTrigger, whole percent 0-40. How far the trigger travels before it registers.
             - trigger_full_at: LeftTrigger or RightTrigger, whole percent 10-100. Where it counts as fully pressed. Lower is a faster, hair trigger.
             - trigger_curve_points: LeftTrigger or RightTrigger, "push1,output1,push2,output2" like stick_curve_points. Prefer it over the presets.
             - trigger_curve: LeftTrigger or RightTrigger, one of: default, quick, slow, smooth, fine. Only when the owner names a preset.
-            - remap: a button (A, B, X, Y, LB, RB, LT, RT, L3, R3, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, START, SELECT, HOME), value: the button it should send.
+            - remap: a button (A, B, X, Y, LB, RB, LT, RT, L3, R3, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, START, SELECT, HOME), value: the button it should send. Aliases: Cross=A, Circle=B, Square=X, Triangle=Y, L1=LB, R1=RB, L2=LT, R2=RT, Menu/Options=START, View/Back/Share=SELECT.
             - turbo: a button, presses per second 2-30, or 0 to turn turbo off.
-            - reset: a stick, trigger or button, or All, value 0. Back to default.
+            - reset: LeftStick, RightStick, LeftTrigger, RightTrigger, a button, or exact "All" (capital A), value 0. Back to default.
             - paddle: a paddle, value A or B. My paddles: {paddles}. Paddles only take this action, and only send A or B. Jump is A in most games.
 
             - pc_mode: target PcMode, value "on" or "off". PC mode is how my settings reach games on this PC. When the owner wants the settings to work in games, or says nothing changed in game, switch it on.
@@ -268,20 +272,23 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - mouse_mode: target Mouse, value "on" or "off". The controller moves the mouse pointer.
             - open_page: target Page, one of: Diagnostics, Tools, Mouse, Curves, Buttons, Macros, Vibration, PcMode, Device. Takes the owner there. Diagnostics shows live sticks, triggers and buttons; Tools has the Controller Check scan.
 
-            - led_color: target Lighting, value: the colour in plain words exactly as the owner said it ("blueish yellow", "dark teal", "light purple", "warm white", "neon green", "#FF8800"). The app reads the words into RGB; never invent hex numbers. Any LED, RGB, light or glow colour request uses this.
+            - led_color: target Lighting, value: the static solid colour named by the owner (e.g. cyan, warm white, #FF8800). The app reads colour words into RGB; never invent hex numbers, never pass animations or "off", and never invent a colour the owner didn't name.
+            - led_effect: target Lighting, value: a lighting animation or off state in plain words ("rainbow", "off", "breathe red", "cycle", "moonlight pulse", "hue sweep", "strobe", "lava", "trigger glow", "stick heat", "button flash", "idle nightlight"). Use for animations, rainbow, reactive effects, or turning lights off/dark.
 
             - measure_drift: LeftStick or RightStick, value 0. Reads where the stick rests with no hand on it, for three seconds. Changes nothing.
 
             Drift: when the owner says a stick drifts, moves on its own, or the aim creeps, measure it first: reply with only measure_drift actions (one per stick named, both if they don't say which) and no other actions. The app then sends you what it measured. Answer that with stick_deadzone at least the smallest dead zone it gives for each drifting stick, and explain the numbers in the recap. If it measured no drift worth a dead zone, change nothing and say so.
 
-            Reset everything -> one action: reset All, value 0. Turn turbo off -> turbo with value 0.
-            What people mean: precise, slow, sniping, less sensitive -> stick_curve_points under the diagonal. Fast or responsive -> points above the diagonal, or stick_full_at about 85. Steady tracking -> a gentle S close to the diagonal. Diagnose, test or check my controller -> open_page Diagnostics. Also use the advanced settings (max output, vertical ratio, anti-dead zone, square gate) when they fit. Twitchy or too sensitive -> stick_curve_points under the diagonal, plus stick_max_output about 90 when turning is too fast. Triggers that react earlier or faster -> trigger_deadzone 0-3 and trigger_curve_points above the diagonal; trigger_full_at 50-70 only for "hair trigger", never below 50 unless the owner gives a number. Progressive racing triggers -> trigger_curve_points under the diagonal. Choose points from the CURRENT curve and the requested amount, not from memorized examples. For a slight change keep each output within five percentage points of its current output at the same push. Stronger requests may move further. Do not reuse the last points unchanged when the owner asks for more. Ask only for genuinely missing details.
+            Reset & turbo shortcuts -> Reset everything: one action with action "reset", target "All" (capital A), value 0. Reset all curves: reset each stick and trigger. Turn turbo off: turbo on that button with value 0.
+            What people mean: precise, slow, sniping, calmer, steadier, long range, overshooting, less sensitive/jumpy/shaky -> stick_curve_points strictly under the diagonal (output < push at both points, never above 50 at half push). Fast, responsive, sluggish, snappy -> points above the diagonal, or stick_full_at about 85. Smooth / S-curve tracking -> gentle S slightly under early and near diagonal late. Too fast at full tilt / full push / max deflection -> lower stick_max_output (80-90), NEVER stick_curve_points. Twitchy overall -> stick_curve_points under the diagonal, plus stick_max_output about 85-92 when full tilt is also too fast. Vertical recoil / up-down speed differs from left-right -> stick_axis_ratio (70-90 reduces vertical climb/recoil, 110-135 speeds up). Weak diagonals / Rocket League aerials -> stick_square_gate "on". Micro-moves ignored by a game -> stick_anti_deadzone (5-15). Triggers that react earlier or faster -> trigger_deadzone 0-3 and trigger_curve_points above the diagonal; trigger_full_at 50-70 only for "hair trigger", never below 50 unless the owner gives a number. Progressive racing triggers -> trigger_curve_points under the diagonal. Diagnose, test or check my controller -> open_page "Diagnostics". Desktop pointer / couch mouse -> mouse_mode "on".
+            Choose points from the CURRENT curve and the requested amount, not from memorized examples. For a slight change keep each output within five percentage points of its current output at the same push. Stronger requests may move further. Do not reuse the last points unchanged when the owner asks for more.
 
             {AgentKnowledge.Prompt(compact: true)}
 
             Numbers are plain whole numbers (6, not "6%"). Use each action and target once.
+            Limits: cannot adjust vibration/rumble strength from chat, flash firmware, pair Bluetooth, build multi-step timed macro sequences directly in chat (mention the Macros tab), or apply PC mode to consoles (PS5, Switch, Xbox — PC mode runs on this Windows PC while X20CTL is open).
             If the owner asks for a number outside its range, don't pick another number for them: tell them the range, with no actions.
-            If the owner asks for something that isn't in this list, say you can't do that yet, with no actions.
+            If the owner asks for something outside these abilities or that isn't in this list, explain honestly with no actions.
             """;
     }
 

@@ -1,0 +1,2757 @@
+[
+  {
+    "Intent": "greeting",
+    "Sentence": "game modes show",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "stick actions list",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "trigger inputs query",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "d-pad commands",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "I need support to configure buttons.",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "List all game modes please.",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Yo, help me with these triggers.",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Assist please, no stick commands here.",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Reset screen and tell me what's up.",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Hi there, I need help with paddles.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "List commands without mentioning sticks.",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Hello, just showing you my buttons.",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Hello, help me find the right trigger.",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Open dialogue",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Sign in",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Log on",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Connect",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Yo trigger",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Greet me button",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Say hi paddle",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Initiate action",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Sign in please",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Log on assistant",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Connect device",
+    "Why": "off-intent greeting noise"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the lighting bright orange today",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "I want the triggers glowing midnight navy",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Paint the whole unit neon lime",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change my controller lights to hex 9900ff",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the buttons to a soft pastel pink",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the LEDs to burnt sienna please",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the lighting icy cyan now",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change the glow on the paddles to amber",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the LED ring to sunset orange",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the lighting to slate gray tone",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the buttons shine rose gold",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change the RGB output to hex #000000 for black",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the triggers to a cool mint shade",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the stick LEDs to fiery red",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the lighting to crisp white hex ffffff",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the RGB lights look like deep indigo",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the faceplate LEDs to chartreuse green",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the button glow to charcoal gray",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the RGB strips on the shoulder buttons to hex #ff69b4",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the lighting on the grip warm amber today",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "I want the paddles glowing soft lavender",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Paint the whole unit icy silver now",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change my controller lights to hex code #008080",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the buttons to a deep forest green shade",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the LEDs to burnt orange please",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the lighting minty fresh color right now",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the RGB color to sunflower yellow",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Paint my controller lights glowing charcoal gray",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the lighting to midnight blue hue",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the buttons shine copper brown",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change the RGB output to hex #FFFF00 for bright yellow",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the triggers to a cool teal shade",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the stick LEDs to blazing gold",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Give the whole console a soft sage green tint",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the faceplate lights glow coral pink today",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change the LED ring to hex #0000FF standard blue",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the buttons to glowing lemon zest color",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the lighting on the back to burnt umber shade",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the RGB strips to hex #FF5733.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the LED glow a bright magenta today.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "I want the triggers shining in a soft lavender shade.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change the stick glow to hex #4A90E2.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Paint the buttons electric blue now.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the RGB color to midnight indigo.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change the paddle lighting to hex #FFD700.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the whole unit to glowing silver.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change the RGB output to hex #2E8B57.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the buttons shine in burnt orange light.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the triggers to a cool aquamarine shade.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the LED ring to hex #9370DB.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change my controller lights to pure white.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Paint the lighting to a rusty red color.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the RGB strips to hex #00CED1.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make the glow on the paddles seafoam green.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the stick LEDs to hex #E9967A.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Change the LED color to a sharp charcoal gray.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Set the buttons to neon yellow please.",
+    "Why": "names no colour"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Cycle through all available colors on the face buttons.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Stop flashing the lights completely.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Disable lighting on the left and right handles.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Flash all buttons in random patterns quickly.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Kill the lighting on all four sides of the pad.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Stop the lights.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Make them breathe.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Cycle colors on my face buttons.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Kill all RGB instantly.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Flash buttons randomly fast.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Off with it, right now.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Kill lighting all four sides.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Disable all controller LEDs.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Breathe mode activate.",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Stop the lights completely",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Kill all rgb lighting",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Flash buttons in random patterns",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Disable left and right handle lights",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Switch to calm breathing cycle",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Cycle through colors on faceplate",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Disable lighting on analog sticks",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Make triggers pulse in green",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Stop breathing mode right away",
+    "Why": "names no lighting effect"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Flash the left paddle randomly",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "paddle_set",
+    "Sentence": "make the left paddle jump",
+    "Why": "names no paddle"
+  },
+  {
+    "Intent": "paddle_set",
+    "Sentence": "put B on the first paddle",
+    "Why": "names no paddle"
+  },
+  {
+    "Intent": "paddle_set",
+    "Sentence": "put jump on my back button",
+    "Why": "names no paddle"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Stop PC routing for this paddle",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "Enable PC mode so my paddles respond",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "Switch my paddle to PC mode",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "why arent my settings working",
+    "Why": "a question"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "Exchange my A and B buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "swap the A and B buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "flip A and B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "swap my A and B buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "trade A and B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "switch the A and B buttons",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_swap",
+    "Sentence": "swap the triggers",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "make A press B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "B should be A",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "make A work like B",
+    "Why": "names fewer than two buttons"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "start from scratch",
+    "Why": "names one control"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "My right paddle needs the fine curve",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Use the fine curve on both my paddles",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Set my paddles to the slow profile",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Apply the default setting to both paddles",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "My left paddle needs the fine curve now",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Make my right paddle move with the fast curve",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Switch both paddles to the default configuration",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Change my left paddle to the default curve",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Set both paddles to slow, thanks for asking",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Make my left paddle responsive right now",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Deadzone for paddle buttons at 0.5",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Both paddles, set input start point to 5.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "Right paddle has slight input creep.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "This paddle keeps sliding left unintentionally.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "Need calibration for drifting right paddle.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "Is there a setting for the paddle that moves on its own?",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "Left paddle slides unintentionally towards the top corner.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "This paddle keeps sliding left unintentionally again.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Make these paddles spin faster",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Increase responsiveness on paddle two.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set my left paddle's outer dead zone to 84.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Right paddle max speed should be 87.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Adjust my left paddle to 76 for full speed.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set both paddles to reach peak velocity at 88.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Make my left paddle scream at 91.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Give me full speed on both paddles at 75.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Left paddle feels slow, set it to 81.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set my left paddle's peak speed to 70.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set both paddles' full speed point to 73.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Left paddle outer dead zone at 82 please.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set max response for both sticks at eighty-five percent",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap analog stick sensitivity at ninety",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Reduce right axis output ceiling to eight-seven",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Stop full input at eighty-two on the left control",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Max out controller gain at seven-fifty percent only",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Turn down joystick range cap to nine-oh",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Clamp both axes movement to ninety-five percent max",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set upper limit for thumbstick input at eight-zero",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Adjust analog output ceiling to eighty-eight for right side",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Limit left analog travel to eight-three percent max",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap stick deadband maximum at ninety-one",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Restrict controller response threshold to seventy-five",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set peak analog sensitivity to eighty-four point five",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Max out both thumbsticks at nine-oh percent output",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Limit input range on right axis to eight-six only",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap left stick max travel at ninety-three percent",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set controller output ceiling at eight-nine for all sticks",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Reduce analog deadzone max to eighty-one percent",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Limit right thumbstick gain cap to nine-two",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set maximum analog response at seventy-eight percent",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap left axis input range to eight-eleven only",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Restrict both stick output to ninety-four percent max",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set upper analog limit at eighty-six for precision",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap controller sensitivity ceiling to ninety-nine percent",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap the right stick output at ninety-five percent.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Limit left stick maximum response to eight-seven point two.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set the aim stick ceiling to ninety-one for precise control.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Turn down the max input on both analogs to eight-zero.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap right axis sensitivity at eighty-eight only, nothing more.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Restrict left thumbstick gain to ninety-three percent max.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set output limit on controller sticks to eighty-five point five.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Stop full speed input at eight-two for the right control stick.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Max out left analog travel to eighty-nine percent ceiling.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap both thumbsticks at ninety-percent maximum response.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Limit right stick range to eighty-six with no variance.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Adjust max output on left axis to eighty-four point zero.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set upper gain limit for right stick at ninety-two only.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Reduce controller input cap to eight-seven for both sides.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap analog travel on left stick to ninety percent max.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Limit right stick sensitivity ceiling to eighty-eight point five.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set peak response threshold to eighty-three for left analog.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Turn down max output on all sticks to nine-zero percent.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Restrict movement range on left control to eighty-five only.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap right axis max input at ninety-four before full speed.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Limit analog stick ceiling to eight-six for the aiming side.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Set maximum gain for both thumbs at eighty-nine point five.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Stop input from reaching full scale at eight-zero on left.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "Cap output percentage on right stick to ninety-one strictly.",
+    "Why": "has no number"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "paddle buttons don't catch light presses",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "my subtle paddle taps register as nothing",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "paddle inputs too loose and don't register",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "add sensitivity fix for small paddle presses",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "Small wiggles of my paddle don't register as input.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "Small pushes on the paddle button don't trigger actions.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "My subtle paddle taps register as zero input in game.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Smooth out the movement across all paddles",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "I want steady inputs on all my paddles",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Reduce the stutter in my paddle inputs",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Can you make my right paddle glide smoothly?",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "stick_square_gate_off",
+    "Sentence": "Turn off square gate on sticks and enable circular mode only.",
+    "Why": "turns square gate on"
+  },
+  {
+    "Intent": "stick_square_gate_on",
+    "Sentence": "Enable square gate for the left stick to stop circular drift feeling.",
+    "Why": "turns square gate off"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Small movements on this paddle send my aim flying.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "How about setting my right button to quick?",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Left paddle should be on the default setting",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Quick curve for the right button please",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Can we switch the left paddle to quick?",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "I need the right button on smooth",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Give my right paddle a slow response",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Quick curve for my left paddle thanks",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Switch right paddle to slow now",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Set my buttons to smooth please",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "How about quick on my right button?",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Left paddle needs default setting",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Right button get that quick curve",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Can we switch left paddle to quick?",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "I need right button on smooth setting",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Both buttons on fine tune please thanks",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "I need zero deadzone on my L2 and R2 buttons",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "I want instant response from my face buttons",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Make my face buttons register every tiny press",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set sensitivity to zero for my R2 button",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Turn off deadzone detection for face buttons",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Get rid of dead zone on L2 and R2 buttons",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure the right paddle dead zone at 0.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make the right face button dead zone 4.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set both face buttons' touch thresholds to 8.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Turn left paddle touch threshold to 5 please.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure right face button touch value at 2.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Please set my left paddle touch threshold to 9.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right face button touch zone is now 5.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left face button touch threshold set to 4 please.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set my right paddle touch value to 9.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Right face button dead zone should be 10.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Turn the left paddle dead zone up to 5.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make my right face button dead zone 4.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make the right paddle threshold exactly 14.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Set left face button dead zone to 7 please.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "My aim button feels too slow, fix it",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Make the shoot button feel snappier",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Shoot faster with less button press",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Make my weapon buttons fire faster",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Quicken the shot release on every button",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Clicking my A button is too slow",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Fire instantly when I tap any button",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Speed up the fire rate for my buttons",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "I want zero lag on all my shot buttons",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Make paddle A register a full input when hit hard at 30.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Adjust right button sensitivity so 40 counts as full.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Let me set the top paddle full click at 90.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "I want button B fully pressed at 20 units.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set the bottom paddle's full count at 60.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Define paddle Y full contact point as 50.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Left button needs a full press value of 60.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Configure bottom paddle full activation to 75.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Let's set the paddle's full click threshold at 50.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set paddle B to register fully when pressed at 40.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Define button C's full activation point as 30.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Change left paddle sensitivity so 55 is full.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Full press the top button at 15 please.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Configure left paddle for 35 full contact.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Right button needs a full press setting of 65.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "I want paddle Z fully engaged at 50.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set button D to full press threshold of 10.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set top paddle full input level to 38.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Define left button A as fully pressed at 70.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Change paddle X threshold to 48 for full count.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "I need button C to register full at 22 units.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set left paddle full activation to 82.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set back paddle full count 30.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Paddle B full press set as 42.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Back button full press 25.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Front paddle full at 85 set.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Make back paddle complete at 45 please.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Configure front button max count as 85.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Paddle A full press set as 75 now.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set left button complete to 35 done.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Left paddle full press set as 65 here.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Paddle C max pressed set at 30 please.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Front button full count needs 85 value.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set right paddle fully at number 45.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set the back paddle full count number 35.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Paddle C full press set as 42 immediately.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Front paddle full press set as 80 now.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Back button full activation 25 done.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Make paddle A full press 55 now.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Adjust the brake paddle to be slower and more linear.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Trying to get finesse with my paddle, need help.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "This paddle is too snappy, soften it up please.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Adjust the trigger curves on these buttons for better racing precision.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "I want finer modulation on the analog button for my racing setup.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "I need a gentle curve on my racing brake button for consistency.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Tweak the analog buttons to provide progressive pressure feedback.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Fine-tune the analog buttons for progressive pressure in Assetto Corsa.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Adjust these buttons for a slower, more controlled brake engagement.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Set up a gentle ramp on these buttons for better throttle control.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Set a smooth progression on these buttons for high-speed cornering.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Adjust the throttle buttons to provide a soft, gradual pressure curve.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Slow the ramp down on my throttle button for better drift control.",
+    "Why": "names a button"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "shut down rapid fire on the bottom paddle",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "No more turbo clicks on the left paddle.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "Stop turboing on the middle paddle.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "Disable turbo shooting on the top paddle.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "Remove turbo from paddle three.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "Turn off rapid fire on paddle one.",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Start turbo on the paddle",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Turn on rapid fire for the paddle",
+    "Why": "names a paddle"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "assist please",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Hey, give me a functions list.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Initiate",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Enter",
+    "Why": "closer to open_page"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "Show me how to get started",
+    "Why": "closer to open_page"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "good morning",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "good evening",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "im new here",
+    "Why": "closer to paddle_set"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "first time using this",
+    "Why": "closer to led_effect_set"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "how does this work",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "show me around",
+    "Why": "closer to open_page"
+  },
+  {
+    "Intent": "greeting",
+    "Sentence": "give me ideas",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Turn the RGB strips on the faceplate to coral",
+    "Why": "closer to led_effect_set"
+  },
+  {
+    "Intent": "led_color_set",
+    "Sentence": "Make my LEDs sparkle in a pale mint hue.",
+    "Why": "closer to led_effect_set"
+  },
+  {
+    "Intent": "led_effect_set",
+    "Sentence": "Set my controller lights to rainbow.",
+    "Why": "closer to led_color_set"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Deactivate mouse mode right away.",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Stop mapping my buttons to mouse clicks.",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Stop the left stick from moving the mouse pointer.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Switch the controller out of mouse mode fast.",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Disengage the controller as a mouse device.",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Remove the ability to move the mouse cursor.",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "mouse_mode_off",
+    "Sentence": "Make the controller not move the pointer.",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Enable cursor control on the screen",
+    "Why": "closer to mouse_mode_off"
+  },
+  {
+    "Intent": "mouse_mode_on",
+    "Sentence": "Make the controller act like a mouse.",
+    "Why": "closer to remap_to"
+  },
+  {
+    "Intent": "open_page",
+    "Sentence": "Switch to PcMode view",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "open_page",
+    "Sentence": "Plot Curves on board",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "open_page",
+    "Sentence": "Rearrange Buttons here",
+    "Why": "closer to greeting"
+  },
+  {
+    "Intent": "open_page",
+    "Sentence": "Start Diagnostics mode right away.",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "open_page",
+    "Sentence": "Set up the Mouse options",
+    "Why": "closer to mouse_mode_on"
+  },
+  {
+    "Intent": "open_page",
+    "Sentence": "Edit the Buttons list",
+    "Why": "closer to greeting"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Stop using PC mode",
+    "Why": "closer to mouse_mode_off"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Turn the PC mode switch to off",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Make PC mode inactive",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Deactivate PC mode",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "Remove PC mode now",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "pc_mode_off",
+    "Sentence": "no more pc mode",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "Fix my setup by enabling PC mode",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "Put my stick in PC mode",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "the game ignores my settings",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "my changes dont show in game",
+    "Why": "closer to open_page"
+  },
+  {
+    "Intent": "pc_mode_on",
+    "Sentence": "use pc mode",
+    "Why": "closer to pc_mode_off"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "put Y on X",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "remap_to",
+    "Sentence": "make the B button press A",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "Just undo this",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "Reset button pressed in spirit",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "Restore original stick feel",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "Reset every setting to default",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "undo everything",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "reset_all",
+    "Sentence": "reset the controller",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset the top right trigger to factory settings",
+    "Why": "closer to reset_all"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "Reset the right bumper function.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "restore my left trigger",
+    "Why": "closer to reset_all"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "clear the changes on my right stick",
+    "Why": "closer to reset_all"
+  },
+  {
+    "Intent": "reset_target",
+    "Sentence": "revert my left stick",
+    "Why": "closer to reset_all"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Swap my left stick to the smooth profile",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Make my sticks move like the smooth curve",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Put smooth on my left stick immediately",
+    "Why": "closer to stick_square_gate_on"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Reset everything to the default stick curves",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Reset the right stick to the quick profile",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "Select the default stick response preset",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "stick_curve_set",
+    "Sentence": "linear curve on both sticks",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Make the left pad responsive instantly.",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Fix the sensitivity issue on my gamepad sticks.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Make both thumbsticks detect even the tiniest push.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Fix the drift and dead zone issues on all my pads.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Zero out the center drift immediately",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "Remove my left stick dead zone",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "get rid of the right stick dead zone",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "take away the left stick dead zone",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "set the stick dead zone to zero",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_deadzone_remove",
+    "Sentence": "i hate dead zones remove them from my sticks",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "stick_deadzone_set",
+    "Sentence": "Just fix my left joystick drift at value 6.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "ghost inputs on my left stick",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "the left stick is not centered",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "stick_drift",
+    "Sentence": "phantom movement",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "I want tighter control over movement",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Make my camera pan instantly.",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "I need my movement to be instant.",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Make my inputs feel more alive and quick",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "Left stick feels like it's dragging",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "higher sensitivity on the right stick",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "raise my aim sensitivity",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "i want quick sticks",
+    "Why": "closer to stick_curve_set"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "i cant turn fast enough",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_fast",
+    "Sentence": "max out my sensitivity",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Left stick dead zone full speed needs to be 84.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "Set my left stick dead zone full range at 91.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_full_at_set",
+    "Sentence": "left stick full at 90",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "8. Max out analog sensitivity for both sticks at ninety-two.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "10. Clamp stick input range on the left side at eighty-eight.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_max_output_set",
+    "Sentence": "15. Turn down the right side movement range to seventysix.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "my finger nudge on face button doesn't work",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "face buttons ignore micro presses now",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "tiny moves on face buttons go unnoticed",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "My joystick barely moves, the game won't catch it.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "Add a setting to fix dead zones on my face buttons.",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "The game thinks I'm not touching the left analog at all.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "Compensate for the games dead zone on my right stick",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_small_moves",
+    "Sentence": "i have to push the stick far before it moves",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Make analog sticks feel more precise",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Increase smoothness on my gamepad sticks",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "My right analog stick feels rough, fix it",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Fix the shaky response when I press button 5",
+    "Why": "closer to paddle_set"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Smooth my left aim input today.",
+    "Why": "closer to stick_square_gate_off"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "Fix my inputs so they dont jump.",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "I want more consistent tracking with my right stick",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "a smooth curve on both sticks",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "smooth curve please",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "stick_smooth",
+    "Sentence": "even response on my sticks",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "Make my aim tighter out of the box",
+    "Why": "closer to reset_all"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "Give me tight control on the right stick for hunting.",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "Get me laser accuracy on the right side stick.",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "I need finer crosshair placement",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "my aim is way too shaky",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "aim feels too twitchy",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "the crosshair jumps around too much",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "i keep overshooting my targets",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "the right stick is too sensitive",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "reduce the camera sensitivity",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "i overshoot when i aim",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "help me land headshots",
+    "Why": "closer to greeting"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "make small aim corrections easier",
+    "Why": "closer to stick_small_moves"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "slow down the right stick",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "the right stick moves too much",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "less sensitive right stick",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "my shots go everywhere",
+    "Why": "closer to greeting"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "make the crosshair steadier",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "ads is too sensitive",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "my scope is too jumpy",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "stick_sniping",
+    "Sentence": "aim for call of duty snipers",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "stick_square_gate_off",
+    "Sentence": "Deactivate square gate mode on both controllers",
+    "Why": "closer to stick_square_gate_on"
+  },
+  {
+    "Intent": "stick_square_gate_on",
+    "Sentence": "Make the right stick reach full output with square gate",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "The joystick feels jittery and hard to control.",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "I keep missing shots because the camera lags behind.",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Camera tracks aggressively and misses",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Oversteering my targets constantly",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Trigger input jumps the camera aim",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "My aim shoots past targets easily",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Make my aim less jumpy please",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Camera movement is not smooth enough",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Make the camera less sensitive to minor hand shakes",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Right thumbstick makes my character move too erratically",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "Aim is too shaky for accurate headshots please fix",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "the sticks feel nervous",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "my aim twitches",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "my aim jitters",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "stick_twitchy",
+    "Sentence": "the stick is twitchy when i move it a little",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "My right trigger needs that fine tune",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Reset right trigger to default please",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Fine detail on the right pad now",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Put my left trigger back to quick.",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Put the left trigger back on the slow curve.",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "trigger_curve_set",
+    "Sentence": "Select slow for my shooting throttle trigger.",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Turn off the stick calibration offset",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Remove the invisible barrier on my triggers",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "I need full sensitivity on my triggers please",
+    "Why": "closer to trigger_fast"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Kill the dead zone on my triggers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "I need the trigger dead zone gone.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Eliminate the trigger dead zone.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Clear the dead zone from both triggers.",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Reset trigger dead zone to default zero.",
+    "Why": "closer to reset_target"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Uncheck trigger dead zone option.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Fix the trigger dead zone issue immediately.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Delete the trigger dead zone configuration.",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Set trigger dead zone to zero",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "Clear the left trigger dead zone",
+    "Why": "closer to trigger_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "zero dead zone on my right trigger",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_remove",
+    "Sentence": "turn off the dead zone on my triggers",
+    "Why": "closer to stick_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "I need 3 units of dead space on the left trigger.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "My right trigger is too twitchy, add a 5 zone.",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "I want zero response on triggers until they hit 3.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure ignore threshold for both sides at 4.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Fix left trigger sensitivity with a 3 zone",
+    "Why": "closer to remap_swap"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left pad deadzone should be 9.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make the right trigger count start at 5.",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Give the right bumper a 7-unit touch offset.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Make left trigger touch sensitivity exactly 6.",
+    "Why": "closer to stick_axis_ratio_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Give the controller's left bumper a 1-unit blind spot.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Configure left trigger blind zone at 6 for me.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Left bumper dead zone set to 11 now.",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "Use 4 percent dead zone on the left trigger",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "dead zone on the right trigger to 5",
+    "Why": "closer to trigger_deadzone_remove"
+  },
+  {
+    "Intent": "trigger_deadzone_set",
+    "Sentence": "set a 3 percent dead zone on the left trigger",
+    "Why": "closer to stick_deadzone_set"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Faster firing rate on my gun controls",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "My trigger response is laggy, speed it up",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Make me pull half a stick and fire",
+    "Why": "closer to stick_square_gate_off"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Tweak my right bumper to be quicker",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "Enable immediate fire mode for all guns",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "I need my firing trigger to react sooner",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "make the right trigger very sensitive",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "more sensitive triggers",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "the triggers are too slow to shoot",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "the trigger needs a full press",
+    "Why": "closer to trigger_full_at_set"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "make the triggers react quicker",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "make my triggers super responsive",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "instant fire on the right trigger",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "make the trigger click sooner",
+    "Why": "closer to trigger_slow"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "shoot on a light touch",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "trigger_fast",
+    "Sentence": "fire faster with the trigger",
+    "Why": "closer to stick_fast"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set my controller's bottom trigger to 90 full.",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Set the rear bumper's full value to 85.",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "Make LT reach full output at 90",
+    "Why": "closer to stick_max_output_set"
+  },
+  {
+    "Intent": "trigger_full_at_set",
+    "Sentence": "the right trigger should max out at 40",
+    "Why": "closer to stick_full_at_set"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "My brake feels too snappy, can you help?",
+    "Why": "closer to greeting"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Fixing my drifting issues by adjusting trigger speed",
+    "Why": "closer to stick_drift"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "My brake feels sharp, want it slower for corners.",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Please tune the analog inputs for smooth brake application.",
+    "Why": "closer to stick_sniping"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "Set a fine-grained curve on my analog triggers for rally simulation.",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "smoother braking",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "make accelerating smoother",
+    "Why": "closer to stick_smooth"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "the triggers feel too touchy",
+    "Why": "closer to stick_twitchy"
+  },
+  {
+    "Intent": "trigger_slow",
+    "Sentence": "slow curve on my triggers",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "End rapid fire on the left analog stick.",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "turbo_off",
+    "Sentence": "stop auto fire on RT",
+    "Why": "closer to turbo_on"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Turbo on RT number twenty",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Quick fire on the right stick",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Give me turbo on X and Z buttons",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Start turbo mode on my thumbstick",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Set turbo on LB at slow speed",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "I need turbo on X activated",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Turbo up on X",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Switch on rapid shots at F",
+    "Why": "closer to pc_mode_on"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Turbo setting for H please",
+    "Why": "closer to trigger_curve_set"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Quick shoot on right trigger",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Switch L3 to turbo mode",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "Hold X to repeat presses with turbo",
+    "Why": "closer to remap_to"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "add turbo to B",
+    "Why": "closer to remap_to"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "enable turbo on X",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "autofire on A",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "button mashing on X",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "turbo the right trigger",
+    "Why": "closer to turbo_off"
+  },
+  {
+    "Intent": "turbo_on",
+    "Sentence": "machine gun mode on RT",
+    "Why": "closer to turbo_off"
+  }
+]

@@ -20,7 +20,7 @@ public sealed class ScreenWorkbench
  internal Button Retry=>retry;internal Button Cancel=>cancel;internal bool IsBusy=>busy;internal string StatusText=>status.Text;
  public byte[]? EncodedAsset=>asset?.ToArray();
  readonly Image image=new(){Width=480,Height=240,Stretch=Stretch.Fill};
- readonly TextBlock details=ManagementVisuals.Copy("Choose an image or wallpaper",14),status=ManagementVisuals.Copy("Controller",14),sizeText=ManagementVisuals.Copy("Upload 0 / 3 MiB",13),notice=ManagementVisuals.Copy("",13);
+ readonly TextBlock details=ManagementVisuals.Copy("Choose an image or wallpaper",14),status=ManagementVisuals.Copy("Controller",14),sizeText=ManagementVisuals.Copy($"Upload 0 / {ScreenCodec.HardwareAssetLimit:N0}",13),notice=ManagementVisuals.Copy("",13);
  readonly TextBox portName=new(){Width=150,HorizontalAlignment=HorizontalAlignment.Left};
  readonly ProgressBar transferProgress=new(){Minimum=0,Maximum=100,Height=6,Margin=new(0,8,0,6)};
  readonly CheckBox animation=new(){Content="Animation",Foreground=Brushes.White},simulate=new(){Content="Simulate",IsChecked=false,Foreground=Brushes.White},confirmReset=new(){Content="Confirm reset",Foreground=Brushes.White};
@@ -71,7 +71,7 @@ public sealed class ScreenWorkbench
  void Open(){var dialog=new OpenFileDialog{Filter="Screen projects and assets|*.x20screen;*.bin|Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif"};if(dialog.ShowDialog()==true)Try(()=>Load(dialog.FileName));}
  public void Load(string path)
  {
-  if(busy)throw new InvalidOperationException("A transfer is running.");var info=new FileInfo(path);long cap=path.EndsWith(".x20screen",StringComparison.OrdinalIgnoreCase)?8*1024*1024:path.EndsWith(".bin",StringComparison.OrdinalIgnoreCase)?ScreenCodec.AssetLimit:ScreenCodec.InputLimit;if(info.Length>cap)throw new ArgumentException("File exceeds its size limit.");
+  if(busy)throw new InvalidOperationException("A transfer is running.");var info=new FileInfo(path);long cap=path.EndsWith(".x20screen",StringComparison.OrdinalIgnoreCase)?8*1024*1024:path.EndsWith(".bin",StringComparison.OrdinalIgnoreCase)?ScreenCodec.HardwareAssetLimit:ScreenCodec.InputLimit;if(info.Length>cap)throw new ArgumentException("File exceeds its size limit.");
   if(path.EndsWith(".x20screen",StringComparison.OrdinalIgnoreCase)){ReadProject(File.ReadAllBytes(path));return;}
   if(path.EndsWith(".bin",StringComparison.OrdinalIgnoreCase)){LoadEncoded(File.ReadAllBytes(path),100);sourceName=info.Name;return;}
   LoadImageBytes(File.ReadAllBytes(path),info.Name);
@@ -89,7 +89,7 @@ public sealed class ScreenWorkbench
  void FinishLoad(){notice.Text="Transparency on black";frameLimit.Maximum=Math.Max(1,frames.Count);frameLimit.Value=frames.Count;animation.IsChecked=frames.Count>1;loading=false;Refresh();details.Text=$"{sourceName} · {frames.Count} frame{(frames.Count==1?"":"s")}";}
  void Refresh()
  {
-  if(loading)return;revision++;planReady=false;plannedNonce=null;asset=null;encodedFrames.Clear();StopPreview();UpdateWriteGates();if(frames.Count>0){image.Source=Crop(frames[0]);editClock.Stop();editClock.Start();}sizeText.Text=$"Input {inputBytes:N0} / 2,097,152 · Upload calculating / 3,145,728";
+  if(loading)return;revision++;planReady=false;plannedNonce=null;asset=null;encodedFrames.Clear();StopPreview();UpdateWriteGates();if(frames.Count>0){image.Source=Crop(frames[0]);editClock.Stop();editClock.Start();}sizeText.Text=$"Upload calculating / {ScreenCodec.HardwareAssetLimit:N0}";
  }
  internal byte[] FirstCroppedPixels=>Rgba(Crop(frames[0]));
  internal byte[] CroppedFramesBytes=>frames.SelectMany(f=>Rgba(Crop(f))).ToArray();
@@ -111,7 +111,7 @@ public sealed class ScreenWorkbench
    int version=revision;bool animated=animation.IsChecked==true;delay=(int)Math.Clamp(Math.Round(100d/fps.Value)*10,10,2550);previewClock.Interval=TimeSpan.FromMilliseconds(delay);
    var pixels=(animated?frames.Take((int)frameLimit.Value):frames.Take(1)).Select(f=>ScreenArtwork.Adjust(Rgba(Crop(f)),brightness.Value,contrast.Value)).ToArray();
    int usedFrames=pixels.Length,usedDelay=delay;var built=await Task.Run(()=>animated?ScreenCodec.EncodeAnimationFitting(pixels,delay,out usedFrames,out usedDelay):ScreenCodec.EncodeStill(pixels[0]));if(animated&&usedDelay!=delay){delay=usedDelay;previewClock.Interval=TimeSpan.FromMilliseconds(delay);}if(version!=revision)return;asset=built;encodedFrames.Clear();encodedFrames.AddRange(ScreenCodec.DecodeAsset(asset,animated).Select(Bitmap));image.Source=encodedFrames[0];if(encodedFrames.Count>1){previewUntil=DateTime.UtcNow.AddSeconds(30);previewClock.Start();}
-   sizeText.Text=$"Upload {asset.Length:N0} / 3,145,728";status.Text=$"{(animated?$"{encodedFrames.Count} frames{(encodedFrames.Count<pixels.Length?$" (every {(pixels.Length+encodedFrames.Count-1)/encodedFrames.Count}th kept to fit)":"")} · {1000d/delay:0.#} FPS":"Static wallpaper")} · {(simulate.IsChecked==true?"Simulate":"Controller")}";
+   sizeText.Text=$"Upload {asset.Length:N0} / {ScreenCodec.HardwareAssetLimit:N0}";status.Text=$"{(animated?$"{encodedFrames.Count} frames{(encodedFrames.Count<pixels.Length?$" (every {(pixels.Length+encodedFrames.Count-1)/encodedFrames.Count}th kept to fit)":"")} · {1000d/delay:0.#} FPS":"Static wallpaper")} · {(simulate.IsChecked==true?"Simulate":"Controller")}";
   }
   catch(ArgumentException e){asset=null;status.Text=e.Message;}
   finally{busy=false;UpdateWriteGates();if(asset==null&&frames.Count>0&&revision>0)sizeText.Text="Upload unavailable · reduce frames or size";}

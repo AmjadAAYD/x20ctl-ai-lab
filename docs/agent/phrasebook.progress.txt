@@ -1,0 +1,58 @@
+15:04:27 loaded 26 existing intents from C:\Users\amjad\Desktop\Study\Other\Projects\Personal\x20ctl-lab-qwen-main\desktop-dotnet\X20Ctl.Zone\Agent\phrasebook.json
+15:04:27 Loading qwen3.5:9b…
+15:04:51 qwen3.5:9b ready
+15:04:52 stick_sniping: preserved 173 existing sentences
+15:04:52 stick_twitchy: preserved 110 existing sentences
+15:04:52 stick_smooth: preserved 135 existing sentences
+15:04:52 stick_fast: preserved 145 existing sentences
+15:04:52 stick_curve_set: preserved 68 existing sentences
+15:04:52 stick_drift: preserved 169 existing sentences
+15:04:52 stick_deadzone_set: preserved 145 existing sentences
+15:04:52 stick_deadzone_remove: preserved 116 existing sentences
+15:04:52 stick_full_at_set: preserved 134 existing sentences
+15:06:32 stick_max_output_set round 1: 25 kept · 100.7 s
+15:08:05 stick_max_output_set round 2: 50 kept · 92.5 s
+15:09:03 stick_max_output_set round 3: 74 kept · 57.8 s
+15:09:05 stick_axis_ratio_set round 1: 0 kept · 2.9 s
+15:09:12 stick_axis_ratio_set round 2: 25 kept · 6.5 s
+15:09:48 stick_axis_ratio_set round 3: 50 kept · 35.8 s
+15:10:32 stick_square_gate_on round 1: 24 kept · 43.7 s
+15:11:14 stick_square_gate_on round 2: 48 kept · 42.3 s
+15:11:56 stick_square_gate_on round 3: 72 kept · 42.6 s
+15:12:39 stick_square_gate_off round 1: 25 kept · 42.1 s
+15:13:46 stick_square_gate_off round 2: 34 kept · 67.6 s
+15:13:55 stick_square_gate_off round 3: 59 kept · 8.9 s
+15:13:55 stick_small_moves: preserved 132 existing sentences
+15:13:55 trigger_fast: preserved 92 existing sentences
+15:13:55 trigger_slow: preserved 131 existing sentences
+15:13:55 trigger_curve_set: preserved 115 existing sentences
+15:13:55 trigger_deadzone_set: preserved 73 existing sentences
+15:13:55 trigger_deadzone_remove: preserved 89 existing sentences
+15:13:55 trigger_full_at_set: preserved 119 existing sentences
+15:13:55 turbo_on: preserved 149 existing sentences
+15:13:55 turbo_off: preserved 150 existing sentences
+15:13:55 remap_swap: preserved 24 existing sentences
+15:13:55 remap_to: preserved 56 existing sentences
+15:13:55 paddle_set: preserved 133 existing sentences
+15:13:55 reset_target: preserved 93 existing sentences
+15:13:55 reset_all: preserved 98 existing sentences
+15:13:55 pc_mode_on: preserved 141 existing sentences
+15:13:55 pc_mode_off: preserved 99 existing sentences
+15:13:58 mouse_mode_on round 1: 28 kept · 3.1 s
+15:14:03 mouse_mode_on round 2: 53 kept · 4.7 s
+15:14:08 mouse_mode_on round 3: 76 kept · 4.9 s
+15:14:12 mouse_mode_off round 1: 25 kept · 4.3 s
+15:14:17 mouse_mode_off round 2: 50 kept · 5.1 s
+15:14:21 mouse_mode_off round 3: 60 kept · 4.2 s
+15:14:25 open_page round 1: 24 kept · 3.6 s
+15:14:29 open_page round 2: 49 kept · 4.1 s
+15:14:33 open_page round 3: 73 kept · 3.6 s
+15:14:38 led_color_set round 1: 25 kept · 5.2 s
+15:14:44 led_color_set round 2: 50 kept · 5.6 s
+15:14:49 led_color_set round 3: 75 kept · 5.6 s
+15:14:54 led_effect_set round 1: 25 kept · 5.2 s
+15:14:58 led_effect_set round 2: 49 kept · 3.9 s
+15:15:02 led_effect_set round 3: 74 kept · 3.9 s
+15:15:02 greeting: preserved 130 existing sentences
+15:15:16 cleaned: 3081 kept, 551 dropped
+15:15:16 done · 3081 sentences across 35 intents

@@ -12,17 +12,25 @@ internal sealed class LightingWindow : Window
     readonly TextBlock rgb=new(){Margin=new(0,8,0,0)},status=new(){Text="Choose a colour and effect, then Apply.",TextWrapping=TextWrapping.Wrap,Margin=new(0,12,0,0),MinHeight=42};
     readonly Border preview=new(){BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Height=180,CornerRadius=new(12),Margin=new(0,0,0,18)};
     readonly Button read=ActionButton("Read controller"),apply=ActionButton("Apply");
-    readonly ComboBox modes=new(){ItemsSource=new[]{"Solid","Breathe","Cycle","Off","Battery"},SelectedIndex=0,MinWidth=115,Margin=new(0,0,8,0)};
-    readonly Slider brightness=new(){Minimum=0,Maximum=100,Value=100,SmallChange=1,LargeChange=10,TickFrequency=1,IsSnapToTickEnabled=true,MinHeight=28,Margin=new(0,4,0,4),ToolTip="Controller brightness."};
-    readonly TextBlock brightnessValue=new(){Text="100%",HorizontalAlignment=HorizontalAlignment.Right};
+    readonly ComboBox modes=new(){ItemsSource=new[]{"Solid","Rainbow","Breathe","Cycle","Off","Battery"},SelectedIndex=0,MinWidth=115,Margin=new(0,0,8,0)};
+    readonly Slider brightness=new(){Minimum=0,Maximum=100,Value=100,SmallChange=1,LargeChange=10,TickFrequency=1,IsSnapToTickEnabled=true,MinHeight=28,Margin=new(0,4,0,4),ToolTip="Controller brightness (0x00 Off .. 0x01 Moonlight .. 0xFF Max)."};
+    readonly TextBlock brightnessValue=new(){Text="100% (0xFF)",HorizontalAlignment=HorizontalAlignment.Right};
+    readonly WrapPanel viewTabs=new();
+    readonly Border leftLedBar=new(){Width=48,Height=10,CornerRadius=new(5),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Margin=new(0,0,6,0)};
+    readonly Border rightLedBar=new(){Width=48,Height=10,CornerRadius=new(5),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Margin=new(0,0,8,0)};
+    readonly TextBlock ledBarLabel=new(){FontSize=12,VerticalAlignment=VerticalAlignment.Center};
+    readonly Button[] sectionBtns=new Button[3];
+    FrameworkElement? staticView,effectsView,presetsView,actionFooter;
+    LightingEffectsSection? effectsSection;
+    int activeSection;
     bool syncingBrightness;
     readonly ColourField square=new(false),hueStrip=new(true);
     readonly List<(Button Button,int Rgb)> swatches=[];
     readonly StackPanel batteryPanel=new(){Visibility=Visibility.Collapsed,Margin=new(0,0,0,24)};
     readonly Button[] levelButtons=new Button[4];
     readonly int[] levelColours=(int[])BatteryLightingService.Load().Colours.Clone();
-    static readonly byte[] ModeValues=[2,3,4,0];
-    const int BatteryMode=4;
+    static readonly byte[] ModeValues=[2,1,3,4,0];
+    const int BatteryMode=5;
     int selected=0xff0000,editingLevel=3; double hue,saturation=1,value=1; bool busy,loadingLevel; byte level=0x50;
     bool BatterySelected=>modes.SelectedIndex==BatteryMode;
     static Button ActionButton(string text)=>new(){Content=text,Style=DS.Style("ActionButton"),Padding=new(20,10,20,10),MinWidth=130};
@@ -33,8 +41,8 @@ internal sealed class LightingWindow : Window
         rgb.Foreground=DS.Brush("DS.TextSoft");rgb.FontSize=15;
         status.Foreground=DS.Brush("DS.TextSoft");status.FontSize=14;status.Margin=new(0);status.MinHeight=0;
         preview.BorderBrush=DS.Brush("DS.Hairline");
-        var root=new Grid();root.RowDefinitions.Add(new());root.RowDefinitions.Add(new(){Height=GridLength.Auto});Content=root;
-        var columns=new Grid();columns.ColumnDefinitions.Add(new(){Width=new(1.6,GridUnitType.Star)});columns.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});root.Children.Add(columns);
+        var root=new Grid();root.RowDefinitions.Add(new(){Height=GridLength.Auto});root.RowDefinitions.Add(new());root.RowDefinitions.Add(new(){Height=GridLength.Auto});Content=root;
+        var columns=new Grid();columns.ColumnDefinitions.Add(new(){Width=new(1.6,GridUnitType.Star)});columns.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});staticView=columns;Grid.SetRow(columns,1);root.Children.Add(columns);
         var panel=new StackPanel();var detail=new StackPanel();
         var left=Kit.Panel("Colour", "Choose from the palette or create a custom colour.",null,new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(24));left.Margin=new(0,0,16,0);columns.Children.Add(left);
         var right=Kit.Panel("Selected colour",null,null,new ScrollViewer{Content=detail,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(24));Grid.SetColumn(right,1);columns.Children.Add(right);
@@ -47,7 +55,13 @@ internal sealed class LightingWindow : Window
         brightnessHeader.Children.Add(Kit.Text("Brightness",13,"DS.TextSoft"));brightnessValue.Foreground=DS.Brush("DS.TextSoft");Grid.SetColumn(brightnessValue,1);brightnessHeader.Children.Add(brightnessValue);
         System.Windows.Automation.AutomationProperties.SetName(brightness,"RGB brightness");
         detail.Children.Add(brightnessHeader);detail.Children.Add(brightness);
-        brightness.ValueChanged+=(_,_)=>{if(syncingBrightness||busy)return;level=LightingRecord.BrightnessByteFor(brightness.Value);brightnessValue.Text=$"{Math.Round(brightness.Value):0}%";};
+        var quickBright=new WrapPanel{Margin=new(0,2,0,4)};
+        var moonlightBtn=new Button{Content="Moonlight (0x01)",Style=DS.Style("ActionButton"),Padding=new(10,4,10,4),FontSize=12,Margin=new(0,0,8,0),ToolTip="Ultra-faint 1% moonlight glow (0x01)"};
+        moonlightBtn.Click+=(_,_)=>{if(!busy)SetBrightnessByte(LightingRecord.MoonlightBrightnessByte);};
+        var offBrightBtn=new Button{Content="0% Off (0x00)",Style=DS.Style("ActionButton"),Padding=new(10,4,10,4),FontSize=12,ToolTip="Turn LEDs off while keeping colour/mode (0x00)"};
+        offBrightBtn.Click+=(_,_)=>{if(!busy)SetBrightnessByte(LightingRecord.MinBrightnessByte);};
+        quickBright.Children.Add(moonlightBtn);quickBright.Children.Add(offBrightBtn);detail.Children.Add(quickBright);
+        brightness.ValueChanged+=(_,_)=>{if(syncingBrightness||busy)return;level=LightingRecord.BrightnessByteFor(brightness.Value);brightnessValue.Text=$"{Math.Round(brightness.Value):0}% (0x{level:X2})";};
         square.Changed+=(x,y)=>{saturation=x;value=1-y;Refresh();};hueStrip.Changed+=(_,y)=>{hue=y*360;Refresh();};
         hex.LostFocus+=(_,_)=>CommitHex();hex.KeyDown+=(_,e)=>{if(e.Key==Key.Enter){CommitHex();e.Handled=true;}};
         var palette=new System.Windows.Controls.Primitives.UniformGrid{Columns=12,Margin=new(-3,10,-3,0)};
@@ -61,7 +75,7 @@ internal sealed class LightingWindow : Window
         panel.Children.Add(palette);panel.Children.Add(Kit.Text("48 prepared colours · hover for names",13,"DS.TextSoft").Also(t=>t.Margin=new(0,16,0,8)));
         detail.Children.Add(Kit.Text("Effect",13,"DS.TextSoft").Also(t=>t.Margin=new(0,24,0,8)));
         modes.HorizontalAlignment=HorizontalAlignment.Stretch;modes.Margin=new(0);modes.MinHeight=44;detail.Children.Add(modes);
-        detail.Children.Add(Kit.Text("Solid · Breathe · Cycle · Off · Battery",13,"DS.TextMuted").Also(t=>t.Margin=new(0,10,0,24)));
+        detail.Children.Add(Kit.Text("Solid · Rainbow (0x01) · Breathe · Cycle · Off · Battery",13,"DS.TextMuted").Also(t=>t.Margin=new(0,10,0,24)));
         batteryPanel.Children.Add(Kit.Text("Battery level colours",13,"DS.TextSoft").Also(t=>t.Margin=new(0,0,0,8)));
         var gauge=new System.Windows.Controls.Primitives.UniformGrid{Columns=4,Margin=new(-3,0,-3,0)};
         for(int i=0;i<4;i++)
@@ -77,8 +91,9 @@ internal sealed class LightingWindow : Window
         var footer=new Grid();footer.ColumnDefinitions.Add(new());footer.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
         status.VerticalAlignment=VerticalAlignment.Center;status.Margin=new(0,0,24,0);footer.Children.Add(status);
         apply.Style=DS.Style("DS.Primary");apply.MinWidth=160;Grid.SetColumn(apply,1);footer.Children.Add(apply);
-        var actionPanel=Kit.Panel(null,null,null,footer,new Thickness(20,14,20,14));actionPanel.Margin=new(0,16,0,0);Grid.SetRow(actionPanel,1);root.Children.Add(actionPanel);
-        read.Click+=async(_,_)=>await Run(false);apply.Click+=async(_,_)=>{if(!CommitHex()||modes.SelectedIndex<0)return;if(BatterySelected)await ApplyBattery();else await Run(true,ModeValues[modes.SelectedIndex]);};
+        var actionPanel=Kit.Panel(null,null,null,footer,new Thickness(20,14,20,14));actionPanel.Margin=new(0,16,0,0);actionFooter=actionPanel;Grid.SetRow(actionPanel,2);root.Children.Add(actionPanel);
+        BuildTopStudioBarAndSections(root);
+        read.Click+=async(_,_)=>await Run(false);apply.Click+=async(_,_)=>{if(!CommitHex()||modes.SelectedIndex<0)return;await LightingEffectsService.StopAsync(restoreBaseline:false);if(BatterySelected)await ApplyBattery();else await Run(true,ModeValues[modes.SelectedIndex]);};
         modes.SelectionChanged+=(_,_)=>{apply.IsEnabled=!busy&&modes.SelectedIndex>=0;batteryPanel.Visibility=BatterySelected?Visibility.Visible:Visibility.Collapsed;if(BatterySelected)EditLevel(editingLevel);};
         SetColour(0xff0000);ShowLevel(0x50);
         if(BatteryLightingService.Load().Enabled)modes.SelectedIndex=BatteryMode;
@@ -86,7 +101,77 @@ internal sealed class LightingWindow : Window
     internal FrameworkElement DetachBody(){var body=(FrameworkElement)Content;Content=null;body.HorizontalAlignment=HorizontalAlignment.Stretch;return body;}
     /// <summary>Shows what the pad holds as soon as the page opens, so editing starts from the real colour. Read only; a failure just says so.</summary>
     internal void ReadOnOpen(){if(!ReviewSandbox.Active)_=Run(false);}
-    internal void ShowBattery()=>modes.SelectedIndex=BatteryMode;
+    internal void ShowBattery(){ShowSection(0);modes.SelectedIndex=BatteryMode;}
+    internal void ShowSection(int index)
+    {
+        activeSection=Math.Clamp(index,0,2);
+        if(staticView!=null)staticView.Visibility=activeSection==0?Visibility.Visible:Visibility.Collapsed;
+        if(effectsView!=null)effectsView.Visibility=activeSection==1?Visibility.Visible:Visibility.Collapsed;
+        if(presetsView!=null)presetsView.Visibility=activeSection==2?Visibility.Visible:Visibility.Collapsed;
+        if(actionFooter!=null)actionFooter.Visibility=activeSection==0?Visibility.Visible:Visibility.Collapsed;
+        for(int i=0;i<sectionBtns.Length;i++)
+            if(sectionBtns[i]!=null)sectionBtns[i].Style=DS.Style(i==activeSection?"DS.Primary":"ActionButton");
+    }
+    void SetBrightnessByte(byte b)
+    {
+        ShowLevel(b);
+        if(b==LightingRecord.MoonlightBrightnessByte)status.Text="Moonlight 1% (0x01) selected — click Apply to write to controller.";
+        else if(b==LightingRecord.MinBrightnessByte)status.Text="0% Off (0x00) selected — click Apply to turn LEDs off while keeping colour.";
+    }
+    void BuildTopStudioBarAndSections(Grid root)
+    {
+        effectsSection=new LightingEffectsSection(()=>selected,SetColour,()=>level);
+        effectsView=effectsSection.EffectsView;Grid.SetRow(effectsView,1);root.Children.Add(effectsView);
+        presetsView=effectsSection.PresetsAndGamesView;Grid.SetRow(presetsView,1);root.Children.Add(presetsView);
+
+        string[] labels=["Colours & Battery","Effects Studio","Presets & Game Auto"];
+        for(int i=0;i<labels.Length;i++)
+        {
+            int idx=i;
+            var btn=new Button{Content=labels[i],Padding=new(12,6,12,6),FontSize=12.5,Margin=new(0,0,8,4),Style=DS.Style(i==0?"DS.Primary":"ActionButton")};
+            btn.Click+=(_,_)=>ShowSection(idx);
+            sectionBtns[i]=btn;
+            viewTabs.Children.Add(btn);
+        }
+
+        ledBarLabel.Foreground=DS.Brush("DS.TextSoft");
+        var ledPreviewStrip=new StackPanel{Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center,Margin=new(0,2,0,2)};
+        ledPreviewStrip.Children.Add(Kit.Text("L ",11.5,"DS.TextMuted").Also(t=>t.VerticalAlignment=VerticalAlignment.Center));
+        ledPreviewStrip.Children.Add(leftLedBar);
+        ledPreviewStrip.Children.Add(Kit.Text("R ",11.5,"DS.TextMuted").Also(t=>t.VerticalAlignment=VerticalAlignment.Center));
+        ledPreviewStrip.Children.Add(rightLedBar);
+        ledPreviewStrip.Children.Add(ledBarLabel);
+
+        var headerWrap=new WrapPanel{VerticalAlignment=VerticalAlignment.Center};
+        viewTabs.Margin=new(0,0,14,0);
+        headerWrap.Children.Add(viewTabs);
+        headerWrap.Children.Add(ledPreviewStrip);
+
+        var headerCard=Kit.Panel(null,null,null,headerWrap,new Thickness(14,8,14,8));
+        headerCard.Margin=new(0,0,0,12);
+        Grid.SetRow(headerCard,0);
+        root.Children.Add(headerCard);
+
+        ShowSection(0);
+        var previewTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};
+        previewTimer.Tick+=(_,_)=>UpdateDualLedPreview();
+        root.Loaded+=(_,_)=>{UpdateDualLedPreview();previewTimer.Start();};
+        root.Unloaded+=(_,_)=>previewTimer.Stop();
+        UpdateDualLedPreview();
+    }
+    void UpdateDualLedPreview()
+    {
+        LightingFrame frame;
+        if(LightingEffectsService.Status.IsRunning || activeSection!=0)
+            frame=LightingEffectsService.EvaluatePreview();
+        else
+            frame=new((byte)((selected>>16)&0xff),(byte)((selected>>8)&0xff),(byte)(selected&0xff),level,ModeValues[Math.Clamp(modes.SelectedIndex,0,ModeValues.Length-1)]);
+
+        double alpha=frame.Brightness==0?0.06:Math.Clamp(0.14+0.86*(frame.Brightness/255.0),0.06,1.0);
+        var brush=new SolidColorBrush(Color.FromArgb((byte)Math.Round(alpha*255),frame.R,frame.G,frame.B));
+        leftLedBar.Background=rightLedBar.Background=brush;
+        ledBarLabel.Text=$"{frame.Hex} · 0x{frame.Brightness:X2} (2 bars linked)";
+    }
     static Color ToColour(int colour)=>Color.FromRgb((byte)(colour>>16),(byte)(colour>>8),(byte)colour);
     static ControlTemplate SwatchTemplate()
     {
@@ -139,6 +224,7 @@ internal sealed class LightingWindow : Window
             if(write)BatteryLightingService.Disable();
             var record=await LightingBleClient.RunAsync(write?colour:null,mode,write?level:null);
             ShowLevel(record[5]);if(!BatterySelected){SetColour((record[0]<<16)|(record[1]<<8)|record[2]);modes.SelectedIndex=Array.IndexOf(ModeValues,record[6]);}
+            if(write)LightingEffectsService.RecordExternalNativeState(record[0],record[1],record[2],record[5],record[6]);
             status.Text=write||mode.HasValue?"Applied. Controller read-back matches.":"Stored colour read. The active effect may change its appearance.";
         }
         catch(Exception ex){status.Text=ex.Message;}
@@ -147,7 +233,7 @@ internal sealed class LightingWindow : Window
     void ShowLevel(byte stored)
     {
         level=stored;syncingBrightness=true;try{brightness.Value=Math.Round(LightingRecord.BrightnessPercentFor(stored));}finally{syncingBrightness=false;}
-        brightnessValue.Text=$"{brightness.Value:0}%";
+        brightnessValue.Text=stored==1?"<1% (0x01 Moonlight)":$"{brightness.Value:0}% (0x{stored:X2})";
     }
     async Task ApplyBattery()
     {

@@ -8,7 +8,9 @@ public sealed record PendingClarification(string Request, string Question);
 public static class AgentClarification
 {
     public static bool IsCancel(string text) => Regex.IsMatch(text.Trim(), @"^(cancel|never ?mind|forget (it|that)|stop that)[.!]?$", RegexOptions.IgnoreCase);
-    public static bool IsNewRequest(string text) => Regex.IsMatch(text.Trim(), @"^(please\s+)?(make|set|turn|switch|enable|disable|open|show|reset|swap|remap|put|give|measure|diagnos\w*)\b", RegexOptions.IgnoreCase);
+    public static bool IsNewRequest(string text) =>
+        OfflineAgent.IsQuestion(text.Trim().ToLowerInvariant())
+        || Regex.IsMatch(text.Trim(), @"^(please\s+)?(make|set|turn|switch|enable|disable|open|show|reset|swap|remap|put|give|measure|diagnos\w*)\b", RegexOptions.IgnoreCase);
 
     public static string AnswerText(PendingClarification pending, string answer)
     {

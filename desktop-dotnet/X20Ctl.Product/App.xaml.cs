@@ -79,6 +79,18 @@ public partial class App : Application
                     bitmap.Render(visual);
                     png = new System.Windows.Media.Imaging.PngBitmapEncoder(); png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
                     using (var file = File.Create(Path.Combine(e.Args[1],"lighting-battery.png"))) png.Save(file);
+                    lightingReviewWindow.ShowSection(1);
+                    visual.UpdateLayout();
+                    bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(1100,800,96,96,System.Windows.Media.PixelFormats.Pbgra32);
+                    bitmap.Render(visual);
+                    png = new System.Windows.Media.Imaging.PngBitmapEncoder(); png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+                    using (var file = File.Create(Path.Combine(e.Args[1],"lighting-effects.png"))) png.Save(file);
+                    lightingReviewWindow.ShowSection(2);
+                    visual.UpdateLayout();
+                    bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(1100,800,96,96,System.Windows.Media.PixelFormats.Pbgra32);
+                    bitmap.Render(visual);
+                    png = new System.Windows.Media.Imaging.PngBitmapEncoder(); png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+                    using (var file = File.Create(Path.Combine(e.Args[1],"lighting-presets.png"))) png.Save(file);
                     if(e.Args[0] == "--review-lighting")
                     {
                         var record = await LightingBleClient.RunAsync();
@@ -345,7 +357,18 @@ public partial class App : Application
                 try { await Development.BatteryReview.Run(e.Args[1]); } catch (Exception failure) { File.WriteAllText(e.Args[1] + ".failure.txt", failure.ToString()); }
                 Shutdown(0); return;
             }
-            if (e.Args.Length == 2 && e.Args[0] is "--review-zone" or "--review-studio" or "--review-console" or "--review-management" or "--review-product" or "--review-models" or "--review-live" or "--review-design" or "--review-showcase" or "--review-dashboard" or "--review-input" or "--review-intro" or "--review-zone-motion" or "--review-windowed" or "--review-pages" or "--review-stress" or "--review-probe" or "--review-readme" or "--review-talk" or "--agent-bakeoff" or "--agent-drift" or "--agent-m3" or "--agent-phrasebook" or "--agent-m5" or "--agent-phrasebook-clean" or "--review-scanflow" or "--review-agent-look")
+            if (e.Args.Length == 3 && e.Args[0] == "--agent-phrasebook" && e.Args[2] == "--missing-only")
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown; IntroView.SoundEnabled = false;
+                var heldOut = X20Ctl.Zone.Agent.AgentBench.OfflineHeldOut
+                    .Concat(X20Ctl.Zone.Agent.AgentBench.OfflineFinal)
+                    .Concat(X20Ctl.Zone.Agent.AgentBench.OfflineMessy)
+                    .Concat(X20Ctl.Zone.Agent.AgentBench.Cases)
+                    .Select(c => c.Sentence).ToHashSet();
+                await Development.AgentPhrasebook.Run(e.Args[1], heldOut, mergeFrom: e.Args[1]);
+                Shutdown(0); return;
+            }
+            if (e.Args.Length == 2 && e.Args[0] is "--review-zone" or "--review-studio" or "--review-console" or "--review-management" or "--review-product" or "--review-models" or "--review-live" or "--review-design" or "--review-showcase" or "--review-dashboard" or "--review-input" or "--review-intro" or "--review-zone-motion" or "--review-windowed" or "--review-pages" or "--review-stress" or "--review-probe" or "--review-readme" or "--review-talk" or "--agent-bakeoff" or "--agent-drift" or "--agent-m3" or "--agent-qwen" or "--agent-phrasebook" or "--agent-m5" or "--agent-phrasebook-clean" or "--review-scanflow" or "--review-agent-look")
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown; IntroView.SoundEnabled = false;
                 if(e.Args[0]=="--review-readme")await Development.ReadmeReview.Run(e.Args[1]); else if(e.Args[0]=="--review-scanflow")await Development.ScanFlowReview.Run(e.Args[1]); else if(e.Args[0]=="--review-agent-look")await Development.AgentLookReview.Run(e.Args[1]);
@@ -353,6 +376,7 @@ public partial class App : Application
                 else if(e.Args[0]=="--agent-bakeoff")await Development.AgentBakeoff.Run(e.Args[1]);
                 else if(e.Args[0]=="--agent-drift")await Development.AgentBakeoff.Run(e.Args[1], X20Ctl.Zone.Agent.AgentBench.DriftCases);
                 else if(e.Args[0]=="--agent-m3")await Development.AgentBakeoff.Run(e.Args[1], X20Ctl.Zone.Agent.AgentBench.M3Cases);
+                else if(e.Args[0]=="--agent-qwen")await Development.AgentBakeoff.Run(e.Args[1], X20Ctl.Zone.Agent.AgentBench.QwenCases);
                 else if(e.Args[0]=="--agent-phrasebook-clean")Development.AgentPhrasebookClean.Run(e.Args[1]);
                 else if(e.Args[0]=="--agent-m5")await Development.AgentDocsBakeoff.Run(e.Args[1]);
                 else if(e.Args[0]=="--agent-phrasebook")await Development.AgentPhrasebook.Run(e.Args[1], X20Ctl.Zone.Agent.AgentBench.OfflineHeldOut.Concat(X20Ctl.Zone.Agent.AgentBench.OfflineFinal).Select(c => c.Sentence).ToHashSet());
@@ -414,14 +438,18 @@ public partial class App : Application
             BatteryLightingService.Resume();
             // HidHide's hide list outlives the app (it survives a reboot): every way out un-hides the controller, not only
             // the window closing — Windows signing out or shutting down, and a crash on any thread
-            SessionEnding += (_, _) => { window.Host.MouseMode?.Dispose(); window.Host.PcMode?.Dispose(); };
-            Exit += (_, _) => { window.Host.RememberStudio(); window.Host.MouseMode?.Dispose(); window.Host.PcMode?.Dispose(); };
+            SessionEnding += (_, _) => { LightingEffectsService.Shutdown(); window.Host.MouseMode?.Dispose(); window.Host.PcMode?.Dispose(); };
+            Exit += (_, _) => { LightingEffectsService.Shutdown(); window.Host.RememberStudio(); window.Host.MouseMode?.Dispose(); window.Host.PcMode?.Dispose(); };
             ForegroundApp.Start();
             AppDomain.CurrentDomain.UnhandledException += (_, _) => { try { window.Host.MouseMode?.Dispose(); window.Host.PcMode?.Dispose(); } catch (Exception) { } };
         }
         catch (Exception error)
         {
-            if (e.Args.Length == 2 && e.Args[0] is "--review-zone" or "--review-studio" or "--review-console" or "--review-management" or "--review-product" or "--review-models" or "--review-live" or "--review-design" or "--review-showcase" or "--review-dashboard" or "--review-input" or "--review-intro" or "--review-zone-motion" or "--review-windowed" or "--review-pages" or "--review-stress" or "--review-probe" or "--review-readme" or "--review-talk" or "--agent-bakeoff" or "--agent-drift" or "--agent-m3" or "--agent-phrasebook" or "--agent-m5" or "--agent-phrasebook-clean" or "--review-scanflow" or "--review-agent-look")
+            if (e.Args.Length == 3 && e.Args[0] == "--agent-phrasebook" && e.Args[2] == "--missing-only")
+            {
+                File.WriteAllText(e.Args[1] + ".failure.txt", error.ToString());
+            }
+            else if (e.Args.Length == 2 && e.Args[0] is "--review-zone" or "--review-studio" or "--review-console" or "--review-management" or "--review-product" or "--review-models" or "--review-live" or "--review-design" or "--review-showcase" or "--review-dashboard" or "--review-input" or "--review-intro" or "--review-zone-motion" or "--review-windowed" or "--review-pages" or "--review-stress" or "--review-probe" or "--review-readme" or "--review-talk" or "--agent-bakeoff" or "--agent-drift" or "--agent-m3" or "--agent-phrasebook" or "--agent-m5" or "--agent-phrasebook-clean" or "--review-scanflow" or "--review-agent-look")
             {
                 Directory.CreateDirectory(e.Args[1]);
                 File.WriteAllText(Path.Combine(e.Args[1], "failure.txt"), error.ToString());

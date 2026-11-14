@@ -103,7 +103,8 @@ public static class AgentColors
     public static string? Asked(string sentence)
     {
         string s = sentence.Trim().ToLowerInvariant().Replace('’', '\'');
-        if (!Regex.IsMatch(s, @"\b(leds?|lights?|lighting|rgb|glow|backlight|light ?bar|light ?ring)\b")) return Pad(s);
+        if (OfflineAgent.IsQuestion(s)) return null;
+        if (!Regex.IsMatch(s, @"\b(leds?|lights?|lighting|rgbs?|glow|backlight|light ?bar|light ?ring)\b")) return Pad(s);
         var m = Regex.Match(s, @"\b(?:to|into|as|=|:|be|is|in)\s+(?<c>[^.!?]+?)\s*(?:please|pls|thanks)?[.!?]*$");
         if (!m.Success) m = Regex.Match(s, @"\b(?:leds?|lights?|lighting|rgb|glow|backlight|light ?bar|light ?ring)(?:'s)?\s+(?:colou?r\s+)?(?<c>[^.!?]+?)\s*[.!?]*$");
         if (!m.Success) m = Regex.Match(s, @"^(?:please\s+)?(?:make|turn|set|change|paint|switch)\s+(?:my\s+|the\s+)?(?:leds?|lights?|lighting|rgb)\s+(?<c>[^.!?]+?)\s*[.!?]*$");

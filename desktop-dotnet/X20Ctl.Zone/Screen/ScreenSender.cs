@@ -22,7 +22,7 @@ public sealed class ScreenSender(IScreenTransport transport)
  public Task UploadAsync(byte[] asset,bool animation,int delayMs,IProgress<ScreenProgress>? progress,CancellationToken cancellationToken,uint? nonce=null)
  {
   var stable=asset.ToArray();var metadata=ScreenCodec.Metadata(stable,animation,delayMs);
-  return TransferAsync(stable,metadata,progress,cancellationToken,false,nonce);
+  return TransferAsync(stable,metadata,progress,cancellationToken,false,nonce,animation);
  }
  /// <summary>Vendor reset blanks screen content. It does not restore factory artwork.</summary>
  public Task ResetAsync(IProgress<ScreenProgress>? progress,CancellationToken cancellationToken)=>!transport.IsEmulated?throw new InvalidOperationException("Restore stock is not verified on this pad."):TransferAsync([255,255,255,255],Enumerable.Repeat((byte)255,4096).ToArray(),progress,cancellationToken,true);
@@ -49,7 +49,7 @@ public sealed class ScreenSender(IScreenTransport transport)
   }
   finally{transaction.Release();}
  }
- async Task TransferAsync(byte[] asset,byte[] metadata,IProgress<ScreenProgress>? progress,CancellationToken cancellationToken,bool vendorReset,uint? nonce=null)
+ async Task TransferAsync(byte[] asset,byte[] metadata,IProgress<ScreenProgress>? progress,CancellationToken cancellationToken,bool vendorReset,uint? nonce=null,bool animation=false)
  {
   if(!transport.IsEmulated&&!ScreenHardwareEvidence.VerifiedDevice)throw new InvalidOperationException("Screen writes await device verification.");
   if(!await transaction.WaitAsync(0,CancellationToken.None))throw new InvalidOperationException("A screen transfer is already running.");
@@ -58,6 +58,7 @@ public sealed class ScreenSender(IScreenTransport transport)
    cancellationToken.ThrowIfCancellationRequested();int sent=0,total=asset.Length+metadata.Length;
    foreach(var (address,data) in new[]{(ScreenProtocol.AssetAddress,asset),(ScreenProtocol.MetadataAddress,metadata)})
    {
+    if(!transport.IsEmulated&&!vendorReset&&address==ScreenProtocol.AssetAddress)ScreenCodec.ValidateHardwareSafe(data,animation);
     State=ScreenTransferState.Connecting;progress?.Report(new(State,sent,total));
     foreach(byte command in new byte[]{0x30,0x32}){var request=ScreenProtocol.Handshake(command,nonce??ScreenProtocol.Nonce(DateTime.Now),magic:transport.Magic);ScreenProtocol.ValidateHandshake(request,await Exchange(request,cancellationToken),transport.Magic);}
     var identity=await Exchange(ScreenProtocol.FlashQuery(),cancellationToken);
@@ -66,9 +67,14 @@ public sealed class ScreenSender(IScreenTransport transport)
     for(int offset=0;offset<data.Length;offset+=2048)
     {
      int n=Math.Min(2048,data.Length-offset);byte mode=(byte)((offset%4096)==0?0:1);
-     var reply=await Exchange(ScreenProtocol.Data(address+(uint)offset,data.AsSpan(offset,n),mode),cancellationToken);
-     // DIYTool treats status 0 and 1 as written and anything above as a CRC error; the X20 Pro answers 1 on odd packets.
-     if(reply.Length<2||reply[0]!=0x7c||reply[1]>1)throw new InvalidDataException("Screen write was rejected.");sent+=n;progress?.Report(new(State,sent,total));
+     for(int attempt=1;;attempt++)
+     {
+      var reply=await Exchange(ScreenProtocol.Data(address+(uint)offset,data.AsSpan(offset,n),mode),cancellationToken);
+      // DIYTool treats status 0 and 1 as written and retries 0x6C up to 3 times on status > 1; the X20 Pro answers 1 on odd packets.
+      if(reply.Length>=2&&reply[0]==0x7c&&reply[1]<=1)break;
+      if(attempt>=3||reply.Length<2||reply[0]!=0x7c)throw new InvalidDataException("Screen write was rejected.");
+     }
+     sent+=n;progress?.Report(new(State,sent,total));
     }
     State=ScreenTransferState.Checking;progress?.Report(new(State,sent,total));
     // Captured vendor reset retains the four-byte content CRC in its metadata query.

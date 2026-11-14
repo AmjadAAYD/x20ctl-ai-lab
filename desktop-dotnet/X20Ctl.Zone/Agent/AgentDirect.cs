@@ -27,6 +27,8 @@ public static class AgentDirect
         s = Regex.Replace(s, @"(?: please| pls| for me| now| thanks?(?: you)?)+$", "");
         if (AgentColors.Asked(s) is { } colourWords && AgentColors.TryParse(colourWords, out var colour))
             return new($"I'll light up {colour.Name} ({colour.Hex}).", [Act(AgentVocabulary.LedColor, AgentVocabulary.LightingTarget, colourWords, "Colour as asked.")], "", [], [], "");
+        if (AgentLightingEffects.Asked(s) is { } effectWords && AgentLightingEffects.TryParse(effectWords, out _, out var effectSummary))
+            return new($"I'll set {effectSummary}.", [Act(AgentVocabulary.LedEffect, AgentVocabulary.LightingTarget, effectWords, "Lighting effect as asked.")], "", [], [], "");
         var swap = Regex.Match(s, "^(?:swap|switch|exchange|flip) " + B("a") + " (?:and|with|&|<->|for) " + B("b") + "$");
         if (swap.Success && ButtonOf(swap.Groups["a"].Value) is { } s1 && ButtonOf(swap.Groups["b"].Value) is { } s2 && s1 != s2)
             return new($"I'll swap {s1} and {s2}.", [Act(AgentVocabulary.Remap, s1, s2, "Swap as asked."), Act(AgentVocabulary.Remap, s2, s1, "Swap as asked.")], "", [], [], "");
@@ -58,7 +60,7 @@ public static class AgentDirect
     /// <summary>A literal command with a number out of range is answered with the range and no actions, never sent on.</summary>
     public static AgentProposal? Resolve(string sentence)
     {
-        if (Quick(sentence) is not { } proposal) return Literal(sentence);
+        if ((Quick(sentence) ?? Literal(sentence)) is not { } proposal) return null;
         var verdict = ProposalValidator.Check(AgentClarification.Json(proposal), "x20");
         return verdict.Checks.FirstOrDefault(c => c.State == CheckState.Rejected) is { } refused
             ? new(refused.Message.TrimEnd('.') + ". Nothing changed.", [], "", [], [], "") : proposal;
@@ -68,7 +70,7 @@ public static class AgentDirect
     {
         if (Regex.IsMatch(sentence.Trim(), @"^(?:please\s+)?reset (?:all |the )?curves[.!]?$", RegexOptions.IgnoreCase))
             return new("I'll reset both stick and trigger responses.", AgentVocabulary.Sticks.Concat(AgentVocabulary.Triggers).Select(t => new AgentAction(AgentVocabulary.Reset,t,JsonSerializer.SerializeToElement(0),"Reset response only.")).ToArray(),"Buttons and turbo stay unchanged.",[],[],"");
-        var match = Regex.Match(sentence.Trim(), @"^(?:please\s+)?(?:set|change)\s+(?:the\s+)?(?<target>left stick|right stick|both sticks|left trigger|right trigger|both triggers)(?:'s)?\s+(?<setting>dead ?zone|full at|anti[ -]?dead ?zone|max(?:imum)? output|(?:vertical )?axis ratio)\s+(?:(?:to|at)\s+)?(?<number>-?\d+(?:\.\d+)?)%?[.!]?$", RegexOptions.IgnoreCase);
+        var match = Regex.Match(sentence.Trim(), @"^(?:please\s+)?(?:set|change)\s+(?:the\s+)?(?<target>left stick|right stick|both sticks|left trigger|right trigger|both triggers)(?:'s)?\s+(?<setting>dead ?zone|full (?:at|speed)|anti[ -]?dead ?zone|max(?:imum)? output|(?:vertical )?axis ratio)\s+(?:(?:to|at)\s+)?(?<number>-?\d+(?:\.\d+)?)%?[.!]?$", RegexOptions.IgnoreCase);
         if (!match.Success) return null;
         string target = match.Groups["target"].Value.ToLowerInvariant(), setting = match.Groups["setting"].Value.ToLowerInvariant();
         bool trigger = target.Contains("trigger");
@@ -77,6 +79,7 @@ public static class AgentDirect
         string? action = setting.StartsWith("anti") ? trigger ? null : AgentVocabulary.StickAntiDeadzone
             : setting.Replace(" ", "") == "deadzone" ? trigger ? AgentVocabulary.TriggerDeadzone : AgentVocabulary.StickDeadzone
             : setting == "full at" ? trigger ? AgentVocabulary.TriggerFullAt : AgentVocabulary.StickFullAt
+            : setting == "full speed" ? trigger ? null : AgentVocabulary.StickFullAt
             : setting.Contains("output") ? trigger ? null : AgentVocabulary.StickMaxOutput
             : setting.Contains("ratio") ? trigger ? null : AgentVocabulary.StickAxisRatio : null;
         if (action == null) return null;

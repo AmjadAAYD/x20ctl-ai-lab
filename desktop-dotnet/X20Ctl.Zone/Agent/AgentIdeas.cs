@@ -59,7 +59,8 @@ public static class AgentIdeas
 
     static readonly HashSet<string> Filler = ["the", "my", "a", "an", "about", "for", "on", "of", "and", "or", "to", "i", "me", "it", "setting", "settings"];
     static readonly HashSet<string> TopicWords = ["stick", "sticks", "analog", "analogs", "joystick", "joysticks", "thumbstick", "thumbsticks", "trigger", "triggers", "button", "buttons", "turbo", "paddle", "paddles",
-        "drift", "deadzone", "dead", "zone", "zones", "deadzones", "curve", "curves", "pc", "mode", "pcmode", "reset", "remap", "remaps", "aim", "aiming", "camera", "sensitivity", "sniping", "racing", "shooting", "layout"];
+        "drift", "deadzone", "dead", "zone", "zones", "deadzones", "curve", "curves", "pc", "mode", "pcmode", "reset", "remap", "remaps", "aim", "aiming", "camera", "sensitivity", "sniping", "racing", "shooting", "layout",
+        "rgb", "led", "leds", "light", "lights", "lighting", "colour", "color", "colours", "colors", "effect", "effects", "rainbow", "mouse", "gate", "output", "ratio", "diagnostics", "macros", "vibration"];
 
     /// <summary>The message is only a topic ("Sticks", "dead zone", "my triggers"), not a request: the topic as typed, or null.</summary>
     public static string? Topic(string sentence)

@@ -155,7 +155,7 @@ public sealed partial class SetupsWorkbench
     private string Summary(SavedSetup item)
     {
         if(!item.Snapshot.HasValue)return "Original fields preserved\nEditor conversion pending";
-        var counts=Counts(Store.NativeSnapshot(item.Id));return $"{counts.Remaps} remap{(counts.Remaps==1?"":"s")} · {counts.Curves} curve{(counts.Curves==1?"":"s")} changed\n{counts.Macros} macro{(counts.Macros==1?"":"s")} · vibration {counts.Vibration}%";
+        var snap=Store.NativeSnapshot(item.Id);var counts=Counts(snap);string lightNote=snap.Lighting is { } fx?$" · {X20Ctl.Zone.Lighting.LightingEffectSpec.EffectLabel(fx.Kind)}":"";return $"{counts.Remaps} remap{(counts.Remaps==1?"":"s")} · {counts.Curves} curve{(counts.Curves==1?"":"s")} changed\n{counts.Macros} macro{(counts.Macros==1?"":"s")} · vibration {counts.Vibration}%{lightNote}";
     }
     private bool EditorModified(SavedSetup item)
     {

@@ -16,8 +16,15 @@ public sealed class AgentLatencyTests
     [Fact] public async Task Direct_numeric_values_are_validated_including_negative_values()
     {
         var session = new AgentSession(new Model(), "x20_pro", "X20 Pro");
-        Assert.False((await session.Ask("Set right stick dead zone to -3", new())).Verdict.Valid);
-        Assert.False((await session.Ask("Set right stick dead zone to 260", new())).Verdict.Valid);
+        foreach (var sentence in new[] { "Set right stick dead zone to -3", "Set right stick dead zone to 260", "set the right stick dead zone to 75" })
+        {
+            var turn = await session.Ask(sentence, new());
+            Assert.True(turn.Verdict.Valid);
+            Assert.Empty(turn.Verdict.Proposal!.Actions);
+            Assert.Empty(turn.Outcome.Changes);
+            Assert.Contains("0 to 40", turn.Verdict.Proposal.Speech);
+            Assert.Contains("Nothing changed", turn.Verdict.Proposal.Speech);
+        }
     }
     [Fact] public void Qualitative_or_compound_requests_still_need_the_model()
     {

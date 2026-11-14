@@ -49,4 +49,17 @@ public sealed class AgentDocsTests(ITestOutputHelper output)
         Assert.True(turn.Verdict.Valid);
         Assert.Contains(turn.Cited, h => h.Chunk.Section.Contains("still running"));
     }
+
+    [Fact]
+    public async Task Markdown_tables_preserve_headers_and_find_supported_controllers()
+    {
+        var chunks = AgentDocs.Chunk("README.md", "# Docs\n\n## Supported controllers\n\n| Controller | Status |\n|---|---|\n| **EasySMX X20 Pro** | Read-only preview: TMR sticks, six back buttons |\n");
+        var chunk = Assert.Single(chunks);
+        Assert.Equal("Supported controllers", chunk.Section);
+        Assert.DoesNotContain("---", chunk.Text);
+        Assert.Contains("Controller: EasySMX X20 Pro. Status: Read-only preview: TMR sticks, six back buttons.", chunk.Text);
+
+        var hits = await new KeywordSearch(AgentDocs.Load(Repo())).Search("Is the X20 Pro supported?", AgentSession.DocCount, default);
+        Assert.Contains(hits, h => h.Chunk.Where.Contains("Supported controllers", StringComparison.OrdinalIgnoreCase));
+    }
 }

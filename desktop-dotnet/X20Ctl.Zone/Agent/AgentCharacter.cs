@@ -73,7 +73,7 @@ public static class AgentCharacter
     ]);
 
     // anything about controllers, games or the app is never off topic
-    static readonly Regex OnTopic = new(@"\b(sticks?|triggers?|buttons?|turbo|paddles?|m[1-6]|pc ?mode|drift\w*|dead ?zones?|curves?|aim\w*|camera|sens\w*|games?|gaming|play\w*|controllers?|gamepads?|pads?|x20\w*|easysmx|xbox|ps[45]|playstation|steam|app|settings?|profiles?|remap\w*|swap|snip\w*|shoot\w*|rac(e|ing)|jump|reset|rgb|leds?|lights?|vibrat\w*|rumble|battery|firmware|gyro|bluetooth|dongle|drivers?|linux|exe|windows|tester|scan\w*|macros?|keylinker|lb|rb|lt|rt|abxy|d-?pad)\b", RegexOptions.IgnoreCase);
+    static readonly Regex OnTopic = new(@"\b(sticks?|triggers?|buttons?|turbo|paddles?|m[1-6]|pc ?mode|drift\w*|dead ?zones?|curves?|aim\w*|camera|sens\w*|games?|gaming|play\w*|controllers?|gamepads?|pads?|x20\w*|easysmx|xbox|ps[45]|playstation|steam|app|settings?|profiles?|remap\w*|swap|snip\w*|shoot\w*|rac(e|ing)|jump|reset|rgb|leds?|lights?|lighting|colou?rs?|rainbow|strobe|moonlight|vibrat\w*|rumble|battery|firmware|gyro|bluetooth|dongle|drivers?|linux|exe|windows|tester|scan\w*|macros?|diagnostics?|keylinker|lb|rb|lt|rt|abxy|d-?pad)\b", RegexOptions.IgnoreCase);
 
     static readonly (Regex Words, string Thing)[] Mistaken =
     [
@@ -111,7 +111,7 @@ public static class AgentCharacter
         if (!turn.Verdict.Valid || turn.Outcome.Error != null || turn.Verdict.Proposal is not { } p) return AgentMood.Failed;
         string said = (p.Speech + " " + p.Recap).ToLowerInvariant();
         if (new[] { "flew right past my sensors", "didn't catch", "did not catch", "don't understand", "didn't understand" }.Any(said.Contains)) return AgentMood.Failed;
-        if (p.Assumptions.Count > 0) return AgentMood.Unsure;
+        if (p.Assumptions.Count > 0 || !string.IsNullOrWhiteSpace(p.Question)) return AgentMood.Unsure;
         if (p.Actions.Count > 0) return AgentMood.Good;
         return IsSilly(said) || said.Contains("can't confirm") || said.Contains("not sure") || said.Contains("can't change that yet") || p.Speech.TrimEnd().EndsWith('?') ? AgentMood.Unsure : AgentMood.Good;
     }

@@ -46,7 +46,7 @@ public sealed partial class AgentPanel
         public double Enough => Now.Enough;
         public async Task<IReadOnlyList<DocHit>> Search(string question, int count, CancellationToken cancel)
         {
-            if (Offline || fellBack || System.Text.RegularExpressions.Regex.IsMatch(question, @"^(please\s+)?(make|set|turn|switch|enable|disable|swap|remap|reset|give|put|measure)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return await keywords.Value.Search(question, count, cancel);
+            if (Offline || fellBack || !question.Contains('?') && System.Text.RegularExpressions.Regex.IsMatch(question, @"^(please\s+)?(make|set|turn|switch|enable|disable|swap|remap|reset|give|put|measure|adjust|cap|change|lower|raise|increase|decrease|reduce|boost)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return await keywords.Value.Search(question, count, cancel);
             try { return await meanings.Value.Search(question, count, cancel); }
             catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { fellBack = true; return await keywords.Value.Search(question, count, cancel); }
         }
@@ -198,8 +198,11 @@ public sealed partial class AgentPanel
         var settingsHead = new DockPanel { Margin = new(0, 0, 0, 12) };
         DockPanel.SetDock(backToChat, Dock.Right); settingsHead.Children.Add(backToChat);
         settingsHead.Children.Add(Kit.Text("Agent settings", 22, "DS.Text", FontWeights.SemiBold));
+        var lab = AgentLab.Create(session, model, modelId, name,
+            on => { demoChosen = on; ShowState(); ShowSettings(new HashSet<string>()); },
+            () => busy, OpenFeedbackFromSettings);
         var settingsPage = new DockPanel(); DockPanel.SetDock(settingsHead, Dock.Top); settingsPage.Children.Add(settingsHead);
-        settingsPage.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 12)), offlineSwitch, settings, privacy } } });
+        settingsPage.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 12)), offlineSwitch, settings, lab.Also(l => l.Margin = new(0, 14, 0, 0)), privacy } } });
         settingsBox = new Border { Visibility = Visibility.Collapsed, Padding = new(16), CornerRadius = new(12), Background = new SolidColorBrush(ScreenTop), Child = settingsPage };
         settingsToggle.Cursor = Cursors.Hand; settingsToggle.ToolTip = "Open agent settings";
         settingsToggle.MouseLeftButtonUp += (_, _) => ShowSettingsPage(true);
@@ -933,8 +936,16 @@ public sealed partial class AgentPanel
             // PC mode on or off, when asked: the switch itself, not a setting
             string? switched = turn.Outcome.PcMode is { } on ? (link == null ? "PC mode isn't reachable from this window." : await PcModePage.SwitchFromAgent(link, on) ?? "") : null;
             string? mouse = turn.Outcome.Mouse is { } mouseOn ? (MouseSwitch == null ? "Mouse mode isn't reachable from this window." : MouseSwitch(mouseOn) ?? "") : null;
-            string? lit = turn.Outcome.Lighting is { } colour ? await SetLights(colour) : null;
+            string? lit = turn.Outcome.Lighting is { } colour ? await SetLights(colour)
+                : turn.Outcome.LightingEffect is { } effect ? await SetLightEffect(effect)
+                : null;
             if (turn.Outcome.Lighting is { } wear) { wornBefore = worn; Wear(Color.FromRgb(wear.R, wear.G, wear.B)); }
+            else if (turn.Outcome.LightingEffect is { } fxWear)
+            {
+                var sample = X20Ctl.Zone.Lighting.LightingEffectEngine.Evaluate(fxWear, TimeSpan.Zero);
+                wornBefore = worn;
+                Wear(Color.FromRgb(sample.R, sample.G, sample.B));
+            }
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
                 try { Store(next); if (!demoChosen) Applied(); }
@@ -1153,6 +1164,7 @@ public sealed partial class AgentPanel
         if (modelId != AgentPad.Model) return "only the X20 Pro's lights are proven writable from X20CTL so far.";
         try
         {
+            if (LightsDevice == null && !ReviewSandbox.Active) await LightingEffectsService.StopAsync(restoreBaseline: false);
             var before = await PadLights();
             bool battery = LightsDevice == null && !ReviewSandbox.Active && BatteryLightingService.Load().Enabled;
             if (battery) BatteryLightingService.Disable(); // battery lighting would paint over the colour at the next level
@@ -1165,11 +1177,33 @@ public sealed partial class AgentPanel
         catch (Exception error) when (PadFailure(error)) { return "couldn't set them: " + error.Message; }
     }
 
+    async Task<string> SetLightEffect(X20Ctl.Zone.Lighting.LightingEffectSpec spec)
+    {
+        if (demoChosen) return "the canned demo never touches the controller.";
+        if (modelId != AgentPad.Model) return "only the X20 Pro's lights are proven writable from X20CTL so far.";
+        if (LightsDevice != null && spec.ToNativeModeByte() is { } m)
+        {
+            try
+            {
+                var before = await PadLights();
+                padLightWrites++;
+                var c = X20Ctl.Zone.Lighting.LightingEffectEngine.Evaluate(spec, TimeSpan.Zero);
+                var after = await PadLights([c.R, c.G, c.B], m);
+                lightsBefore = before;
+                return after.Length == 24 && after[6] == m ? "" : $"controller reported mode {after[6]} instead of {m}.";
+            }
+            catch (Exception error) when (PadFailure(error)) { return "couldn't set effect: " + error.Message; }
+        }
+        var status = await LightingEffectsService.ApplyAsync(spec);
+        return status.LastError == null ? "" : "couldn't start effect: " + status.LastError;
+    }
+
     async Task<string> RestoreLights(byte[] was)
     {
-        if (was.Length != 24 || was[6] is not (0 or 2 or 3 or 4)) return "I can't put that lighting back: the old effect isn't one X20CTL knows.";
+        if (was.Length != 24 || was[6] is not (0 or 1 or 2 or 3 or 4)) return "I can't put that lighting back: the old effect isn't one X20CTL knows.";
         try
         {
+            if (LightsDevice == null && !ReviewSandbox.Active) await LightingEffectsService.StopAsync(restoreBaseline: false);
             var now = await PadLights([was[0], was[1], was[2]], was[6]);
             return now.AsSpan(0, 3).SequenceEqual(was.AsSpan(0, 3)) && now[6] == was[6] ? $"Lights back to #{was[0]:X2}{was[1]:X2}{was[2]:X2}, read back from the controller." : "Put back, but the controller reads something else now.";
         }
@@ -1498,9 +1532,13 @@ public sealed partial class AgentPanel
         // the changes and the saved setups have their own pages on the rail
         var toHistory = Small($"History · {history.Steps.Count}"); toHistory.Click += (_, _) => ShowView(View.History); register(toHistory);
         var toSetups = Small($"Setups · {setups.Items.Count}"); toSetups.Click += (_, _) => ShowView(View.Setups); register(toSetups);
-        settings.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 14, 0, 0), Children = { toHistory, toSetups.Also(b => b.Margin = new(8, 0, 0, 0)) } });
+        var toReport = Small("Report issue"); toReport.Click += (_, _) => OpenFeedbackFromSettings(); register(toReport);
+        settings.Children.Add(new WrapPanel { Orientation = Orientation.Horizontal, Margin = new(0, 14, 0, 0), Children = { toHistory, toSetups.Also(b => b.Margin = new(8, 0, 0, 0)), toReport.Also(b => b.Margin = new(8, 0, 0, 0)) } });
         RefreshPages();
     }
+
+    void OpenFeedbackFromSettings() => FeedbackRequested?.Invoke(
+        $"Controller: {padName} ({modelId})\nComponent: Agent XCTL (AI Lab)\nMode: {(demoChosen ? "Canned demo" : Offline ? "Offline phrasebook" : model.Name)}\n\nSteps to reproduce / expected vs actual:\n");
 
     UIElement Source(DocHit hit)
     {

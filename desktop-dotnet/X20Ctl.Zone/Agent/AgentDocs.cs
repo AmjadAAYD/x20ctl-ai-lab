@@ -39,7 +39,7 @@ public static class AgentDocs
 {
     /// <summary>The guides an owner reads. The validation logs under docs/ are internal and stay out.</summary>
     public static readonly string[] Files = ["README.md", "IF-YOUR-CONTROLLER-ISNT-WORKING.md", "PRIVACY.md"];
-    public const int Words = 140, Overlap = 30;
+    public const int Words = 300, Overlap = 50;
 
     public static List<DocChunk> Chunk(string file, string markdown)
     {
@@ -59,8 +59,10 @@ public static class AgentDocs
                 if (start + Words >= words.Length) break;
             }
         }
-        foreach (var raw in markdown.Replace("\r", "").Split('\n'))
+        var lines = markdown.Replace("\r", "").Split('\n');
+        for (int i = 0; i < lines.Length; i++)
         {
+            string raw = lines[i];
             if (raw.TrimStart().StartsWith("```")) { fenced = !fenced; continue; }
             if (fenced) continue; // code isn't prose to answer from
             var heading = Regex.Match(raw, @"^(#{1,4})\s+(.+?)\s*#*\s*$");
@@ -72,11 +74,46 @@ public static class AgentDocs
                 if (level > 1) path.Add((level, Clean(heading.Groups[2].Value))); // the page title would only repeat the file name
                 continue;
             }
+            if (raw.TrimStart().StartsWith('|'))
+            {
+                var table = new List<string> { raw };
+                while (i + 1 < lines.Length && lines[i + 1].TrimStart().StartsWith('|')) table.Add(lines[++i]);
+                AppendTable(table, body);
+                continue;
+            }
             body.AppendLine(raw);
         }
         Flush();
         return chunks;
     }
+
+    /// <summary>Converts Markdown pipe tables into header-paired sentences and drops separator rules.</summary>
+    static void AppendTable(List<string> table, StringBuilder body)
+    {
+        if (table.Count < 2 || !IsSeparator(table[1]))
+        {
+            foreach (var row in table) body.AppendLine(row);
+            return;
+        }
+        var headers = Cells(table[0]).Select(Clean).ToArray();
+        for (int r = 2; r < table.Count; r++)
+        {
+            if (IsSeparator(table[r])) continue;
+            var values = Cells(table[r]);
+            var parts = new List<string>();
+            for (int c = 0; c < values.Length; c++)
+            {
+                string val = Clean(values[c]);
+                if (val.Length == 0) continue;
+                string head = c < headers.Length ? headers[c] : "";
+                parts.Add(head.Length > 0 ? $"{head}: {val.TrimEnd('.')}" : val.TrimEnd('.'));
+            }
+            if (parts.Count > 0) body.AppendLine(string.Join(". ", parts) + ".");
+        }
+    }
+
+    static bool IsSeparator(string line) => Regex.IsMatch(line.Trim(), @"^\|?\s*:?-{2,}:?(?:\s*\|\s*:?-{2,}:?)*\s*\|?$");
+    static string[] Cells(string line) => line.Trim().Trim('|').Split('|').Select(s => s.Trim()).ToArray();
 
     /// <summary>Markdown to plain sentences: images, badges, HTML and link targets go; link text stays.</summary>
     static string Clean(string text)
@@ -124,10 +161,15 @@ public sealed class EmbeddingSearch(IReadOnlyList<DocChunk> chunks, IEmbedder em
         try { if (cacheFile != null && File.Exists(cacheFile)) cache = JsonSerializer.Deserialize<Dictionary<string, float[]>>(File.ReadAllText(cacheFile)) ?? new(); }
         catch (Exception error) when (error is JsonException or IOException) { cache = new(); }
         var missing = chunks.Where(c => !cache.ContainsKey(c.Key)).ToList();
-        if (missing.Count > 0)
+        var current = chunks.ToDictionary(c => c.Key, _ => true);
+        bool stale = cache.Keys.Any(k => !current.ContainsKey(k));
+        if (missing.Count > 0 || stale)
         {
-            var made = await embedder.Embed(missing.Select(c => c.Where + ": " + c.Text).ToList(), questions: false, cancel);
-            for (int i = 0; i < missing.Count; i++) cache[missing[i].Key] = made[i];
+            if (missing.Count > 0)
+            {
+                var made = await embedder.Embed(missing.Select(c => c.Where + ": " + c.Text).ToList(), questions: false, cancel);
+                for (int i = 0; i < missing.Count; i++) cache[missing[i].Key] = made[i];
+            }
             if (cacheFile != null)
                 try { Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!); File.WriteAllText(cacheFile, JsonSerializer.Serialize(chunks.ToDictionary(c => c.Key, c => cache[c.Key]))); }
                 catch (IOException) { } // a cache that can't be written only costs time next start

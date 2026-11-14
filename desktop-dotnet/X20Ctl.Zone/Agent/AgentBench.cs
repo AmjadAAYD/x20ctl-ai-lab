@@ -88,6 +88,23 @@ public static class AgentBench
         new("Take me to macros", "x20_pro", ["open_page:Page=Macros"]),
     ];
 
+    /// <summary>Nuanced live-Qwen comprehension cases: PS aliases, gameplay mechanics, lighting vs effects, multi-intent, ambiguity, and limits.</summary>
+    public static readonly BenchCase[] QwenCases =
+    [
+        new("Put L1 onto Circle", "x20_pro", ["remap:LB=B"]),
+        new("Reduce my vertical recoil a little", "x20_pro", ["stick_axis_ratio:RightStick"]),
+        new("Rocket League diagonals feel weak", "x20_pro", ["stick_square_gate:LeftStick=on"]),
+        new("Set the lights to rainbow and turn PC mode on", "x20_pro", ["led_effect:Lighting=rainbow"], ["pc_mode:PcMode=on"]),
+        new("Make my aim feel less responsive", "x20_pro", ["stick_curve:RightStick=slow"]),
+        new("Small aim tweaks don't register near the middle", "x20_pro", ["stick_anti_deadzone:RightStick"]),
+        new("Turning at full tilt feels too fast", "x20_pro", ["stick_max_output:RightStick", "stick_curve:RightStick=slow"]),
+        new("Make my right stick slightly calmer for long range", "x20_pro", ["stick_curve_points:RightStick=gentle_slow"]),
+        new("Put all settings back to default and turn lights off", "x20_pro", ["reset:All"], ["led_effect:Lighting=off"]),
+        new("Can you boost vibration strength?", "x20_pro"),
+        new("Make my controller better", "x20_pro"),
+        new("Change the lights", "x20_pro"),
+    ];
+
     /// <summary>Offline mode's held-out sentences: never in its seeds, and kept out of the phrasebook, so they measure
     /// how it handles wording it has never seen.</summary>
     public static readonly BenchCase[] OfflineHeldOut =

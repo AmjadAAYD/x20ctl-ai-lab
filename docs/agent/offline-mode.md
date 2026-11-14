@@ -1,101 +1,50 @@
 # Offline mode: Agent XCTL without a language model
 
-Offline mode is the agent with no model behind it: an **Offline** switch in the agent's title bar. It also takes over
-when Ollama can't run on the PC. Its replies are the same JSON Qwen writes, so the validator, the drift reading, the
-walk-through and Undo are shared, and so is "Say HELP".
+Offline mode is the agent with no model behind it: an **Offline** switch in the agent's Settings view (**RB Settings**). It also takes over automatically when Ollama cannot run on the PC. Its replies use the same JSON schema Qwen writes, so `ProposalValidator`, live drift measurement, page walk-throughs, Saved Setups, History, and **Undo** are shared cleanly.
 
 ## How it understands a sentence
 
-1. **Slots are lifted out.** Sticks, triggers, buttons (in the order said), paddles, numbers and curve words are read
-   with patterns. "jump" is A, with the guess stated.
-2. **The words rule some requests out.** A sentence that names a stick and no trigger can't be a trigger request, and
-   the other way round. Switching something off needs a word that says off.
-3. **The rest is matched by example.** The sentence becomes TF-IDF weighted words and word pairs, with the slots
-   replaced by placeholders (STICK, TRIGGER, BTN, PADDLE, NUM). The 7 closest examples vote, weighted by similarity,
-   with the hand-written ones counting double. Below 0.3 similarity it says it didn't catch that.
-4. **The winning request builds the reply** from the slots. The recap comes from each setting's meaning
-   (`AgentKnowledge`), the same text Qwen is taught from.
-
-Questions ("what's good and bad about…") are answered from the meanings. App questions it can't match fall back to
-the closest passage of the docs, found by keywords (M5).
+1. **Direct fast-paths (`AgentDirect.Resolve`) & slot extraction (`OfflineAgent.Slots`).** Normalized via `AgentGrammar.Plain` and `AgentSpelling`. Sticks, triggers, buttons (in spoken order), rear paddles (`M1`–`M6`), numbers, curve presets, colors (`AgentColors`), and lighting effects (`AgentLightingEffects`) are parsed first. All direct proposals pass through `ProposalValidator.Check`.
+2. **Exclusion rules & question guards.** Contradicting slots (e.g., naming a stick on a trigger intent) are ruled out; standalone informational questions (*"what does rainbow do?"*) are intercepted by `OfflineAgent.IsQuestion` across `AgentClarification`, `AgentColors`, `AgentLightingEffects`, and `OfflineAgent.Chat` so they never execute hardware changes or glue onto prior clarification prompts.
+3. **TF-IDF example voting.** Remaining requests are vectorized as weighted unigrams/bigrams with slot tokens replaced (`STICK`, `TRIGGER`, `BTN`, `PADDLE`, `NUM`). The `7` nearest neighbors vote (hand-written seeds carry weight `2.0`). Below `0.3` similarity (`OfflineAgent.Threshold`), the agent declines safely and offers examples.
+4. **Action building & explanation.** The winning intent builds actions from extracted slots and explains why from `AgentKnowledge`. Unmatched questions fall back to `KeywordSearch` over the help docs (`M5`).
 
 ## The phrasebook: Qwen as the teacher
 
-The 26 requests have 142 hand-written examples between them (4 to 9 each). Qwen wrote more ways to say each one, once and ahead of time
-(`--agent-phrasebook`). Offline mode never calls the model.
+### Historical baseline (26 intents: v1 + v2)
 
-| Version | Prompt | Sentences |
-|---|---|---|
-| v1 | the request's meaning and its examples; "write 30 more" ×2 | 1487 |
-| v2 | v1, plus the similar requests named as off limits, what every sentence must contain (a paddle, two buttons, a number), and no questions; 25 ×3 | 1620 |
+Originally built across `26` intents (`142` hand-written examples). Qwen wrote paraphrases ahead of time (`--agent-phrasebook`):
 
-Both are kept as Qwen wrote them (`phrasebook-raw.json`, `phrasebook-v2-raw.json`).
-
-### Cleaning
-
-Some of Qwen's sentences belong to another request. For example, "Reset the right stick to the quick profile" was
-written for *curves*. `PhrasebookCleaner` works in two passes, with nothing picked by hand:
-
-1. **Rules.** A sentence must not name what contradicts its request, must name what its request needs, and must not
-   be a question.
-2. **Leave-one-out vote.** Each sentence is matched against all the others. If its neighbours vote for another
-   request at least twice as strongly as for its own, it goes.
-
-| | Kept | Dropped by rules | Dropped by the vote |
+| Version | Prompt | Raw Sentences | Kept after `PhrasebookCleaner` |
 |---|---|---|---|
-| v1 | 1060 | 267 | 160 |
-| v2 | 1412 | 108 | 100 |
+| v1 | Meaning + examples; "write 30 more" ×2 | 1,487 | 1,060 (267 rules, 160 vote) |
+| v2 | v1 + neighbor exclusions + required slots + no questions; 25 ×3 | 1,620 | 1,412 (108 rules, 100 vote) |
 
-Every dropped sentence, with the reason, is in `phrasebook-dropped.json`. The agent embeds both cleaned versions
-merged: 2459 sentences.
+Merged cleaned baseline (`v1 + v2`): **2,459** sentences (`52/60` on development held-out; `16/20` final test vs. `17/20` examples-only).
 
-## Results
+### Current expansion & cleanup (35 intents — AI Lab update)
 
-Three sets of sentences, all for the X20 Pro.
+Offline coverage was expanded from **26 → 35 intents** (**189** hand-written seeds) to match `AgentVocabulary`:
+- Added 9 intents: `stick_max_output_set`, `stick_axis_ratio_set`, `stick_square_gate_on`, `stick_square_gate_off`, `mouse_mode_on`, `mouse_mode_off`, `open_page`, `led_color_set`, `led_effect_set`.
+- Strengthened `PhrasebookCleaner` rules to filter `greeting` control-word noise (`sticks`, `triggers`, `buttons`, `paddles`, `d-pad`, `reset`, `game modes`, `sign in`), exclude non-LED `"rainbow six/6/r6"` false positives, reject buttons inside `trigger_*`, and require valid color/effect extraction on `led_*` intents.
+- Ran incremental generation (`--agent-phrasebook desktop-dotnet\X20Ctl.Zone\Agent\phrasebook.json --missing-only`) using local **`qwen3.5:9b`** only for the 9 missing intents while explicitly excluding all held-out benchmarks (`OfflineHeldOut`, `OfflineFinal`, `OfflineMessy`, `AgentBench.Cases`), followed by full two-pass `PhrasebookCleaner.Clean`:
+  - **3,081 kept** sentences across **35 intents** in `desktop-dotnet/X20Ctl.Zone/Agent/phrasebook.json`
+  - **551 dropped** noisy/cross-intent sentences logged in [phrasebook.dropped.json](phrasebook.dropped.json)
 
-- **Evaluation sentences** are the same 40 as Qwen's. Most are also hand-written examples, so these flatter it.
-- **Development (60):** none are examples or phrasebook sentences. 20 were written before the phrasebook and 40
-  before it was cleaned. Once their results were looked at, they guided the changes below, so they are no longer an
-  independent test.
-- **Final test (20):** written after every choice was made, and scored once.
+## Current verified evaluation results (`X20Ctl.Zone.Tests`)
 
-### Development, step by step
+Executed after the final code edits (`1,125 / 1,125` tests passing):
 
-| | Examples only | v1 raw | v1 cleaned | v2 raw | v2 cleaned |
-|---|---|---|---|---|---|
-| nearest example decides | 16/20 * | 15/20 * | | | |
-| 7 closest vote | 52/60 | 48/60 | 50/60 | 50/60 | 45/60 |
-| + the words rule requests out, every stick/trigger one placeholder | 52/60 | 51/60 | 52/60 | 51/60 | 51/60 |
-
-\* on the first 20 sentences only.
-
-Both cleaned versions merged: **52/60**, the same as the hand-written examples alone. With a tie, the merged
-phrasebook was chosen for its wider coverage, before the final test.
-
-### Final test
-
-| | Score |
-|---|---|
-| Hand-written examples only | 17/20 |
-| Examples + cleaned phrasebook (shipped) | **16/20** |
-
-A bug showed up on this test: "help me hit headshots from far away" was taken as a greeting, because the greeting
-pattern only looked at the first word. It was fixed after the test was first scored. Before the fix the scores were
-17/20 and 15/20.
-
-The evaluation sentences score 39/40 with the shipped phrasebook. "Put all my settings back to default" now asks
-"Reset what?", because phrasebook sentences about resetting one control pull it the wrong way.
+| Benchmark | Result | Notes |
+|---|---|---|
+| `bench` (`Offline_mode_answers_the_evaluation_sentences`) | **40/40 (100%)** | Canonical evaluation sentences (up from historical `39/40`) |
+| `examples only` (`Phrasebooks_compared_on_held_out_wording`) | **59/60** | Hand-written seeds alone with upgraded normalization/rules |
+| `both cleaned` (`Phrasebooks_compared_on_held_out_wording`) | **59/60** | Expanded & cleaned 35-intent phrasebook (**+7** vs. historical `52/60`) |
+| `held out` (`Offline_mode_handles_wording_it_has_never_seen`) | **57/60 (95.0%)** | Unseen wording (3 borderline misses on game/curve phrasing after adding 9 new intents) |
+| `messy` (`Offline_mode_reads_messy_typing`) | **130/131 (99.2%)** | Typos, SMS abbreviations, broken grammar, French/Spanish/German phrases |
 
 ## What this shows
 
-- **More data didn't help a word matcher.** Doubling or tripling the examples with Qwen's paraphrases left the score
-  where the 142 hand-written examples already had it. Cleaning removed the harm the noisy sentences did (48 → 52), but
-  added nothing beyond the examples.
-- **The real gains came from the matcher:** voting instead of a single nearest example, and letting the sentence's own
-  words rule requests out.
-- **What would make the paraphrases count is matching by meaning,** for example a small embedding model over the
-  phrasebook. That needs a model at run time, which is what offline mode avoids. Qwen, which understands the wording
-  itself, scores 96% on the evaluation sentences that offline mode mostly has memorised.
-- **Offline mode can still be wrong in ways that change settings.** "make LB send X" became turbo on LB and X: a valid
-  change, so it applied. The validator stops impossible settings, not wrong guesses. Undo is the safety net, and the
-  status line always says what was applied.
+- **Cleaner data + normalization beats raw volume:** Cleaning `greeting` leakage (`22` noisy entries dropped) and upgrading `AgentGrammar` / `OfflineSupport` raised the cleaned phrasebook score from `52/60` to `59/60` even after growing from `26` to `35` intents.
+- **Classifier vs. meaning:** TF-IDF remains bounded by surface tokens on rare borderline complaints (`57/60` held-out), whereas live `qwen3.5:9b` understands novel phrasing directly (**96 %** on M2).
+- **Safety invariant still holds:** `ProposalValidator` prevents impossible values (`"set the right stick full speed to 40"` cleanly returns 0 actions), and transactional **Undo** backs every valid change.

@@ -127,7 +127,9 @@ public class AgentCharacterTests
 
     [Theory]
     [InlineData("banana telescope", AgentMood.Failed)]
-    [InlineData("Put all my settings back to default", AgentMood.Unsure)]
+    [InlineData("Turn turbo on", AgentMood.Unsure)]
+    [InlineData("Make my controller better", AgentMood.Unsure)]
+    [InlineData("Put all my settings back to default", AgentMood.Good)]
     [InlineData("Turbo on X, 12 presses a second", AgentMood.Good)]
     [InlineData("Make my sticks smooth", AgentMood.Good)]
     [InlineData("What's good and bad about hair triggers?", AgentMood.Good)]

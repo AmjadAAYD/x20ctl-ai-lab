@@ -274,4 +274,42 @@ public class AgentCustomizationTests
         var turn = await new AgentSession(model, "x20_pro", "X20 Pro").Ask(sentence, new());
         Assert.Single(turn.Attempts); Assert.Single(model.Seen); Assert.True(turn.Verdict.Valid);
     }
+
+    [Fact]
+    public void Lighting_cross_hints_guide_wrong_action_choices()
+    {
+        var fxAsColor = ProposalValidator.Check(Reply(actions: [Action("led_color", "Lighting", "rainbow")]), "x20_pro");
+        Assert.False(fxAsColor.Valid);
+        Assert.Contains("led_effect", fxAsColor.Checks[0].Message);
+
+        var colorAsFx = ProposalValidator.Check(Reply(actions: [Action("led_effect", "Lighting", "cyan")]), "x20_pro");
+        Assert.False(colorAsFx.Valid);
+        Assert.Contains("led_color", colorAsFx.Checks[0].Message);
+    }
+
+    [Theory]
+    [InlineData("my aim feels too shaky", "10,20,30,60", true)]
+    [InlineData("make my right stick less responsive", "10,20,30,60", true)]
+    [InlineData("Make my right stick slightly calmer for long range", "50,52,100,98", true)]
+    [InlineData("my right stick feels sluggish", "30,15,70,50", true)]
+    [InlineData("calm down my camera", "25,15,75,65", false)]
+    public void Curve_intent_problem_understands_broader_gamer_terms(string sentence, string points, bool shouldFlag)
+    {
+        var verdict = ProposalValidator.Check(Reply(actions: [Action("stick_curve_points", "RightStick", points)]), "x20_pro");
+        Assert.Equal(shouldFlag, AgentSession.CurveIntentProblem(sentence, new(), verdict) != null);
+    }
+
+    [Fact]
+    public async Task Lighting_changes_with_relative_words_do_not_trigger_empty_retry_and_enter_history()
+    {
+        Assert.NotNull(AgentDirect.Resolve("rainbow lights"));
+        Assert.Null(AgentDirect.Resolve("Set the lights to rainbow and turn PC mode on"));
+        var model = new FakeModel(Reply("I'll set moonlight pulse.", actions: [Action("led_effect", "Lighting", "moonlight pulse")]), Reply());
+        var session = new AgentSession(model, "x20_pro", "X20 Pro");
+        var turn = await session.Ask("make the moonlight pulse a little slower", new());
+        Assert.Single(turn.Attempts);
+        Assert.NotNull(turn.Outcome.LightingEffect);
+        await session.Ask("what lights did you set?", new());
+        Assert.Contains(model.Seen[1], m => m.Role == "assistant" && m.Content.Contains("[lighting effect moonlight pulse]"));
+    }
 }

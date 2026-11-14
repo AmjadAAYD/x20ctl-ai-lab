@@ -72,4 +72,57 @@ public sealed class AgentOfflineCustomizationTests
         var explicitPreset = await session.Ask("Set my right stick to the quick preset", new());
         Assert.Equal("quick", explicitPreset.Outcome.Next!.Curves["RightStick"].Preset);
     }
+
+    [Fact]
+    public async Task Offline_lighting_color_effect_and_clarification()
+    {
+        var session = new AgentSession(new OfflineAgent(), "x20_pro", "X20 Pro");
+        var colorTurn = await session.Ask("can u set the rgbs to light blue", new());
+        Assert.True(colorTurn.Verdict.Valid);
+        var colorAction = Assert.Single(colorTurn.Verdict.Proposal!.Actions);
+        Assert.Equal(AgentVocabulary.LedColor, colorAction.Action);
+        Assert.True(AgentColors.TryParse(colorAction.ValueText, out var parsedColor));
+        Assert.Equal("light blue", colorAction.ValueText, ignoreCase: true);
+        Assert.True(parsedColor.B > parsedColor.R);
+
+        var rainbowTurn = await session.Ask("put rainbow mode on my leds", new());
+        Assert.True(rainbowTurn.Verdict.Valid);
+        var rainbowAction = Assert.Single(rainbowTurn.Verdict.Proposal!.Actions);
+        Assert.Equal(AgentVocabulary.LedEffect, rainbowAction.Action);
+        Assert.Contains("rainbow", rainbowAction.ValueText, StringComparison.OrdinalIgnoreCase);
+
+        var offTurn = await session.Ask("turn off my rgb", new());
+        Assert.True(offTurn.Verdict.Valid);
+        var offAction = Assert.Single(offTurn.Verdict.Proposal!.Actions);
+        Assert.Equal(AgentVocabulary.LedEffect, offAction.Action);
+        Assert.Equal("off", offAction.ValueText, ignoreCase: true);
+
+        var vagueTurn = await session.Ask("change the lights", new());
+        Assert.True(vagueTurn.Verdict.Valid);
+        Assert.Empty(vagueTurn.Verdict.Proposal!.Actions);
+        Assert.NotEmpty(vagueTurn.Verdict.Proposal!.Question);
+
+        var explainTurn = await session.Ask("what does rainbow do?", new());
+        Assert.True(explainTurn.Verdict.Valid);
+        Assert.Empty(explainTurn.Verdict.Proposal!.Actions);
+        Assert.Contains("rainbow", explainTurn.Verdict.Proposal!.Speech + " " + explainTurn.Verdict.Proposal!.Recap, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Direct_literal_rejects_out_of_range_values()
+    {
+        var session = new AgentSession(new OfflineAgent(), "x20_pro", "X20 Pro");
+        var turn = await session.Ask("set the right stick full speed to 40", new());
+        Assert.True(turn.Verdict.Valid);
+        Assert.Empty(turn.Verdict.Proposal!.Actions);
+        Assert.Empty(turn.Outcome.Changes);
+    }
+
+    [Fact]
+    public void PhrasebookCleaner_rejects_cross_intent_noise_and_preserves_game_mentions()
+    {
+        Assert.NotNull(PhrasebookCleaner.Rule("greeting", "game modes show"));
+        Assert.NotNull(PhrasebookCleaner.Rule("trigger_curve_set", "Change my right button response curve"));
+        Assert.Null(PhrasebookCleaner.Rule("trigger_fast", "Make triggers faster for Rainbow Six"));
+    }
 }

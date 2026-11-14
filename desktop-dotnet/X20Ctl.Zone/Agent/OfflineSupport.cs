@@ -44,7 +44,7 @@ public static class OfflineSupport
             return Info("Circularity error measures the stick's edge against a circle.","Open Try it or Diagnostics and roll the physical stick around its edge. The score needs enough sampled directions; keyboard previews cannot measure hardware error. It is deviation from a circle, not a statistical confidence margin.");
         if (Regex.IsMatch(t,@"\b(ps5|playstation|switch console|xbox console|other consoles)\b"))
             return Info("These saved PC-mode changes apply on this PC.","They do not reprogram the controller for another console. Console compatibility and onboard configuration require model-specific documentation and a proven hardware path.");
-        if (Regex.IsMatch(t,@"\b(make|tune|improve)\b.*\b(controller|sticks?)\b.*\b(better|good)\b") && !Regex.IsMatch(t,@"\b(sniping|sniper|aim|racing|smooth|fast|precise)\b"))
+        if (Regex.IsMatch(t,@"\b(make|tune|improve)\b.*\b(controller|sticks?)\b.*\b(better|good)\b") && !Regex.IsMatch(t,@"\b(sniping|sniper|aim|aiming|racing|smooth|fast|quick|slow|steady|steadier|precise|precision|shooting|shooters?|long\s*(?:shots?|range)|fps|track(?:ing)?|turning)\b"))
             return new([],"I need one detail to choose a useful change.","",[]) { Question="Do you want steadier aim, faster turning, or help with drift?" };
         return null;
     }

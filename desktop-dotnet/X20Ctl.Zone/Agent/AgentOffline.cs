@@ -56,6 +56,7 @@ public sealed class OfflineAgent : IAgentModel
         // Carry only a pending clarification, not arbitrary prior requests, into a short answer.
         var previous = messages.Take(messages.Count - 1).LastOrDefault(m => m.Role == "assistant");
         if (previous?.Content.TrimEnd().EndsWith('?') == true && Regex.Matches(sentence, @"\S+").Count <= 4
+            && !IsQuestion(sentence.ToLowerInvariant())
             && !Regex.IsMatch(sentence, @"\b(turn|set|make|open|show|switch|reset|stop)\b", RegexOptions.IgnoreCase))
         {
             var request = messages.Take(messages.Count - 1).LastOrDefault(m => m.Role == "user");
@@ -149,8 +150,14 @@ public sealed class OfflineAgent : IAgentModel
             return Plan(slots, stickTargets.Select(t => (AgentVocabulary.StickSquareGate, t, (object)(Regex.IsMatch(lower, @"\b(off|disable|stop)\b") ? "off" : "on"))).ToArray());
         if (Regex.IsMatch(lower, @"\b(turbo|rapid fire)\b") && !IsQuestion(lower) && Slots(sentence).Buttons.Count == 0)
             return OfflinePlan.Say("Which button should get turbo?");
-        if (Regex.IsMatch(lower, @"\b(rgb|leds?|lights?|lighting|colou?rs?|vibration|vibrate|rumble|haptics?|battery|firmware|gyro|motion|volume|sound|mic|microphone|bluetooth)\b"))
-            return OfflinePlan.Say("I can't change that yet. I can set sticks, triggers, buttons, turbo, paddles, PC mode, and measure drift.");
+        if (AgentColors.Asked(sentence) is { } colorWords && AgentColors.TryParse(colorWords, out var ledColor))
+            return Plan(slots, (AgentVocabulary.LedColor, AgentVocabulary.LightingTarget, colorWords)) with { Speech = $"I'll light up {ledColor.Name} ({ledColor.Hex})." };
+        if (AgentLightingEffects.Asked(sentence) is { } effectWords && AgentLightingEffects.TryParse(effectWords, out _, out var effectSummary))
+            return Plan(slots, (AgentVocabulary.LedEffect, AgentVocabulary.LightingTarget, effectWords)) with { Speech = $"I'll set {effectSummary}." };
+        if (Regex.IsMatch(lower, @"\b(rgb|leds?|lights|lighting|backlights?)\b|\b(?:change|set|turn|make|switch|put|paint)\b.*\b(?:light|colou?r)\b"))
+            return OfflinePlan.Say("Which colour or lighting effect should I set? Say a colour (like dark teal, warm white, or #FF8800) or an effect (like rainbow, breathe, cycle, moonlight pulse, hue sweep, strobe, or off).") with { Question = "Which colour or lighting effect should I set?" };
+        if (Regex.IsMatch(lower, @"\b(vibration|vibrate|rumble|haptics?|battery|firmware|gyro|motion|volume|sound|mic|microphone|bluetooth)\b"))
+            return OfflinePlan.Say("I can't change that yet. I can set sticks, triggers, buttons, turbo, paddles, lighting, mouse mode, PC mode, and measure drift.");
         if (Regex.IsMatch(lower, @"^\s*(hi|hello|hey|help|what can you do|who are you)\W*$")) return Intents.First(i => i.Id == "greeting").Build(new OfflineSlots());
         if (Regex.IsMatch(lower, @"\bmouse\s*mode\b"))
             return Intents.First(i => i.Id == (Regex.IsMatch(lower, @"\b(off|disable|stop)\b") ? "mouse_mode_off" : "mouse_mode_on")).Build(Slots(sentence));
@@ -212,6 +219,10 @@ public sealed class OfflineAgent : IAgentModel
         return id =>
             !(id.StartsWith("trigger_") && stick && !trigger) && !(id.StartsWith("stick_") && trigger && !stick)
             && !(id.StartsWith("mouse_mode") && !lower.Contains("mouse")) && !(id == "open_page" && !AgentVocabulary.Pages.Any(p => lower.Contains(p.ToLowerInvariant())))
+            && !(id.StartsWith("led_") && !Regex.IsMatch(lower, @"\b(rgb|leds?|lights|lighting|colou?rs?|backlights?|rainbow(?!\s*(?:six|6|r6))|strobe|moonlight|breathe|breathing|cycle|fade|ember|shimmer|lava|glow)\b"))
+            && !(id == "stick_max_output_set" && !Regex.IsMatch(lower, @"\b(max(?:imum)?\s*output|output\s*cap|cap\b.*\boutput|limit\b.*\boutput)\b"))
+            && !(id == "stick_axis_ratio_set" && !Regex.IsMatch(lower, @"\b(ratio|vertical|horizontal)\b"))
+            && !(id.StartsWith("stick_square_gate") && !Regex.IsMatch(lower, @"\bsquare\s*gate\b|\bgate\b"))
             && !(id.EndsWith("_off") && !off) && !(id.EndsWith("_on") && off);
     }
 
@@ -386,7 +397,10 @@ public sealed class OfflineAgent : IAgentModel
         AgentVocabulary.StickSquareGate => $"switch my {Words(targets.Select(Called))} square gate {value}",
         AgentVocabulary.MouseMode => $"switch mouse mode {value}",
         AgentVocabulary.OpenPage => $"open {value}",
-        _ => $"switch PC mode {value}",
+        AgentVocabulary.LedColor => $"change controller lighting to {value}",
+        AgentVocabulary.LedEffect => $"set lighting effect to {value}",
+        AgentVocabulary.PcMode => $"switch PC mode {value}",
+        _ => $"{action.Replace('_', ' ')} {value}",
     };
 
     /// <summary>A plan from actions: "I'll …" from each action, and a recap from each setting's meaning.</summary>
@@ -435,6 +449,9 @@ public sealed class OfflineAgent : IAgentModel
             : Regex.IsMatch(lower, @"axis ratio|vertical ratio") ? AgentVocabulary.StickAxisRatio
             : Regex.IsMatch(lower, @"square gate") ? AgentVocabulary.StickSquareGate
             : Regex.IsMatch(lower, @"mouse mode") ? AgentVocabulary.MouseMode
+            : Regex.IsMatch(lower, @"\b(effect|rainbow(?!\s*(?:six|6|r6))|strobe|moonlight|lava|ember|shimmer|breathe|breathing|hue\s*sweep|nightlight|trigger\s*glow|stick\s*heat|button\s*flash)\b") ? AgentVocabulary.LedEffect
+            : Regex.IsMatch(lower, @"\b(colou?rs?|hex|shade|rgb|leds?|lights|lighting|backlights?)\b") ? AgentVocabulary.LedColor
+            : Regex.IsMatch(lower, @"\b(pages?|diagnostics?\s*page)\b") ? AgentVocabulary.OpenPage
             : Regex.IsMatch(lower, @"hair[\s-]*trigger|full[\s-]*(at|press)") ? AgentVocabulary.TriggerFullAt
             : Regex.IsMatch(lower, @"anti[\s-]*dead") ? AgentVocabulary.StickAntiDeadzone
             : Regex.IsMatch(lower, @"dead[\s-]*zone|deadzone|drift") ? (trigger ? AgentVocabulary.TriggerDeadzone : AgentVocabulary.StickDeadzone)
@@ -444,7 +461,7 @@ public sealed class OfflineAgent : IAgentModel
             : Regex.IsMatch(lower, @"remap|swap|rebind") ? AgentVocabulary.Remap
             : Regex.IsMatch(lower, @"paddle|\bm[1-6]\b") ? AgentVocabulary.Paddle
             : Regex.IsMatch(lower, @"pc mode") ? AgentVocabulary.PcMode : null;
-        if (action == null) return OfflinePlan.Say("Ask me about dead zones, anti-dead zones, curves, hair triggers, turbo, remaps, paddles or PC mode, and I'll explain.");
+        if (action == null) return OfflinePlan.Say("Ask me about dead zones, anti-dead zones, curves, max output, vertical ratio, square gate, hair triggers, turbo, remaps, paddles, lighting, mouse mode or PC mode, and I'll explain.");
         var m = AgentKnowledge.Of(action);
         var answer = new StringBuilder($"{m.Name}: {m.What}.");
         if (m.More.Length > 0) answer.Append($" Higher: {m.More}.");
@@ -497,7 +514,7 @@ public sealed class OfflineAgent : IAgentModel
         return
         [
             new("stick_sniping", "make a stick (usually the right, aiming one) precise for sniping or long range aim",
-                ["Make my right stick good for sniping", "Make my right stick more precise for sniping", "I need precise aim for sniping", "Set me up for snipers", "Better long range aim", "I play sniper a lot, help my aim", "Make aiming more precise", "precision aiming please", "Slower for aiming please", "Make my right stick more precise"],
+                ["Make my right stick good for sniping", "Make my right stick more precise for sniping", "I need precise aim for sniping", "Set me up for snipers", "Better long range aim", "I play sniper a lot, help my aim", "Make aiming more precise", "precision aiming please", "Slower for aiming please", "Make my right stick more precise", "Hard to hit far targets, steadier right stick aim", "I miss long-distance shots in shooters"],
                 s => Each(s, AgentVocabulary.StickCurvePoints, Sticks(s, right), "30,23,72,65")),
             new("stick_twitchy", "the aim or camera is too sensitive, twitchy or jumpy",
                 ["My aim feels too twitchy", "My aim is too sensitive", "The camera moves way too fast", "My crosshair is jumpy", "Aim feels shaky", "Small moves make my aim jump too far", "I keep overshooting my targets"],
@@ -512,7 +529,7 @@ public sealed class OfflineAgent : IAgentModel
                 ["Set my right stick curve to slow", "Use the fine curve on my left stick", "Put both sticks on the default curve", "Change the stick curve to quick", "Left stick curve smooth"],
                 s => s.Preset is { } p ? Each(s, AgentVocabulary.StickCurve, Sticks(s, both), p) : OfflinePlan.Say("Which curve? default, quick, slow, smooth or fine.")),
             new("stick_drift", "a stick drifts, moves on its own, or the aim or character creeps without touching it",
-                ["My right stick drifts a little", "My left stick moves on its own", "Fix my stick drift", "My camera keeps slowly turning by itself", "Check my sticks for drift", "My character walks by himself", "Stick drift", "The aim creeps when I let go", "My stick is drifting"],
+                ["My right stick drifts a little", "My left stick moves on its own", "Fix my stick drift", "My camera keeps slowly turning by itself", "Check my sticks for drift", "My character walks by himself", "Stick drift", "The aim creeps when I let go", "My stick is drifting", "Camera spins when untouched", "My view keeps turning without input"],
                 s => Each(s, AgentVocabulary.MeasureDrift, Sticks(s, both), 0)),
             new("stick_deadzone_set", "set a stick dead zone to a number",
                 ["Set my left stick dead zone to 8", "Right stick dead zone 5", "Put the dead zone on both sticks at 4", "Change my stick deadzone to 10 percent", "Left stick deadzone to 3"],
@@ -521,8 +538,20 @@ public sealed class OfflineAgent : IAgentModel
                 ["Remove the dead zone on my sticks", "No dead zone on my right stick", "Turn off the stick dead zone", "Zero dead zone on both sticks"],
                 s => Each(s, AgentVocabulary.StickDeadzone, Sticks(s, both), 0)),
             new("stick_full_at_set", "set where a stick reaches full speed (outer dead zone), as a number",
-                ["Right stick full speed at 85", "Make my left stick reach max at 90", "Set the outer dead zone of my sticks to 80", "Full speed at 75 on the right stick"],
+                ["Right stick full speed at 85", "Make my left stick reach max at 90", "Set the outer dead zone of my sticks to 80", "Full speed at 75 on the right stick", "Set left stick full speed to 85"],
                 s => Number(s, AgentVocabulary.StickFullAt, Sticks(s, both), "full speed point, 60 to 100")),
+            new("stick_max_output_set", "cap the maximum output percentage of a stick",
+                ["Cap right stick output at 90 percent", "Limit left stick max output to 85", "Set right stick maximum output to 88", "Cap stick output at 92%"],
+                s => Number(s, AgentVocabulary.StickMaxOutput, Sticks(s, both), "maximum output, 60 to 100")),
+            new("stick_axis_ratio_set", "set a stick's vertical axis ratio percentage relative to horizontal",
+                ["Set right stick vertical axis ratio to 120 percent", "Change left stick vertical ratio to 85", "Lower vertical axis ratio to 90 on right stick"],
+                s => Number(s, AgentVocabulary.StickAxisRatio, Sticks(s, both), "vertical axis ratio, 50 to 150")),
+            new("stick_square_gate_on", "enable square gate on a stick so diagonals reach full output",
+                ["Turn square gate on for the left stick", "Enable square gate on both sticks", "Switch right stick square gate on"],
+                s => Each(s, AgentVocabulary.StickSquareGate, Sticks(s, both), "on")),
+            new("stick_square_gate_off", "disable square gate on a stick to use a circular gate",
+                ["Turn square gate off for the left stick", "Disable square gate on my sticks", "Stop square gate on right stick"],
+                s => Each(s, AgentVocabulary.StickSquareGate, Sticks(s, both), "off")),
             new("stick_small_moves", "small stick movements don't register in a game (needs an anti-dead zone)",
                 ["Small stick movements don't register in my game", "Tiny movements of my stick do nothing in game", "The game ignores small aim adjustments", "Add an anti dead zone", "My small corrections don't register"],
                 s => First(s) is { } n ? Each(s, AgentVocabulary.StickAntiDeadzone, Sticks(s, both), Num(n)) : Each(s, AgentVocabulary.StickAntiDeadzone, Sticks(s, both), 10)),
@@ -530,7 +559,7 @@ public sealed class OfflineAgent : IAgentModel
                 ["I want faster triggers for shooting", "Hair triggers for Call of Duty", "Make my triggers shoot faster", "Hair trigger on my right trigger", "Quick triggers for shooters", "Shorter trigger pull", "I want to shoot quicker"],
                 s => Plan(s, [.. Triggers(s, rt).SelectMany(t => new[] { (AgentVocabulary.TriggerFullAt, t, (object)40), (AgentVocabulary.TriggerDeadzone, t, (object)0) })])),
             new("trigger_slow", "slow, progressive triggers, for racing throttle and brakes",
-                ["Slow, progressive triggers for racing", "Better throttle control for racing games", "Make my triggers progressive", "I need finer brake control", "Racing setup for my triggers"],
+                ["Slow, progressive triggers for racing", "Better throttle control for racing games", "Make my triggers progressive", "I need finer brake control", "Racing setup for my triggers", "Make my throttle gradual instead of on off", "Smooth gas pedal control for racing"],
                 s => Each(s, AgentVocabulary.TriggerCurvePoints, Triggers(s, triggersBoth), "30,23,72,65")),
             new("trigger_curve_set", "set a trigger curve by name: default, quick, slow, smooth or fine",
                 ["Set my right trigger curve to quick", "Left trigger curve smooth", "Put my triggers on the default curve", "Use the fine curve on my triggers"],
@@ -569,10 +598,10 @@ public sealed class OfflineAgent : IAgentModel
                 s => (s.Sticks.Concat(s.Triggers).Concat(s.Triggers.Count > 0 ? Enumerable.Empty<string>() : s.Buttons).ToArray()) is { Length: > 0 } t ? Each(s, AgentVocabulary.Reset, t, 0) : Regex.IsMatch(s.Text, @"\b(everything|all|every setting|whole controller)\b") ? Plan(s, (AgentVocabulary.Reset, AgentVocabulary.All, 0)) // "put everything back to normal"
                     : OfflinePlan.Say("Reset what? A stick, a trigger, a button, or everything?")),
             new("reset_all", "reset every setting to default",
-                ["Reset everything", "Put all my settings back to default", "Start over", "Factory reset my settings", "Clear all my changes", "Restore defaults"],
+                ["Reset everything", "Put all my settings back to default", "Start over", "Factory reset my settings", "Clear all my changes", "Restore defaults", "Wipe all custom settings", "Erase all my adjustments"],
                 s => Plan(s, (AgentVocabulary.Reset, AgentVocabulary.All, 0))),
             new("pc_mode_on", "switch PC mode on, so settings reach games",
-                ["Turn on PC mode", "My settings don't do anything in games", "Enable PC mode", "Make my settings work in games", "Switch PC mode on", "Nothing changes in game"],
+                ["Turn on PC mode", "My settings don't do anything in games", "Enable PC mode", "Make my settings work in games", "Switch PC mode on", "Nothing changes in game", "My edits aren't appearing in game", "Games still see stock settings after my edits"],
                 s => Plan(s, (AgentVocabulary.PcMode, AgentVocabulary.PcModeTarget, "on"))),
             new("pc_mode_off", "switch PC mode off",
                 ["Switch PC mode off", "Turn off PC mode", "Disable PC mode", "Stop PC mode", "I don't want PC mode"],
@@ -587,9 +616,19 @@ public sealed class OfflineAgent : IAgentModel
                 ["Open diagnostics", "Show curves", "Take me to macros", "Open buttons", "Show tools"],
                 s => AgentVocabulary.Pages.FirstOrDefault(p => s.Text.Contains(p, StringComparison.OrdinalIgnoreCase)) is { } page
                     ? Plan(s, (AgentVocabulary.OpenPage, AgentVocabulary.PageTarget, page)) : OfflinePlan.Say("Which page should I open?")),
+            new("led_color_set", "change controller RGB lights to a colour, tint, shade or hex code",
+                ["Change my leds to blue", "Set the lights to dark teal", "Make my rgb neon green", "Change led colour to warm white", "Paint the lighting deep purple"],
+                s => AgentColors.Asked(s.Text) is { } colorWords && AgentColors.TryParse(colorWords, out var ledColor)
+                    ? Plan(s, (AgentVocabulary.LedColor, AgentVocabulary.LightingTarget, colorWords)) with { Speech = $"I'll light up {ledColor.Name} ({ledColor.Hex})." }
+                    : OfflinePlan.Say("Which colour should I set the lights to? Try warm white, dark teal, or #FF8800.")),
+            new("led_effect_set", "set a lighting effect or turn controller lights off",
+                ["Put rainbow effect on my lights", "Set leds to moonlight pulse blue", "Turn off my rgb lights", "Enable breathing lights", "Switch lighting to strobe"],
+                s => AgentLightingEffects.Asked(s.Text) is { } effectWords && AgentLightingEffects.TryParse(effectWords, out _, out var effectSummary)
+                    ? Plan(s, (AgentVocabulary.LedEffect, AgentVocabulary.LightingTarget, effectWords)) with { Speech = $"I'll set {effectSummary}." }
+                    : OfflinePlan.Say("Which lighting effect would you like? Try rainbow, breathe, cycle, moonlight pulse, hue sweep, strobe, or off.")),
             new("greeting", "hello, help, or what can you do",
                 ["Hi", "Hello", "What can you do", "Help", "Hey there", "Who are you"],
-                _ => OfflinePlan.Say("I'm Agent XCTL, in offline mode. I can set stick and trigger dead zones and curves, hair triggers, turbo, remaps, paddles, reset, switch PC mode, and measure stick drift. Tell me how you play.")),
+                _ => OfflinePlan.Say("I'm Agent XCTL, in offline mode. I can set stick and trigger dead zones and curves, max output, vertical ratio, square gate, hair triggers, turbo, remaps, paddles, lighting, mouse mode, PC mode, and measure stick drift. Tell me how you play.")),
         ];
     }
 }

@@ -17,9 +17,9 @@ public static class PhrasebookCleaner
 {
     public const double Margin = 2;
 
-    static readonly HashSet<string> StickIntents = ["stick_sniping", "stick_twitchy", "stick_smooth", "stick_fast", "stick_curve_set", "stick_drift", "stick_deadzone_set", "stick_deadzone_remove", "stick_full_at_set", "stick_small_moves"];
+    static readonly HashSet<string> StickIntents = ["stick_sniping", "stick_twitchy", "stick_smooth", "stick_fast", "stick_curve_set", "stick_drift", "stick_deadzone_set", "stick_deadzone_remove", "stick_full_at_set", "stick_small_moves", "stick_max_output_set", "stick_axis_ratio_set", "stick_square_gate_on", "stick_square_gate_off"];
     static readonly HashSet<string> TriggerIntents = ["trigger_fast", "trigger_slow", "trigger_curve_set", "trigger_deadzone_set", "trigger_deadzone_remove", "trigger_full_at_set"];
-    static readonly HashSet<string> NeedNumber = ["stick_deadzone_set", "stick_full_at_set", "trigger_deadzone_set", "trigger_full_at_set"];
+    static readonly HashSet<string> NeedNumber = ["stick_deadzone_set", "stick_full_at_set", "stick_max_output_set", "stick_axis_ratio_set", "trigger_deadzone_set", "trigger_full_at_set"];
 
     /// <summary>Why a sentence breaks the rules for its intent, or null when it doesn't.</summary>
     public static string? Rule(string intent, string sentence)
@@ -27,14 +27,19 @@ public static class PhrasebookCleaner
         var s = OfflineAgent.Slots(sentence);
         string lower = s.Text;
         bool namedStick = Regex.IsMatch(lower, @"\b(left|right|l|r)[\s-]*(analog|thumb ?stick|joystick|stick)s?\b|\b(ls|rs)\b|\b(sticks|analogs|joysticks|thumb ?sticks)\b");
+        bool namedPaddle = s.Paddles.Count > 0 || Regex.IsMatch(lower, @"\bpaddles?\b");
+        bool namedLighting = Regex.IsMatch(lower, @"\b(rgb|leds?|lights|lighting|backlights?|rainbow(?!\s*(?:six|6|r6))|strobe|moonlight)\b");
         if (intent != "greeting" && OfflineAgent.IsQuestion(lower)) return "a question";
-        if (s.Paddles.Count > 0 && intent != "paddle_set") return "names a paddle";
+        if (namedPaddle && intent != "paddle_set") return "names a paddle";
+        if (namedLighting && !intent.StartsWith("led_", StringComparison.Ordinal)) return "names lighting";
         if (StickIntents.Contains(intent) && s.Triggers.Count > 0) return "names a trigger";
         if (TriggerIntents.Contains(intent) && namedStick) return "names a stick";
+        if (TriggerIntents.Contains(intent) && Regex.IsMatch(lower, @"\bbuttons?\b")) return "names a button";
         if (NeedNumber.Contains(intent) && s.Numbers.Count == 0) return "has no number";
         if (intent.EndsWith("_remove") && s.Numbers.Any(n => n != 0)) return "names a number";
         return intent switch
         {
+            "greeting" when Regex.IsMatch(lower, @"\b(sticks?|triggers?|buttons?|paddles?|d-pad|reset|game modes?|connect|sign in|log on|open dialogue|initiate action|showing you)\b") => "off-intent greeting noise",
             "paddle_set" when s.Paddles.Count == 0 => "names no paddle",
             "remap_to" when s.Buttons.Count < 2 => "names fewer than two buttons",
             "remap_swap" when s.Buttons.Count < 2 && !lower.Contains("bumpers") => "names fewer than two buttons",
@@ -43,6 +48,12 @@ public static class PhrasebookCleaner
             "turbo_on" when Regex.IsMatch(lower, @"\b(off|disable|stop|remove|no more)\b") => "turns turbo off",
             "pc_mode_on" when Regex.IsMatch(lower, @"\b(off|disable|stop)\b") => "turns PC mode off",
             "pc_mode_off" when Regex.IsMatch(lower, @"\b(enable|turn on|switch on)\b") => "turns PC mode on",
+            "mouse_mode_on" when Regex.IsMatch(lower, @"\b(off|disable|stop)\b") => "turns mouse mode off",
+            "mouse_mode_off" when Regex.IsMatch(lower, @"\b(enable|turn on|switch on)\b") => "turns mouse mode on",
+            "stick_square_gate_on" when Regex.IsMatch(lower, @"\b(off|disable|stop)\b") => "turns square gate off",
+            "stick_square_gate_off" when Regex.IsMatch(lower, @"\b(enable|turn on|switch on)\b") => "turns square gate on",
+            "led_color_set" when AgentColors.Asked(sentence) == null => "names no colour",
+            "led_effect_set" when AgentLightingEffects.Asked(sentence) == null => "names no lighting effect",
             _ => null,
         };
     }

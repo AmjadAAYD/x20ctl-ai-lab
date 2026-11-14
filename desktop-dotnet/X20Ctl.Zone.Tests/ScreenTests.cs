@@ -40,14 +40,38 @@ public class ScreenTests
  [Fact] public void FittingKeepsEveryFrameWhenTheyAlreadyFit()
  {
   var raw=Data("uniform.rgba");var frames=Enumerable.Range(0,3).Select(n=>raw.AsMemory(n*51200,51200).ToArray()).ToArray();
-  Assert.Equal(ScreenCodec.EncodeAnimation(frames,160,80),ScreenCodec.EncodeAnimationFitting(frames,40,out int used,out int delay,160,80));Assert.Equal((3,40),(used,delay));
+  var unthrottled=ScreenCodec.EncodeAnimation(frames,160,80);
+  var fitted=ScreenCodec.EncodeAnimationFitting(frames,40,out int used,out int delay,160,80);
+  Assert.Equal((3,40),(used,delay));
+  Assert.Equal(ScreenCodec.DecodeAsset(unthrottled,true),ScreenCodec.DecodeAsset(fitted,true));
+  ScreenCodec.ValidateHardwareSafe(fitted,true);
+  Assert.Equal(unthrottled,ScreenCodec.EncodeAnimationFitting(frames,40,out _,out _,160,80,maxAssetBytes:ScreenCodec.AssetLimit));
  }
  [Fact] public void FittingThinsFramesAndStretchesTheDelayInsteadOfRefusing()
  {
   var random=new Random(7);var frames=Enumerable.Range(0,400).Select(_=>{var f=new byte[51200];random.NextBytes(f);return f;}).ToArray();
   Assert.Throws<ArgumentException>(()=>ScreenCodec.EncodeAnimation(frames,160,80));
   var asset=ScreenCodec.EncodeAnimationFitting(frames,50,out int used,out int delay,160,80);
-  Assert.InRange(asset.Length,1,ScreenCodec.AssetLimit);Assert.InRange(used,1,399);Assert.True(delay>50);
+  Assert.InRange(asset.Length,1,ScreenCodec.HardwareAssetLimit);Assert.InRange(used,1,399);Assert.True(delay>50);
+  ScreenCodec.ValidateHardwareSafe(asset,true);
+  var large=ScreenCodec.EncodeAnimationFitting(frames,50,out int largeUsed,out _,160,80,maxAssetBytes:ScreenCodec.AssetLimit);
+  Assert.InRange(large.Length,ScreenCodec.HardwareAssetLimit+1,ScreenCodec.AssetLimit);Assert.True(largeUsed>used);
+ }
+ [Fact] public void FittingCapsMultiBlockGifWithinHardwareSafeLimit()
+ {
+  var random=new Random(19);
+  var frames35=Enumerable.Range(0,35).Select(_=>{var f=new byte[51200];random.NextBytes(f);return f;}).ToArray();
+  var full35=ScreenCodec.EncodeAnimationFitting(frames35,50,out int used35,out int delay35,160,80);
+  Assert.Equal((35,50,ScreenCodec.HardwareAssetLimit),(used35,delay35,full35.Length));
+  ScreenCodec.ValidateHardwareSafe(full35,true);
+  var frames36=frames35.Append(frames35[0]).ToArray();
+  var unthinned=ScreenCodec.EncodeAnimation(frames36,160,80);
+  Assert.InRange(unthinned.Length,ScreenCodec.HardwareAssetLimit+1,ScreenCodec.AssetLimit);
+  var fitted=ScreenCodec.EncodeAnimationFitting(frames36,50,out int used,out int delay,160,80);
+  Assert.InRange(fitted.Length,1,ScreenCodec.HardwareAssetLimit);Assert.InRange(used,1,35);Assert.True(delay>=100);
+  ScreenCodec.ValidateHardwareSafe(fitted,true);
+  var decoded=ScreenCodec.DecodeAsset(fitted,true);
+  Assert.Equal(used,decoded.Count);
  }
  [Fact] public void VendorLimitTruncationIsExplicitAndDefaultDoesNotSilentlyDropFrames()
  {
@@ -140,7 +164,32 @@ public class ScreenTests
   var emulator=new ScreenEmulator();var sender=new ScreenSender(new BrokenReply(emulator,true));
   await Assert.ThrowsAsync<InvalidDataException>(()=>sender.UploadAsync(Data("uniform.bin"),true,100,null,CancellationToken.None));Assert.All(emulator.Read(0x400000,4096),b=>Assert.Equal(255,b));
  }
+ [Fact] public async Task TransientDataStatusRetrySucceedsWithinThreeAttempts()
+ {
+  var emulator=new ScreenEmulator();var transport=new TransientAckError(emulator,2);
+  await new ScreenSender(transport).UploadAsync(Data("gradient.bin"),false,100,null,CancellationToken.None);
+  Assert.Equal(2,transport.Injected);
+ }
+ [Fact] public async Task OversizedPhysicalAssetRefusesBeforeTouchingDevice()
+ {
+  var big=new byte[ScreenCodec.HardwareAssetLimit+1];
+  await Assert.ThrowsAsync<InvalidOperationException>(()=>new ScreenSender(new PhysicalStub()).UploadAsync(big,true,100,null,CancellationToken.None));
+  var multiBlock=ScreenCodec.EncodeAnimation(new[]{Data("compressed-palette-257.rgba")});
+  Assert.InRange(multiBlock.Length,1,ScreenCodec.HardwareAssetLimit);
+  await Assert.ThrowsAsync<InvalidOperationException>(()=>new ScreenSender(new PhysicalStub()).UploadAsync(multiBlock,true,100,null,CancellationToken.None));
+  var rle=Data("uniform.bin");
+  Assert.InRange(rle.Length,1,ScreenCodec.HardwareAssetLimit);
+  await Assert.ThrowsAsync<InvalidOperationException>(()=>new ScreenSender(new PhysicalStub()).UploadAsync(rle,true,100,null,CancellationToken.None));
+  var safe=ScreenCodec.EncodeAnimationFitting(new[]{Data("compressed-palette-257.rgba")},50,out int used,out _,160,80);
+  Assert.Equal(1,used);
+  ScreenCodec.ValidateHardwareSafe(safe,true);
+ }
  sealed class ProgressNow(Action<ScreenProgress> report):IProgress<ScreenProgress>{public void Report(ScreenProgress value)=>report(value);}
+ sealed class TransientAckError(ScreenEmulator emulator,int failCount):IScreenTransport
+ {
+  public int Injected;public bool IsEmulated=>true;
+  public async ValueTask<byte[]> ExchangeAsync(ReadOnlyMemory<byte> request,CancellationToken token){if(request.Span[0]==0x6c&&Injected<failCount){Injected++;var ok=await emulator.ExchangeAsync(request,token);ok[1]=0x60;return ok;}return await emulator.ExchangeAsync(request,token);}
+ }
  sealed class BrokenReply(ScreenEmulator emulator,bool crc):IScreenTransport
  {
   public bool IsEmulated=>true;
