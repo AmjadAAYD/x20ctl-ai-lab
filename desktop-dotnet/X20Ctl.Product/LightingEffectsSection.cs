@@ -142,19 +142,19 @@ internal sealed class LightingEffectsSection
         var leftStack = new StackPanel();
         leftStack.Children.Add(Kit.Text("Tap any effect to preview and start immediately", 12.5, "DS.TextMuted").Also(t => t.Margin = new(0, 0, 0, 10)));
 
-        var cardGrid = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2, Margin = new(-4, 0, -4, 12) };
-        foreach (var kind in AnimatedKinds)
+        Button MakeEffectCard(LightingEffectKind kind, bool hero = false)
         {
-            var captured = kind;
             var (accentHex, subtitle) = EffectCardMeta(kind);
+            var accentColor = (Color)ColorConverter.ConvertFromString(accentHex);
             var dot = new Border
             {
-                Width = 10, Height = 10, CornerRadius = new(5),
-                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(accentHex)),
-                Margin = new(0, 2, 10, 0), VerticalAlignment = VerticalAlignment.Top,
+                Width = hero ? 14 : 10, Height = hero ? 14 : 10, CornerRadius = new(hero ? 7 : 5),
+                Background = new SolidColorBrush(accentColor),
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = accentColor, BlurRadius = hero ? 12 : 6, ShadowDepth = 0, Opacity = 0.85 },
+                Margin = new(0, 2, 12, 0), VerticalAlignment = VerticalAlignment.Top,
             };
             var textCol = new StackPanel();
-            textCol.Children.Add(Kit.Text(ShortEffectName(kind), 13.5, "DS.Text", FontWeights.SemiBold));
+            textCol.Children.Add(Kit.Text(hero ? "Ambient Screen Sync  ·  Hero Mode" : ShortEffectName(kind), hero ? 14.5 : 13.5, "DS.Text", FontWeights.SemiBold));
             textCol.Children.Add(Kit.Text(subtitle, 11.5, "DS.TextMuted").Also(t => { t.TextTrimming = TextTrimming.CharacterEllipsis; t.Margin = new(0, 2, 0, 0); }));
             var row = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(dot, Dock.Left);
@@ -165,22 +165,27 @@ internal sealed class LightingEffectsSection
             {
                 Content = row,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                Padding = new(12, 10, 12, 10),
-                Margin = new(4),
+                Padding = hero ? new Thickness(14, 12, 14, 12) : new Thickness(12, 10, 12, 10),
+                Margin = hero ? new Thickness(0, 0, 0, 10) : new Thickness(4),
                 Style = DS.Style("ActionButton"),
             };
             btn.Click += async (_, _) =>
             {
-                selectedKind = captured;
-                if (captured == LightingEffectKind.ScreenAmbient && intervalSlider.Value > 120)
+                selectedKind = kind;
+                if (kind == LightingEffectKind.ScreenAmbient && intervalSlider.Value > 120)
                     intervalSlider.Value = 70;
                 UpdateSelectionPills();
                 UpdateSliderLabels();
                 await LightingEffectsService.ApplyAsync(BuildCurrentEffectSpec());
             };
             kindButtons[kind] = btn;
-            cardGrid.Children.Add(btn);
+            return btn;
         }
+
+        leftStack.Children.Add(MakeEffectCard(LightingEffectKind.ScreenAmbient, hero: true));
+        var cardGrid = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2, Margin = new(-4, 0, -4, 12) };
+        foreach (var kind in AnimatedKinds.Where(k => k != LightingEffectKind.ScreenAmbient))
+            cardGrid.Children.Add(MakeEffectCard(kind));
         leftStack.Children.Add(cardGrid);
 
         leftStack.Children.Add(Kit.Text("Color stops & quick themes", 13, "DS.TextSoft").Also(t => t.Margin = new(0, 2, 0, 6)));
@@ -240,9 +245,15 @@ internal sealed class LightingEffectsSection
         periodSlider.ValueChanged += (_, _) => UpdateSliderLabels();
         idleSlider.ValueChanged += (_, _) => UpdateSliderLabels();
 
-        rightStack.Children.Add(minBrightLabel);
-        rightStack.Children.Add(minBrightSlider);
-        rightStack.Children.Add(new WrapPanel
+        rightStack.Children.Add(maxBrightLabel);
+        rightStack.Children.Add(maxBrightSlider);
+        rightStack.Children.Add(intervalLabel);
+        rightStack.Children.Add(intervalSlider);
+
+        var advancedStack = new StackPanel { Margin = new(0, 8, 0, 0) };
+        advancedStack.Children.Add(minBrightLabel);
+        advancedStack.Children.Add(minBrightSlider);
+        advancedStack.Children.Add(new WrapPanel
         {
             Margin = new(0, 4, 0, 10),
             Children =
@@ -251,14 +262,17 @@ internal sealed class LightingEffectsSection
                 PillButton("Off 0x00 floor", () => minBrightSlider.Value = LightingRecord.MinBrightnessByte),
             },
         });
-        rightStack.Children.Add(maxBrightLabel);
-        rightStack.Children.Add(maxBrightSlider);
-        rightStack.Children.Add(intervalLabel);
-        rightStack.Children.Add(intervalSlider);
-        rightStack.Children.Add(periodLabel);
-        rightStack.Children.Add(periodSlider);
-        rightStack.Children.Add(idleLabel);
-        rightStack.Children.Add(idleSlider);
+        advancedStack.Children.Add(periodLabel);
+        advancedStack.Children.Add(periodSlider);
+        advancedStack.Children.Add(idleLabel);
+        advancedStack.Children.Add(idleSlider);
+        rightStack.Children.Add(new Expander
+        {
+            Header = Kit.Text("Advanced timing & brightness floor", 12.5, "DS.TextSoft"),
+            Foreground = DS.Brush("DS.TextSoft"),
+            Margin = new(0, 10, 0, 4),
+            Content = advancedStack,
+        });
 
         var startBtn = new Button
         {

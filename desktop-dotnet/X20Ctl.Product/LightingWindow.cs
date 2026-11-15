@@ -9,8 +9,8 @@ namespace X20Ctl.Product;
 internal sealed class LightingWindow : Window
 {
     readonly TextBox hex=new(){MaxLength=7,Padding=new(12,8,12,8)};
-    readonly TextBlock rgb=new(){Margin=new(0,6,0,0)},status=new(){Text="Instant Apply is ON — pick any colour or mode to update immediately.",TextWrapping=TextWrapping.Wrap,Margin=new(0,12,0,0),MinHeight=38};
-    readonly Border preview=new(){BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Height=116,CornerRadius=new(14),Margin=new(0,0,0,14)};
+    readonly TextBlock heroHexText=new(){FontSize=20,FontWeight=FontWeights.SemiBold},heroRgbText=new(){FontSize=12.5,Margin=new(0,2,0,0)},status=new(){Text="Instant Apply is ON — pick any colour or mode to update immediately.",TextWrapping=TextWrapping.Wrap,Margin=new(0,12,0,0),MinHeight=38};
+    readonly Border preview=new(){BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Height=96,CornerRadius=new(14),Padding=new(18,14,18,14),Margin=new(0,0,0,16)};
     readonly Button read=ActionButton("Read controller"),apply=ActionButton("Apply");
     readonly ComboBox modes=new(){ItemsSource=new[]{"Solid","Rainbow","Breathe","Cycle","Off","Battery"},SelectedIndex=0,MinWidth=115,Margin=new(0,0,8,0),Visibility=Visibility.Collapsed};
     readonly Button[] modePills=new Button[6];
@@ -28,7 +28,8 @@ internal sealed class LightingWindow : Window
     LightingEffectsSection? effectsSection;
     int activeSection;
     bool syncingBrightness;
-    readonly ColourField square=new(false),hueStrip=new(true);
+    readonly HueWheel wheel=new();
+    readonly ValueStrip valueStrip=new();
     readonly List<(Button Button,int Rgb)> swatches=[];
     readonly StackPanel batteryPanel=new(){Visibility=Visibility.Collapsed,Margin=new(0,12,0,16)};
     readonly Button[] levelButtons=new Button[4];
@@ -38,8 +39,7 @@ internal sealed class LightingWindow : Window
     [
         ("Electric Cyan", 0x00E5FF), ("Sky Blue", 0x2979FF), ("Royal Indigo", 0x5E35B1), ("Neon Violet", 0xAA00FF),
         ("Hot Magenta", 0xFF00AA), ("Crimson Red", 0xFF1744), ("Lava Orange", 0xFF6D00), ("Amber Gold", 0xFFAB00),
-        ("Solar Yellow", 0xFFD600), ("Lime Pulse", 0x76FF03), ("Emerald", 0x00E676), ("Mint Teal", 0x1DE9B6),
-        ("Coral Pink", 0xFF5252), ("Ice Blue", 0x80D8FF), ("Warm White", 0xFFE8C8), ("Pure White", 0xFFFFFF),
+        ("Solar Yellow", 0xFFD600), ("Lime Pulse", 0x76FF03), ("Emerald", 0x00E676), ("Pure White", 0xFFFFFF),
     ];
     const int BatteryMode=5;
     int selected=0xff0000,editingLevel=3; double hue,saturation=1,value=1; bool busy,loadingLevel,pendingInstantWrite; byte level=0x50;
@@ -49,41 +49,49 @@ internal sealed class LightingWindow : Window
     {
         Title="X20 Pro · RGB";Width=1100;Height=800;MinWidth=820;MinHeight=680;
         Background=DS.Brush("DS.Deep");Foreground=DS.Brush("DS.Text");FontFamily=DS.Body;WindowStartupLocation=WindowStartupLocation.CenterOwner;
-        rgb.Foreground=DS.Brush("DS.TextSoft");rgb.FontSize=15;
-        status.Foreground=DS.Brush("DS.TextSoft");status.FontSize=14;status.Margin=new(0);status.MinHeight=0;
-        preview.BorderBrush=DS.Brush("DS.Hairline");
+        status.Foreground=DS.Brush("DS.TextSoft");status.FontSize=13.5;status.Margin=new(0);status.MinHeight=0;
+        var heroStack=new StackPanel{VerticalAlignment=VerticalAlignment.Center};heroStack.Children.Add(heroHexText);heroStack.Children.Add(heroRgbText);preview.Child=heroStack;
         var root=new Grid();root.RowDefinitions.Add(new(){Height=GridLength.Auto});root.RowDefinitions.Add(new());root.RowDefinitions.Add(new(){Height=GridLength.Auto});Content=root;
-        var columns=new Grid();columns.ColumnDefinitions.Add(new(){Width=new(1.6,GridUnitType.Star)});columns.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});staticView=columns;Grid.SetRow(columns,1);root.Children.Add(columns);
+        var columns=new Grid();columns.ColumnDefinitions.Add(new(){Width=new(1.15,GridUnitType.Star)});columns.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});staticView=columns;Grid.SetRow(columns,1);root.Children.Add(columns);
         var panel=new StackPanel();var detail=new StackPanel();
-        var left=Kit.Panel("Colour Studio", "Pick a colour or tap any swatch for instant controller sync.",null,new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(22));left.Margin=new(0,0,16,0);columns.Children.Add(left);
+        var left=Kit.Panel("Colour Wheel", "Spin the wheel or tap a swatch for instant controller sync.",null,new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(22));left.Margin=new(0,0,16,0);columns.Children.Add(left);
         var right=Kit.Panel("Mode & Brightness",null,null,new ScrollViewer{Content=detail,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(22));Grid.SetColumn(right,1);columns.Children.Add(right);
-        var picker=new Grid{Height=270,Margin=new(0,8,0,18)};
+        var picker=new Grid{Height=248,Margin=new(0,4,0,18)};
         picker.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});picker.ColumnDefinitions.Add(new(){Width=new(28)});
-        square.Margin=new(0,0,14,0);square.ToolTip="Saturation and brightness · arrow keys adjust";hueStrip.ToolTip="Hue · up/down keys adjust";
-        Grid.SetColumn(hueStrip,1);picker.Children.Add(square);picker.Children.Add(hueStrip);panel.Children.Add(picker);
-        detail.Children.Add(preview);detail.Children.Add(Kit.Text("Hex colour",13,"DS.TextSoft").Also(t=>t.Margin=new(0,0,0,6)));detail.Children.Add(hex);detail.Children.Add(rgb);
-        var brightnessHeader=new Grid{Margin=new(0,16,0,2)};brightnessHeader.ColumnDefinitions.Add(new());brightnessHeader.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
+        wheel.Width=244;wheel.Height=244;wheel.HorizontalAlignment=HorizontalAlignment.Center;wheel.VerticalAlignment=VerticalAlignment.Center;wheel.ToolTip="Hue and saturation wheel";
+        valueStrip.Margin=new(10,8,0,8);valueStrip.ToolTip="Lightness / intensity";
+        Grid.SetColumn(valueStrip,1);picker.Children.Add(wheel);picker.Children.Add(valueStrip);panel.Children.Add(picker);
+        detail.Children.Add(preview);
+        var brightnessHeader=new Grid{Margin=new(0,4,0,2)};brightnessHeader.ColumnDefinitions.Add(new());brightnessHeader.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
         brightnessHeader.Children.Add(Kit.Text("Brightness",13,"DS.TextSoft"));brightnessValue.Foreground=DS.Brush("DS.TextSoft");Grid.SetColumn(brightnessValue,1);brightnessHeader.Children.Add(brightnessValue);
         System.Windows.Automation.AutomationProperties.SetName(brightness,"RGB brightness");
         detail.Children.Add(brightnessHeader);detail.Children.Add(brightness);
         var quickBright=new WrapPanel{Margin=new(0,2,0,4)};
         var moonlightBtn=new Button{Content="Moonlight (1%)",Style=DS.Style("ActionButton"),Padding=new(12,5,12,5),FontSize=12,Margin=new(0,0,8,0),ToolTip="Ultra-faint 1% moonlight glow (0x01)"};
-        moonlightBtn.Click+=(_,_)=>{if(!busy){SetBrightnessByte(LightingRecord.MoonlightBrightnessByte);TriggerInstantApply();}};
+        moonlightBtn.Click+=(_,_)=>{if(!busy){SetBrightnessByte(LightingRecord.MoonlightBrightnessByte);TriggerInstantApply(immediate:true);}};
         var offBrightBtn=new Button{Content="0% Off",Style=DS.Style("ActionButton"),Padding=new(12,5,12,5),FontSize=12,ToolTip="Turn LEDs off while keeping colour/mode (0x00)"};
-        offBrightBtn.Click+=(_,_)=>{if(!busy){SetBrightnessByte(LightingRecord.MinBrightnessByte);TriggerInstantApply();}};
+        offBrightBtn.Click+=(_,_)=>{if(!busy){SetBrightnessByte(LightingRecord.MinBrightnessByte);TriggerInstantApply(immediate:true);}};
         quickBright.Children.Add(moonlightBtn);quickBright.Children.Add(offBrightBtn);detail.Children.Add(quickBright);
         brightness.ValueChanged+=(_,_)=>{if(syncingBrightness||busy)return;level=LightingRecord.BrightnessByteFor(brightness.Value);brightnessValue.Text=$"{Math.Round(brightness.Value):0}% (0x{level:X2})";TriggerInstantApply();};
-        square.Changed+=(x,y)=>{saturation=x;value=1-y;Refresh();TriggerInstantApply();};hueStrip.Changed+=(_,y)=>{hue=y*360;Refresh();TriggerInstantApply();};
-        hex.LostFocus+=(_,_)=>CommitHex();hex.KeyDown+=(_,e)=>{if(e.Key==Key.Enter){if(CommitHex())TriggerInstantApply();e.Handled=true;}};
-        var palette=new System.Windows.Controls.Primitives.UniformGrid{Columns=8,Margin=new(-4,6,-4,0)};
+        wheel.Changed+=(h,s)=>{hue=h;saturation=s;Refresh();TriggerInstantApply();};valueStrip.Changed+=v=>{value=v;Refresh();TriggerInstantApply();};
+        hex.LostFocus+=(_,_)=>CommitHex();hex.KeyDown+=(_,e)=>{if(e.Key==Key.Enter){if(CommitHex())TriggerInstantApply(immediate:true);e.Handled=true;}};
+        var palette=new System.Windows.Controls.Primitives.UniformGrid{Columns=6,Margin=new(-4,4,-4,0)};
         foreach(var (name,rgbVal) in CuratedSwatches)
         {
-            var b=new Button{Height=44,Margin=new(4),Background=new SolidColorBrush(ToColour(rgbVal)),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),ToolTip=$"{name} · #{rgbVal:X6}"};
+            var b=new Button{Height=40,Margin=new(4),Background=new SolidColorBrush(ToColour(rgbVal)),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),ToolTip=$"{name} · #{rgbVal:X6}"};
             System.Windows.Automation.AutomationProperties.SetName(b,$"{name}, #{rgbVal:X6}");
             b.Template=SwatchTemplate();
             b.Click+=(_,_)=>{if(!busy){SetColour(rgbVal);TriggerInstantApply(immediate:true);}};palette.Children.Add(b);swatches.Add((b,rgbVal));
         }
-        panel.Children.Add(palette);panel.Children.Add(Kit.Text("16 curated quick colours · click any swatch to apply instantly",12.5,"DS.TextMuted").Also(t=>t.Margin=new(0,12,0,4)));
+        panel.Children.Add(palette);
+        var kelvinWrap=new WrapPanel{Margin=new(0,12,0,0)};
+        foreach(var (kLabel,kRgb) in new (string,int)[]{("2700K Warm",0xFFB46B),("4000K Neutral",0xFFE6CC),("6500K Cool",0xE3F0FF)})
+        {
+            var kb=new Button{Content=kLabel,Style=DS.Style("ActionButton"),Padding=new(10,5,10,5),FontSize=11.5,Margin=new(0,0,6,0)};
+            kb.Click+=(_,_)=>{if(!busy){SetColour(kRgb);TriggerInstantApply(immediate:true);}};
+            kelvinWrap.Children.Add(kb);
+        }
+        panel.Children.Add(kelvinWrap);
         detail.Children.Add(Kit.Text("Hardware Mode",13,"DS.TextSoft").Also(t=>t.Margin=new(0,18,0,8)));
         detail.Children.Add(modes);
         var modeGrid=new WrapPanel{Margin=new(0,0,0,8)};
@@ -106,8 +114,12 @@ internal sealed class LightingWindow : Window
             var cell=new StackPanel();cell.Children.Add(b);cell.Children.Add(Kit.Text(name,13,"DS.TextSoft").Also(t=>{t.HorizontalAlignment=HorizontalAlignment.Center;t.Margin=new(0,4,0,0);}));gauge.Children.Add(cell);
         }
         batteryPanel.Children.Add(gauge);batteryPanel.Children.Add(Kit.Text("Updates while X20CTL is open.",13,"DS.TextMuted").Also(t=>t.Margin=new(0,10,0,0)));detail.Children.Add(batteryPanel);
-        read.HorizontalAlignment=HorizontalAlignment.Left;detail.Children.Add(read);
-        var note=Kit.Text("Keep the controller awake and Windows Bluetooth enabled.",13,"DS.TextSoft");note.TextWrapping=TextWrapping.Wrap;note.TextTrimming=TextTrimming.None;note.Margin=new(0,16,0,0);detail.Children.Add(note);
+        var fineTuneStack=new StackPanel{Margin=new(0,8,0,0)};
+        fineTuneStack.Children.Add(Kit.Text("Custom Hex (#RRGGBB)",12.5,"DS.TextSoft").Also(t=>t.Margin=new(0,0,0,6)));
+        fineTuneStack.Children.Add(hex);
+        read.Margin=new(0,10,0,0);read.HorizontalAlignment=HorizontalAlignment.Left;
+        fineTuneStack.Children.Add(read);
+        detail.Children.Add(new Expander{Header=Kit.Text("Fine-tune Hex & read controller",12.5,"DS.TextSoft"),Foreground=DS.Brush("DS.TextSoft"),Margin=new(0,12,0,0),Content=fineTuneStack});
         var footer=new Grid();footer.ColumnDefinitions.Add(new());footer.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
         status.VerticalAlignment=VerticalAlignment.Center;status.Margin=new(0,0,24,0);footer.Children.Add(status);
         apply.Style=DS.Style("DS.Primary");apply.MinWidth=160;Grid.SetColumn(apply,1);footer.Children.Add(apply);
@@ -245,8 +257,14 @@ internal sealed class LightingWindow : Window
     }
     void Refresh()
     {
-        selected=ColourPalette.FromHsv(hue,saturation,value);var c=ToColour(selected);preview.Background=new SolidColorBrush(c);hex.Text=$"#{selected:X6}";rgb.Text=$"R {c.R}   G {c.G}   B {c.B}";
-        square.Set(hue,saturation,1-value);hueStrip.Set(hue,0,hue/360);
+        selected=ColourPalette.FromHsv(hue,saturation,value);var c=ToColour(selected);preview.Background=new SolidColorBrush(c);
+        preview.Effect=new System.Windows.Media.Effects.DropShadowEffect{Color=c,BlurRadius=22,ShadowDepth=0,Opacity=0.45};
+        double luma=(0.299*c.R+0.587*c.G+0.114*c.B)/255d;
+        var fg=new SolidColorBrush(luma>0.58?Color.FromRgb(10,18,38):Color.FromRgb(244,247,253));
+        heroHexText.Foreground=heroRgbText.Foreground=fg;
+        heroHexText.Text=$"#{selected:X6}";heroRgbText.Text=$"R {c.R}  ·  G {c.G}  ·  B {c.B}";
+        hex.Text=$"#{selected:X6}";
+        wheel.Set(hue,saturation,value);valueStrip.Set(hue,saturation,value);
         foreach(var(button,colour)in swatches){button.BorderBrush=colour==selected?DS.Brush("DS.AccentHi"):DS.Brush("DS.Hairline");button.BorderThickness=new(colour==selected?3:1);}
         if(BatterySelected&&!loadingLevel){levelColours[editingLevel]=selected;RefreshLevels();}
     }
@@ -284,22 +302,72 @@ internal sealed class LightingWindow : Window
         catch(Exception ex){status.Text=ex.Message;}
         finally{Lock(false);}
     }
-    sealed class ColourField(bool hueOnly):FrameworkElement
+    sealed class HueWheel:FrameworkElement
     {
-        double hue,x,y;public event Action<double,double>? Changed;
-        public void Set(double h,double px,double py){hue=h;x=px;y=py;InvalidateVisual();}
-        protected override void OnInitialized(EventArgs e){base.OnInitialized(e);Focusable=true;Cursor=Cursors.Cross;System.Windows.Automation.AutomationProperties.SetName(this,hueOnly?"Hue":"Saturation and brightness");}
+        double hue,sat=1,val=1;
+        static System.Windows.Media.Imaging.WriteableBitmap? cachedWheel;
+        public event Action<double,double>? Changed;
+        public void Set(double h,double s,double v){hue=h;sat=s;val=v;InvalidateVisual();}
+        protected override void OnInitialized(EventArgs e){base.OnInitialized(e);Focusable=true;Cursor=Cursors.Cross;System.Windows.Automation.AutomationProperties.SetName(this,"Hue and saturation wheel");}
+        static System.Windows.Media.Imaging.WriteableBitmap WheelBitmap()
+        {
+            if(cachedWheel!=null)return cachedWheel;
+            const int size=240;const double r=size/2d;
+            var wb=new System.Windows.Media.Imaging.WriteableBitmap(size,size,96,96,PixelFormats.Bgra32,null);
+            byte[] buf=new byte[size*size*4];
+            for(int y=0;y<size;y++)for(int x=0;x<size;x++)
+            {
+                double dx=x+0.5-r,dy=y+0.5-r,dist=Math.Sqrt(dx*dx+dy*dy);
+                int idx=(y*size+x)*4;
+                if(dist>r){buf[idx+3]=0;continue;}
+                double angle=(Math.Atan2(dy,dx)*180/Math.PI+360)%360;
+                int rgb=ColourPalette.FromHsv(angle,Math.Clamp(dist/r,0,1),1);
+                byte alpha=(byte)(dist>r-1.5?Math.Clamp((r-dist)/1.5,0,1)*255:255);
+                buf[idx]=(byte)rgb;buf[idx+1]=(byte)(rgb>>8);buf[idx+2]=(byte)(rgb>>16);buf[idx+3]=alpha;
+            }
+            wb.WritePixels(new Int32Rect(0,0,size,size),buf,size*4,0);
+            wb.Freeze();
+            return cachedWheel=wb;
+        }
+        protected override void OnRender(DrawingContext dc)
+        {
+            double d=Math.Min(ActualWidth,ActualHeight);if(d<=4)return;
+            var rect=new Rect((ActualWidth-d)/2,(ActualHeight-d)/2,d,d);
+            dc.DrawImage(WheelBitmap(),rect);
+            double rad=hue*Math.PI/180d,r=d/2d;
+            var pt=new Point(rect.X+r+Math.Cos(rad)*sat*r,rect.Y+r+Math.Sin(rad)*sat*r);
+            dc.DrawEllipse(null,new Pen(Brushes.Black,3.5),pt,7,7);
+            dc.DrawEllipse(null,new Pen(Brushes.White,2),pt,7,7);
+        }
+        void Pick(Point p)
+        {
+            double d=Math.Min(ActualWidth,ActualHeight);if(d<=4)return;
+            double cx=ActualWidth/2d,cy=ActualHeight/2d,r=d/2d;
+            double dx=p.X-cx,dy=p.Y-cy;
+            double h=(Math.Atan2(dy,dx)*180/Math.PI+360)%360;
+            double s=Math.Clamp(Math.Sqrt(dx*dx+dy*dy)/r,0,1);
+            Changed?.Invoke(h,s);
+        }
+        protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e){Focus();CaptureMouse();Pick(e.GetPosition(this));e.Handled=true;}
+        protected override void OnMouseMove(MouseEventArgs e){if(IsMouseCaptured)Pick(e.GetPosition(this));}
+        protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e){if(IsMouseCaptured)ReleaseMouseCapture();}
+    }
+    sealed class ValueStrip:FrameworkElement
+    {
+        double hue,sat=1,val=1;public event Action<double>? Changed;
+        public void Set(double h,double s,double v){hue=h;sat=s;val=v;InvalidateVisual();}
+        protected override void OnInitialized(EventArgs e){base.OnInitialized(e);Focusable=true;Cursor=Cursors.SizeNS;System.Windows.Automation.AutomationProperties.SetName(this,"Lightness");}
         protected override void OnRender(DrawingContext dc)
         {
             var bounds=new Rect(0,0,ActualWidth,ActualHeight);
-            if(hueOnly){var brush=new LinearGradientBrush{StartPoint=new(0,0),EndPoint=new(0,1)};for(int i=0;i<=6;i++)brush.GradientStops.Add(new(ToColour(ColourPalette.FromHsv(i*60,1,1)),i/6d));dc.DrawRectangle(brush,null,bounds);dc.DrawRectangle(null,new Pen(Brushes.White,2),new Rect(0,Math.Clamp(y*ActualHeight-3,0,Math.Max(0,ActualHeight-6)),ActualWidth,6));}
-            else{dc.DrawRectangle(new LinearGradientBrush(Colors.White,ToColour(ColourPalette.FromHsv(hue,1,1)),0),null,bounds);dc.DrawRectangle(new LinearGradientBrush(Colors.Transparent,Colors.Black,90),null,bounds);var point=new Point(x*ActualWidth,y*ActualHeight);dc.DrawEllipse(null,new Pen(Brushes.Black,3),point,5,5);dc.DrawEllipse(null,new Pen(Brushes.White,1.5),point,5,5);}
-            if(IsKeyboardFocused)dc.DrawRectangle(null,new Pen(Brushes.White,1),bounds);
+            var full=ToColour(ColourPalette.FromHsv(hue,sat,1));
+            dc.DrawRoundedRectangle(new LinearGradientBrush(full,Colors.Black,90),new Pen(DS.Brush("DS.Hairline"),1),bounds,8,8);
+            double y=(1-val)*ActualHeight;
+            dc.DrawRoundedRectangle(null,new Pen(Brushes.White,2),new Rect(0,Math.Clamp(y-4,0,Math.Max(0,ActualHeight-8)),ActualWidth,8),4,4);
         }
-        void Pick(Point p){x=Math.Clamp(p.X/Math.Max(1,ActualWidth),0,1);y=Math.Clamp(p.Y/Math.Max(1,ActualHeight),0,1);Changed?.Invoke(x,y);}
+        void Pick(Point p){Changed?.Invoke(1-Math.Clamp(p.Y/Math.Max(1,ActualHeight),0,1));}
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e){Focus();CaptureMouse();Pick(e.GetPosition(this));e.Handled=true;}
         protected override void OnMouseMove(MouseEventArgs e){if(IsMouseCaptured)Pick(e.GetPosition(this));}
-        protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e){if(IsMouseCaptured){Pick(e.GetPosition(this));ReleaseMouseCapture();}e.Handled=true;}
-        protected override void OnKeyDown(KeyEventArgs e){double step=Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)?.05:.005;if(e.Key==Key.Left&&!hueOnly)x-=step;else if(e.Key==Key.Right&&!hueOnly)x+=step;else if(e.Key==Key.Up)y-=step;else if(e.Key==Key.Down)y+=step;else{base.OnKeyDown(e);return;}x=Math.Clamp(x,0,1);y=Math.Clamp(y,0,1);Changed?.Invoke(x,y);e.Handled=true;}
+        protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e){if(IsMouseCaptured)ReleaseMouseCapture();}
     }
 }
