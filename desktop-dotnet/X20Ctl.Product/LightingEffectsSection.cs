@@ -52,6 +52,7 @@ internal sealed class LightingEffectsSection
         LightingEffectKind.StickHeat,
         LightingEffectKind.ButtonFlash,
         LightingEffectKind.IdleSleepDim,
+        LightingEffectKind.ScreenAmbient,
     ];
 
     static readonly (int Cap, string Label)[] WriteCapChoices =
@@ -666,6 +667,7 @@ internal sealed class LightingEffectsSection
         LightingEffectKind.StickHeat => "Stick Heat",
         LightingEffectKind.ButtonFlash => "Button Flash",
         LightingEffectKind.IdleSleepDim => "Idle Nightlight",
+        LightingEffectKind.ScreenAmbient => "Ambient Sync",
         _ => kind.ToString(),
     };
 

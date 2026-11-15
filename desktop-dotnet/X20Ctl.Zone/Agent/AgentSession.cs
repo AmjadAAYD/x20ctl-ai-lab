@@ -273,7 +273,7 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
             - open_page: target Page, one of: Diagnostics, Tools, Mouse, Curves, Buttons, Macros, Vibration, PcMode, Device. Takes the owner there. Diagnostics shows live sticks, triggers and buttons; Tools has the Controller Check scan.
 
             - led_color: target Lighting, value: the static solid colour named by the owner (e.g. cyan, warm white, #FF8800). The app reads colour words into RGB; never invent hex numbers, never pass animations or "off", and never invent a colour the owner didn't name.
-            - led_effect: target Lighting, value: a lighting animation or off state in plain words ("rainbow", "off", "breathe red", "cycle", "moonlight pulse", "hue sweep", "strobe", "lava", "trigger glow", "stick heat", "button flash", "idle nightlight"). Use for animations, rainbow, reactive effects, or turning lights off/dark.
+            - led_effect: target Lighting, value: a lighting animation, sync mode, or off state in plain words ("ambient", "battery", "rainbow", "off", "breathe red", "cycle", "fade", "palette jump", "moonlight pulse", "hue sweep", "strobe", "lava", "trigger glow", "stick heat", "button flash", "idle nightlight", "game auto"). Use for animations, screen sync, battery indicator, rainbow, reactive effects, or turning lights off/dark.
 
             - measure_drift: LeftStick or RightStick, value 0. Reads where the stick rests with no hand on it, for three seconds. Changes nothing.
 

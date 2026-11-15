@@ -1,0 +1,59 @@
+using X20Ctl.Zone.Agent;
+using X20Ctl.Zone.Lighting;
+using Xunit;
+
+namespace X20Ctl.Zone.Tests;
+
+public sealed class AgentAutocompleteAndRgbTests
+{
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("   ", "")]
+    [InlineData("Change my RGB to ", "ambient")]
+    [InlineData("Change my RGB ", "to ambient")]
+    [InlineData("Change my RGB to amb", "ient")]
+    [InlineData("set lights to moo", "nlight pulse")]
+    [InlineData("set lights to batt", "ery mode")]
+    [InlineData("Enable a", "mbient mode")]
+    [InlineData("My right stick ", "drifts")]
+    [InlineData("Open ", "diagnostics")]
+    public void AutocompletePredictsExpectedSuffix(string typed, string expectedSuffix)
+    {
+        Assert.Equal(expectedSuffix, AgentAutocomplete.Suggest(typed));
+    }
+
+    [Theory]
+    [InlineData("ambient", LightingEffectKind.ScreenAmbient)]
+    [InlineData("ambient mode", LightingEffectKind.ScreenAmbient)]
+    [InlineData("screen sync", LightingEffectKind.ScreenAmbient)]
+    [InlineData("ambilight", LightingEffectKind.ScreenAmbient)]
+    [InlineData("battery", LightingEffectKind.BatteryLevel)]
+    [InlineData("battery mode", LightingEffectKind.BatteryLevel)]
+    [InlineData("battery lights", LightingEffectKind.BatteryLevel)]
+    [InlineData("palette jump", LightingEffectKind.PaletteStep)]
+    [InlineData("multi-color jump", LightingEffectKind.PaletteStep)]
+    [InlineData("game auto", LightingEffectKind.GameAutoProfile)]
+    public void AgentLightingEffectsParsesAllStudioAndSyncModes(string text, LightingEffectKind expected)
+    {
+        Assert.True(AgentLightingEffects.TryParse(text, out var spec, out _));
+        Assert.Equal(expected, spec.Kind);
+    }
+
+    [Theory]
+    [InlineData("enable ambient mode")]
+    [InlineData("change my rgb to ambient")]
+    [InlineData("switch lights to battery mode")]
+    [InlineData("set rgb to palette jump")]
+    [InlineData("turn on screen sync")]
+    public void AskedDetectsNewRgbAndSyncRequests(string sentence)
+    {
+        Assert.NotNull(AgentLightingEffects.Asked(sentence));
+    }
+
+    [Fact]
+    public void EffectLabelsIncludeAmbientAndBattery()
+    {
+        Assert.Equal("Ambient Screen Sync", LightingEffectSpec.EffectLabel(LightingEffectKind.ScreenAmbient));
+        Assert.Equal("Battery Level Indicator", LightingEffectSpec.EffectLabel(LightingEffectKind.BatteryLevel));
+    }
+}

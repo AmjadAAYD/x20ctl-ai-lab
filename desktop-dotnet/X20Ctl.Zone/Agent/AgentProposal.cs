@@ -187,7 +187,7 @@ public static class ProposalValidator
                     return (CheckState.Ok, "Reads as " + effectSummary + ".");
                 if (a.Value.ValueKind == JsonValueKind.String && AgentColors.TryParse(a.ValueText, out _))
                     return No($"\"{a.ValueText}\" is a solid colour, not a lighting effect. Use {{\"action\":\"led_color\",\"target\":\"Lighting\",\"value\":\"{a.ValueText}\"}} instead.");
-                return No($"\"{a.ValueText}\" isn't a lighting effect I can run (try rainbow, breathe, cycle, moonlight pulse, hue sweep, strobe, lava, trigger glow, stick heat, button flash, or off).");
+                return No($"\"{a.ValueText}\" isn't a lighting effect I can run (try ambient, battery, rainbow, breathe, cycle, fade, palette jump, moonlight pulse, hue sweep, strobe, lava, trigger glow, stick heat, button flash, game auto, or off).");
             case AgentVocabulary.MeasureDrift:
                 return stick ? (CheckState.Ok, "A reading: changes nothing.") : No($"measure_drift needs LeftStick or RightStick, not {a.Target}.");
             case AgentVocabulary.Reset:

@@ -99,10 +99,28 @@ public static class AgentLightingEffects
             summary = "Idle Auto-Dim Nightlight";
             return true;
         }
+        if (Regex.IsMatch(raw, @"\b(ambient|ambilight|screen\s*sync|screen\s*ambient)\b"))
+        {
+            spec = new LightingEffectSpec { Kind = LightingEffectKind.ScreenAmbient, Palette = [parsedColor?.Hex ?? "#1E88E5"], MaxBrightness = 0xE0, StepIntervalMs = 360 }.Normalized();
+            summary = "Ambient Screen Sync";
+            return true;
+        }
+        if (Regex.IsMatch(raw, @"\b(battery(?:\s+(?:mode|lights?|leds?|level|indicator))?)\b"))
+        {
+            spec = new LightingEffectSpec { Kind = LightingEffectKind.BatteryLevel, Palette = ["#1EB980"], MaxBrightness = 0xC0 }.Normalized();
+            summary = "Battery Level Indicator";
+            return true;
+        }
         if (Regex.IsMatch(raw, @"\b(game\s*auto)\b"))
         {
             spec = new LightingEffectSpec { Kind = LightingEffectKind.GameAutoProfile, MaxBrightness = 0xC0 }.Normalized();
             summary = "Auto by Foreground Game";
+            return true;
+        }
+        if (Regex.IsMatch(raw, @"\b((?:multi[\s-]*)?(?:color|colour|palette)\s*jump|palette\s*step)\b"))
+        {
+            spec = new LightingEffectSpec { Kind = LightingEffectKind.PaletteStep, Palette = [parsedColor?.Hex ?? "#00FFFF", "#FF00FF", "#FFAA00"], MaxBrightness = 0xD8, StepIntervalMs = 500 }.Normalized();
+            summary = "Multi-Color Jump";
             return true;
         }
         if (Regex.IsMatch(raw, @"\b(cycle|cycling|fade)\b"))
@@ -124,7 +142,7 @@ public static class AgentLightingEffects
         if (Regex.IsMatch(s, @"\b(?:pc\s*mode|mouse\s*mode|dead\s*zone|anti[\s-]?dead|curve|turbo|remap|swap|paddle|recoil|drift|reset|slower|faster|speed|open\s+(?:diagnostics|tools|mouse|curves|buttons|macros|vibration|device)|left\s+(?:stick|trigger|bumper)|right\s+(?:stick|trigger|bumper))\b")
             || Regex.IsMatch(s, @"\band\s+(?:make|set|turn|switch|enable|disable|put|swap|remap|reset|open)\b"))
             return null;
-        bool mentionsLights = Regex.IsMatch(s, @"\b(leds?|lights?|lighting|rgb|glow|backlight|rainbow|strobe|moonlight|ember|shimmer|nightlight|hue\s*sweep|hue\s*wave|trigger\s*glow|stick\s*heat|button\s*flash)\b");
+        bool mentionsLights = Regex.IsMatch(s, @"\b(leds?|lights?|lighting|rgb|glow|backlight|rainbow|strobe|moonlight|ember|shimmer|nightlight|ambient|ambilight|screen\s*sync|battery\s*(?:lights?|leds?|mode|level|indicator)|(?:color|colour|palette)\s*(?:jump|fade)|hue\s*(?:sweep|wave)|trigger\s*glow|stick\s*heat|button\s*flash|game\s*auto)\b");
         if (!mentionsLights) return null;
         // Require either a lights-off turn off request or an effect keyword (never swallow colour questions like "change my led colour").
         if (Regex.IsMatch(s, @"\bturn\s+off\b.*\b(leds?|lights?|lighting|rgb)\b") || Regex.IsMatch(s, @"\b(leds?|lights?|rgb)\s+off\b"))

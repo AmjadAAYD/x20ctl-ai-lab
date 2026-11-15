@@ -20,6 +20,8 @@ public enum LightingEffectKind
     ButtonFlash,
     IdleSleepDim,
     GameAutoProfile,
+    ScreenAmbient,
+    BatteryLevel,
 }
 
 public readonly record struct LightingFrame(byte R, byte G, byte B, byte Brightness, byte NativeMode = LightingRecord.ModeSolid)
@@ -132,6 +134,8 @@ public sealed record LightingEffectSpec
         LightingEffectKind.ButtonFlash => "Button Action Flash",
         LightingEffectKind.IdleSleepDim => "Idle Auto-Dim / Nightlight",
         LightingEffectKind.GameAutoProfile => "Auto by Foreground Game",
+        LightingEffectKind.ScreenAmbient => "Ambient Screen Sync",
+        LightingEffectKind.BatteryLevel => "Battery Level Indicator",
         _ => kind.ToString(),
     };
 }
@@ -237,6 +241,13 @@ public static class LightingEffectEngine
             MaxBrightness = 0xA0,
             IdleTimeoutSeconds = 30,
             StepIntervalMs = 500,
+        }),
+        BuiltIn("builtin-screen-ambient", "Ambient Screen Sync", new LightingEffectSpec
+        {
+            Kind = LightingEffectKind.ScreenAmbient,
+            Palette = ["#1E88E5"],
+            MaxBrightness = 0xE0,
+            StepIntervalMs = 360,
         }),
         BuiltIn("builtin-off", "LEDs Off (0x00)", new LightingEffectSpec
         {

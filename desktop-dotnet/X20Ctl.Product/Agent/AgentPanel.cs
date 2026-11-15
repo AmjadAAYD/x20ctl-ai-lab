@@ -257,19 +257,45 @@ public sealed partial class AgentPanel
             topics.Add((query, look, text, icon)); register(pill); pills.Children.Add(pill);
         }
 
-        // the chat bar: a field with a hint, and a round send button
-        Input = new TextBox { AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 42, MaxHeight = 84, MaxLength = 600, FontSize = 14.5, Padding = new(4, 9, 12, 8), VerticalContentAlignment = VerticalAlignment.Center, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ToolTip = "Talk to the agent: Enter or A to send", Background = Brushes.Transparent, BorderThickness = new(0), FocusVisualStyle = null,
+        // the chat bar: a field with a hint, inline Tab ghost autocomplete, and a round send button
+        Input = new TextBox { AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 42, MaxHeight = 84, MaxLength = 600, FontSize = 14.5, Padding = new(4, 9, 12, 8), VerticalContentAlignment = VerticalAlignment.Center, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, ToolTip = "Talk to the agent: Enter or A to send · Tab to accept suggestion", Background = Brushes.Transparent, BorderThickness = new(0), FocusVisualStyle = null,
             Foreground = DS.Brush("DS.Text"), CaretBrush = DS.Brush("DS.Text"), Template = Bare() };
-        Input.KeyDown += (_, e) => { if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; Send(); } };
         var hint = Kit.Text("Tell me what feels off…", 14.5, "DS.TextMuted").Also(h => { h.IsHitTestVisible = false; h.Margin = new(6, 0, 0, 0); h.VerticalAlignment = VerticalAlignment.Center; });
-        Input.TextChanged += (_, _) => { hint.Visibility = Input.Text.Length > 0 ? Visibility.Collapsed : Visibility.Visible; if (!busy) { Look(Input.Text.Length > 0 ? Gaze.Typing : Gaze.Idle); Typing(Input.Text.Length > 0); } };
+        var ghostTyped = new System.Windows.Documents.Run { Foreground = Brushes.Transparent };
+        var ghostSuffixRun = new System.Windows.Documents.Run { Foreground = DS.Brush("DS.TextMuted") };
+        var ghost = new TextBlock { IsHitTestVisible = false, FontSize = 14.5, Margin = new(6, 9, 12, 8), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap, Opacity = 0.68 };
+        ghost.Inlines.Add(ghostTyped);
+        ghost.Inlines.Add(ghostSuffixRun);
+        string activeGhost = "";
+        void RefreshGhost()
+        {
+            string text = Input.Text;
+            bool eligible = text.Length > 0 && Input.SelectionLength == 0 && Input.CaretIndex == text.Length && Input.LineCount <= 1 && Input.ExtentWidth <= Math.Max(0, Input.ViewportWidth + 1);
+            activeGhost = eligible ? AgentAutocomplete.Suggest(text) : "";
+            ghostTyped.Text = text;
+            ghostSuffixRun.Text = activeGhost;
+            ghost.Visibility = string.IsNullOrEmpty(activeGhost) ? Visibility.Collapsed : Visibility.Visible;
+        }
+        Input.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None && !string.IsNullOrEmpty(activeGhost))
+            {
+                e.Handled = true;
+                Input.Text += activeGhost;
+                Input.CaretIndex = Input.Text.Length;
+                RefreshGhost();
+            }
+        };
+        Input.KeyDown += (_, e) => { if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None) { e.Handled = true; Send(); } };
+        Input.TextChanged += (_, _) => { hint.Visibility = Input.Text.Length > 0 ? Visibility.Collapsed : Visibility.Visible; RefreshGhost(); if (!busy) { Look(Input.Text.Length > 0 ? Gaze.Typing : Gaze.Idle); Typing(Input.Text.Length > 0); } };
+        Input.SelectionChanged += (_, _) => RefreshGhost();
         var sendGlyph = Kit.Icon("\uE724", 16, "DS.Text").Also(i => { i.Foreground = new SolidColorBrush(ThemeCatalog.R(Color.FromRgb(24, 20, 8))); i.HorizontalAlignment = HorizontalAlignment.Center; });
         sendRound = PadKey(new Border { Width = 40, Height = 40, CornerRadius = new(20), Background = new SolidColorBrush(Amber), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Amber), Child = sendGlyph }, "Send", Send);
         register(sendRound);
         var field = new Grid { ColumnDefinitions = { new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto }, new(), new() { Width = GridLength.Auto } } };
         field.Children.Add(Kit.Icon("\uE8BD", 16, "DS.TextMuted").Also(i => i.Margin = new(4, 0, 12, 0)));
         var sep = new Border { Width = 1, Height = 22, Margin = new(0, 0, 12, 0), Background = new SolidColorBrush(Line) }; Grid.SetColumn(sep, 1); field.Children.Add(sep);
-        var typed = new Grid { Children = { hint, Input } }; Grid.SetColumn(typed, 2); field.Children.Add(typed);
+        var typed = new Grid { Children = { hint, ghost, Input } }; Grid.SetColumn(typed, 2); field.Children.Add(typed);
         Grid.SetColumn(sendRound, 3); field.Children.Add(sendRound);
         var bar = new Border { Margin = new(0, 10, 0, 0), CornerRadius = new(26), Padding = new(12, 4, 6, 4), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card), Child = field };
 
@@ -1193,6 +1219,16 @@ public sealed partial class AgentPanel
                 return after.Length == 24 && after[6] == m ? "" : $"controller reported mode {after[6]} instead of {m}.";
             }
             catch (Exception error) when (PadFailure(error)) { return "couldn't set effect: " + error.Message; }
+        }
+        if (spec.Kind == X20Ctl.Zone.Lighting.LightingEffectKind.BatteryLevel)
+        {
+            if (ReviewSandbox.Active) return "";
+            try
+            {
+                await BatteryLightingService.ApplyAsync(BatteryLightingService.Load().Colours);
+                return "";
+            }
+            catch (Exception error) when (PadFailure(error)) { return "couldn't start battery mode: " + error.Message; }
         }
         var status = await LightingEffectsService.ApplyAsync(spec);
         return status.LastError == null ? "" : "couldn't start effect: " + status.LastError;

@@ -135,10 +135,15 @@ internal static class LightingEffectsService
             spec = resolved;
         }
         var (input, pressAge) = ReadInputState();
-        var frame = LightingEffectEngine.Evaluate(spec, DateTimeOffset.UtcNow - effectStartUtc, input, pressAge);
+        var frame = EvaluateFrame(spec, DateTimeOffset.UtcNow - effectStartUtc, input, pressAge);
         previewFrame = frame;
         return frame;
     }
+
+    static LightingFrame EvaluateFrame(LightingEffectSpec spec, TimeSpan elapsed, LightingInputState input, TimeSpan? pressAge) =>
+        spec.Kind == LightingEffectKind.ScreenAmbient && !ReviewSandbox.Active
+            ? ScreenAmbientSampler.Sample(spec)
+            : LightingEffectEngine.Evaluate(spec, elapsed, input, pressAge);
 
     public static void SetPreviewDraft(LightingEffectSpec draftSpec)
     {
@@ -420,7 +425,7 @@ internal static class LightingEffectsService
                     while (!ct.IsCancellationRequested)
                     {
                         var (input, pressAge) = ReadInputState();
-                        var frame = LightingEffectEngine.Evaluate(spec, DateTimeOffset.UtcNow - effectStartUtc, input, pressAge);
+                        var frame = EvaluateFrame(spec, DateTimeOffset.UtcNow - effectStartUtc, input, pressAge);
                         previewFrame = frame;
 
                         bool sent = await session.SendFrameAsync(frame, ct);
