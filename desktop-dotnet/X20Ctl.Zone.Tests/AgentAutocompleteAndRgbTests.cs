@@ -9,6 +9,9 @@ public sealed class AgentAutocompleteAndRgbTests
     [Theory]
     [InlineData("", "")]
     [InlineData("   ", "")]
+    [InlineData("make my led", "s to ambient")]
+    [InlineData("make my led ", "to ambient")]
+    [InlineData("make my led c", "yan")]
     [InlineData("Change my RGB to ", "ambient")]
     [InlineData("Change my RGB ", "to ambient")]
     [InlineData("Change my RGB to amb", "ient")]
@@ -16,7 +19,11 @@ public sealed class AgentAutocompleteAndRgbTests
     [InlineData("set lights to batt", "ery mode")]
     [InlineData("Enable a", "mbient mode")]
     [InlineData("My right stick ", "drifts")]
+    [InlineData("make my aim ", "more precise")]
+    [InlineData("remap LB ", "to B")]
     [InlineData("Open ", "diagnostics")]
+    [InlineData("open c", "urves")]
+    [InlineData("how do i ", "use ambient mode?")]
     public void AutocompletePredictsExpectedSuffix(string typed, string expectedSuffix)
     {
         Assert.Equal(expectedSuffix, AgentAutocomplete.Suggest(typed));

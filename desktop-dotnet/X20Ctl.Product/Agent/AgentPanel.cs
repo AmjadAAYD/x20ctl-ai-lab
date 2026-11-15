@@ -270,7 +270,8 @@ public sealed partial class AgentPanel
         void RefreshGhost()
         {
             string text = Input.Text;
-            bool eligible = text.Length > 0 && Input.SelectionLength == 0 && Input.CaretIndex == text.Length && Input.LineCount <= 1 && Input.ExtentWidth <= Math.Max(0, Input.ViewportWidth + 1);
+            bool fitsSingleLine = Input.LineCount <= 1 && (Input.ViewportWidth <= 0 || Input.ExtentWidth <= Input.ViewportWidth + 2);
+            bool eligible = text.Length > 0 && Input.SelectionLength == 0 && Input.CaretIndex == text.Length && fitsSingleLine;
             activeGhost = eligible ? AgentAutocomplete.Suggest(text) : "";
             ghostTyped.Text = text;
             ghostSuffixRun.Text = activeGhost;
