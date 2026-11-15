@@ -1,5 +1,8 @@
 # Rapport d'Ingénierie (PFE) — Chatbot Intelligent Intégré à X20CTL (`Agent XCTL`)
 
+**Équipe (Groupe G17) :** Amjad AAYD, Saad ZINE, Salma RAHMANI  
+**Dépôt public :** [`AmjadAAYD/x20ctl-ai-lab`](https://github.com/AmjadAAYD/x20ctl-ai-lab) (branche `lab/qwen-v0.022`)
+
 > **Portée du document :** Livrable d'ingénierie répondant au cahier des charges *« Développer et déployer un chatbot intelligent intégré à une plateforme »*. Chaque choix architectural, algorithmique et ergonomique ci-dessous est justifié par des exigences, des contraintes mesurées, des comparaisons d'options ou des résultats de tests reproductibles issus du dépôt `x20ctl-ai-lab` (branche `lab/qwen-v0.022`).
 
 ---

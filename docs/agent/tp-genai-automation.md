@@ -1,8 +1,9 @@
 # Exploring the Power of Generative AI to Automate Everyday Tasks
 
-**Name and surname 1:** …………………….  
-**Name and surname 2:** ……………………..  
-**Group number:** ……………….  
+**Name and surname 1:** Amjad AAYD  
+**Name and surname 2:** Saad ZINE  
+**Name and surname 3:** Salma RAHMANI  
+**Group number:** G17  
 **Shared document Number:** ……….
 
 ---
@@ -201,12 +202,17 @@ flowchart LR
 
 #### Individual Reflections *(complete individually before submission)*
 
-**Member 1 — Name: …………………….**  
+**Member 1 — Amjad AAYD:**  
 * Most useful lesson from automating this task with GenAI: ………………………………………  
 * Hardest debugging/validation challenge encountered: ……………………………………………  
 * Where human judgment remained essential: …………………………………………………………  
 
-**Member 2 — Name: …………………….**  
+**Member 2 — Saad ZINE:**  
+* Most useful lesson from automating this task with GenAI: ………………………………………  
+* Hardest debugging/validation challenge encountered: ……………………………………………  
+* Where human judgment remained essential: …………………………………………………………  
+
+**Member 3 — Salma RAHMANI:**  
 * Most useful lesson from automating this task with GenAI: ………………………………………  
 * Hardest debugging/validation challenge encountered: ……………………………………………  
 * Where human judgment remained essential: …………………………………………………………  

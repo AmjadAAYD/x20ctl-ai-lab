@@ -1,6 +1,6 @@
 # Agent XCTL: teacher guide (IA Générative Textuelle)
 
-Private class project. Current AI Lab work is on branch `lab/qwen-v0.022` of `AmjadAAYD/x20ctl-ai-lab` (`x20ctl-lab-qwen-main`). The public X20CTL download does not contain the local-model / AI Lab code unless granted access to this repository.
+Public class project (**Group G17:** Amjad AAYD, Saad ZINE, Salma RAHMANI). Current AI Lab work is on branch `lab/qwen-v0.022` of [`AmjadAAYD/x20ctl-ai-lab`](https://github.com/AmjadAAYD/x20ctl-ai-lab) (`x20ctl-lab-qwen-main`). The standard X20CTL download does not contain the local-model / AI Lab code unless built from this repository.
 
 ## What it is
 
