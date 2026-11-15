@@ -20,6 +20,70 @@ internal static class LightingBleClient
         finally { }
     }
 
+    /// <summary>Reads the full 24-byte lighting record, and optionally probes a trailing RGB offset (7..21, or 0 = fill tail 7..23 with 0000FF) before restoring the original record.</summary>
+    public static async Task<string> ProbeLightingAsync(int? testOffset = null)
+    {
+        if (testOffset is { } off && off != 0 && (off < 7 || off > 21))
+            throw new ArgumentOutOfRangeException(nameof(testOffset), "Offset must be 0 or between 7 and 21.");
+
+        await using var gate = await NativeBleClient.AcquireConfigGateAsync();
+        return await SessionAsync(async (exchange, next) =>
+        {
+            var sb = new System.Text.StringBuilder();
+            var original = await LightingTransaction.ReadAsync((o, p, s, l) => exchange(o, p, s, l), next);
+            sb.AppendLine($"Original 24-byte record: {Convert.ToHexString(original)}");
+            sb.AppendLine($"  RGB[0..2]       = #{original[0]:X2}{original[1]:X2}{original[2]:X2}");
+            sb.AppendLine($"  Byte[3]         = 0x{original[3]:X2}");
+            sb.AppendLine($"  Byte[4] (CLR)   = 0x{original[4]:X2}");
+            sb.AppendLine($"  Byte[5] (Bright)= 0x{original[5]:X2}");
+            sb.AppendLine($"  Byte[6] (Mode)  = 0x{original[6]:X2} ({LightingRecord.ModeName(original[6])})");
+            sb.AppendLine($"  Tail[7..23]     = {Convert.ToHexString(original, 7, 17)}");
+
+            if (testOffset is { } offset)
+            {
+                var target = LightingRecord.WithFrame(original, 0xFF, 0x00, 0x00, 0xFF, LightingRecord.ModeSolid);
+                if (offset == 0)
+                {
+                    for (int i = 7; i + 2 < 24; i += 3)
+                    {
+                        target[i] = 0x00;
+                        target[i + 1] = 0x00;
+                        target[i + 2] = 0xFF;
+                    }
+                    target[22] = 0x00;
+                    target[23] = 0xFF;
+                    sb.AppendLine();
+                    sb.AppendLine("Probing ALL tail bytes [7..23] with Blue (0000FF) while RGB[0..2] = FF0000 (Red)...");
+                }
+                else
+                {
+                    target[offset] = 0x00;
+                    target[offset + 1] = 0x00;
+                    target[offset + 2] = 0xFF;
+                    sb.AppendLine();
+                    sb.AppendLine($"Probing offset {offset}..{offset + 2} = 0000FF (Blue) while RGB[0..2] = FF0000 (Red)...");
+                }
+                try
+                {
+                    await LightingTransaction.WriteRecordAsync((o, p, s, l) => exchange(o, p, s, l), target, TimeSpan.FromMilliseconds(150));
+                    var observed = await LightingTransaction.ReadAsync((o, p, s, l) => exchange(o, p, s, l), next);
+                    sb.AppendLine($"Read-back record: {Convert.ToHexString(observed)}");
+                    sb.AppendLine($"  Tail[7..23]     = {Convert.ToHexString(observed, 7, 17)}");
+                    sb.AppendLine(observed.SequenceEqual(target)
+                        ? "  Status: Controller ACCEPTED and persisted the trailing bytes! Check LEDs visually."
+                        : "  Status: Controller modified or stripped the trailing bytes on read-back.");
+                    await Task.Delay(4000);
+                }
+                finally
+                {
+                    await LightingTransaction.WriteRecordAsync((o, p, s, l) => exchange(o, p, s, l), original, TimeSpan.FromMilliseconds(150));
+                    sb.AppendLine("Restored original 24-byte lighting record.");
+                }
+            }
+            return sb.ToString();
+        });
+    }
+
     /// <summary>Reads one stored macro. Asking for the macro limits first makes the record count entries, not bytes.</summary>
     public static async Task<byte[]> ReadMacroAsync(int slot)
     {
@@ -169,7 +233,7 @@ internal static class LightingBleClient
 
     static Task<byte[]> ConnectedAsync(byte[]? colour, byte? mode, byte? brightnessByte) => SessionAsync((exchange, next) =>
         LightingTransaction.RunAsync((o, p, s, l) => exchange(o, p, s, l), next, colour, mode, brightnessByte,
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "x20ctl", "lighting"), TimeSpan.FromMilliseconds(150)));
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "x20ctl", "lighting"), TimeSpan.FromMilliseconds(20)));
 
     /// <summary>Persistent GATT session on the X20 Pro lighting channel for low-latency effect streaming (chunkGap = 0ms).</summary>
     internal sealed class LightingStreamSession : IAsyncDisposable

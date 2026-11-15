@@ -8,16 +8,20 @@ namespace X20Ctl.Product;
 
 internal sealed class LightingWindow : Window
 {
-    readonly TextBox hex=new(){MaxLength=7,Padding=new(12,9,12,9)};
-    readonly TextBlock rgb=new(){Margin=new(0,8,0,0)},status=new(){Text="Choose a colour and effect, then Apply.",TextWrapping=TextWrapping.Wrap,Margin=new(0,12,0,0),MinHeight=42};
-    readonly Border preview=new(){BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Height=180,CornerRadius=new(12),Margin=new(0,0,0,18)};
+    readonly TextBox hex=new(){MaxLength=7,Padding=new(12,8,12,8)};
+    readonly TextBlock rgb=new(){Margin=new(0,6,0,0)},status=new(){Text="Instant Apply is ON — pick any colour or mode to update immediately.",TextWrapping=TextWrapping.Wrap,Margin=new(0,12,0,0),MinHeight=38};
+    readonly Border preview=new(){BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Height=116,CornerRadius=new(14),Margin=new(0,0,0,14)};
     readonly Button read=ActionButton("Read controller"),apply=ActionButton("Apply");
-    readonly ComboBox modes=new(){ItemsSource=new[]{"Solid","Rainbow","Breathe","Cycle","Off","Battery"},SelectedIndex=0,MinWidth=115,Margin=new(0,0,8,0)};
+    readonly ComboBox modes=new(){ItemsSource=new[]{"Solid","Rainbow","Breathe","Cycle","Off","Battery"},SelectedIndex=0,MinWidth=115,Margin=new(0,0,8,0),Visibility=Visibility.Collapsed};
+    readonly Button[] modePills=new Button[6];
+    readonly Button instantToggleBtn=new(){Content="Instant Apply: ON",Padding=new(12,6,12,6),FontSize=12,Margin=new(12,0,0,0),Style=DS.Style("DS.Primary"),ToolTip="Immediately writes colour and mode changes to the controller over BLE."};
+    readonly System.Windows.Threading.DispatcherTimer instantDebounce=new(){Interval=TimeSpan.FromMilliseconds(75)};
+    bool instantApply=true;
     readonly Slider brightness=new(){Minimum=0,Maximum=100,Value=100,SmallChange=1,LargeChange=10,TickFrequency=1,IsSnapToTickEnabled=true,MinHeight=28,Margin=new(0,4,0,4),ToolTip="Controller brightness (0x00 Off .. 0x01 Moonlight .. 0xFF Max)."};
     readonly TextBlock brightnessValue=new(){Text="100% (0xFF)",HorizontalAlignment=HorizontalAlignment.Right};
     readonly WrapPanel viewTabs=new();
-    readonly Border leftLedBar=new(){Width=48,Height=10,CornerRadius=new(5),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Margin=new(0,0,6,0)};
-    readonly Border rightLedBar=new(){Width=48,Height=10,CornerRadius=new(5),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Margin=new(0,0,8,0)};
+    readonly Border leftLedBar=new(){Width=56,Height=11,CornerRadius=new(5.5),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Margin=new(0,0,6,0)};
+    readonly Border rightLedBar=new(){Width=56,Height=11,CornerRadius=new(5.5),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),Margin=new(0,0,10,0)};
     readonly TextBlock ledBarLabel=new(){FontSize=12,VerticalAlignment=VerticalAlignment.Center};
     readonly Button[] sectionBtns=new Button[3];
     FrameworkElement? staticView,effectsView,presetsView,actionFooter;
@@ -26,12 +30,19 @@ internal sealed class LightingWindow : Window
     bool syncingBrightness;
     readonly ColourField square=new(false),hueStrip=new(true);
     readonly List<(Button Button,int Rgb)> swatches=[];
-    readonly StackPanel batteryPanel=new(){Visibility=Visibility.Collapsed,Margin=new(0,0,0,24)};
+    readonly StackPanel batteryPanel=new(){Visibility=Visibility.Collapsed,Margin=new(0,12,0,16)};
     readonly Button[] levelButtons=new Button[4];
     readonly int[] levelColours=(int[])BatteryLightingService.Load().Colours.Clone();
     static readonly byte[] ModeValues=[2,1,3,4,0];
+    static readonly (string Name, int Rgb)[] CuratedSwatches =
+    [
+        ("Electric Cyan", 0x00E5FF), ("Sky Blue", 0x2979FF), ("Royal Indigo", 0x5E35B1), ("Neon Violet", 0xAA00FF),
+        ("Hot Magenta", 0xFF00AA), ("Crimson Red", 0xFF1744), ("Lava Orange", 0xFF6D00), ("Amber Gold", 0xFFAB00),
+        ("Solar Yellow", 0xFFD600), ("Lime Pulse", 0x76FF03), ("Emerald", 0x00E676), ("Mint Teal", 0x1DE9B6),
+        ("Coral Pink", 0xFF5252), ("Ice Blue", 0x80D8FF), ("Warm White", 0xFFE8C8), ("Pure White", 0xFFFFFF),
+    ];
     const int BatteryMode=5;
-    int selected=0xff0000,editingLevel=3; double hue,saturation=1,value=1; bool busy,loadingLevel; byte level=0x50;
+    int selected=0xff0000,editingLevel=3; double hue,saturation=1,value=1; bool busy,loadingLevel,pendingInstantWrite; byte level=0x50;
     bool BatterySelected=>modes.SelectedIndex==BatteryMode;
     static Button ActionButton(string text)=>new(){Content=text,Style=DS.Style("ActionButton"),Padding=new(20,10,20,10),MinWidth=130};
     public LightingWindow()
@@ -44,38 +55,47 @@ internal sealed class LightingWindow : Window
         var root=new Grid();root.RowDefinitions.Add(new(){Height=GridLength.Auto});root.RowDefinitions.Add(new());root.RowDefinitions.Add(new(){Height=GridLength.Auto});Content=root;
         var columns=new Grid();columns.ColumnDefinitions.Add(new(){Width=new(1.6,GridUnitType.Star)});columns.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});staticView=columns;Grid.SetRow(columns,1);root.Children.Add(columns);
         var panel=new StackPanel();var detail=new StackPanel();
-        var left=Kit.Panel("Colour", "Choose from the palette or create a custom colour.",null,new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(24));left.Margin=new(0,0,16,0);columns.Children.Add(left);
-        var right=Kit.Panel("Selected colour",null,null,new ScrollViewer{Content=detail,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(24));Grid.SetColumn(right,1);columns.Children.Add(right);
-        var picker=new Grid{Height=260,Margin=new(0,8,0,20)};
-        picker.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});picker.ColumnDefinitions.Add(new(){Width=new(26)});
+        var left=Kit.Panel("Colour Studio", "Pick a colour or tap any swatch for instant controller sync.",null,new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(22));left.Margin=new(0,0,16,0);columns.Children.Add(left);
+        var right=Kit.Panel("Mode & Brightness",null,null,new ScrollViewer{Content=detail,VerticalScrollBarVisibility=ScrollBarVisibility.Auto},new Thickness(22));Grid.SetColumn(right,1);columns.Children.Add(right);
+        var picker=new Grid{Height=270,Margin=new(0,8,0,18)};
+        picker.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});picker.ColumnDefinitions.Add(new(){Width=new(28)});
         square.Margin=new(0,0,14,0);square.ToolTip="Saturation and brightness · arrow keys adjust";hueStrip.ToolTip="Hue · up/down keys adjust";
         Grid.SetColumn(hueStrip,1);picker.Children.Add(square);picker.Children.Add(hueStrip);panel.Children.Add(picker);
-        detail.Children.Add(preview);detail.Children.Add(Kit.Text("Hex colour",13,"DS.TextSoft").Also(t=>t.Margin=new(0,0,0,8)));detail.Children.Add(hex);detail.Children.Add(rgb);
-        var brightnessHeader=new Grid{Margin=new(0,20,0,2)};brightnessHeader.ColumnDefinitions.Add(new());brightnessHeader.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
+        detail.Children.Add(preview);detail.Children.Add(Kit.Text("Hex colour",13,"DS.TextSoft").Also(t=>t.Margin=new(0,0,0,6)));detail.Children.Add(hex);detail.Children.Add(rgb);
+        var brightnessHeader=new Grid{Margin=new(0,16,0,2)};brightnessHeader.ColumnDefinitions.Add(new());brightnessHeader.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
         brightnessHeader.Children.Add(Kit.Text("Brightness",13,"DS.TextSoft"));brightnessValue.Foreground=DS.Brush("DS.TextSoft");Grid.SetColumn(brightnessValue,1);brightnessHeader.Children.Add(brightnessValue);
         System.Windows.Automation.AutomationProperties.SetName(brightness,"RGB brightness");
         detail.Children.Add(brightnessHeader);detail.Children.Add(brightness);
         var quickBright=new WrapPanel{Margin=new(0,2,0,4)};
-        var moonlightBtn=new Button{Content="Moonlight (0x01)",Style=DS.Style("ActionButton"),Padding=new(10,4,10,4),FontSize=12,Margin=new(0,0,8,0),ToolTip="Ultra-faint 1% moonlight glow (0x01)"};
-        moonlightBtn.Click+=(_,_)=>{if(!busy)SetBrightnessByte(LightingRecord.MoonlightBrightnessByte);};
-        var offBrightBtn=new Button{Content="0% Off (0x00)",Style=DS.Style("ActionButton"),Padding=new(10,4,10,4),FontSize=12,ToolTip="Turn LEDs off while keeping colour/mode (0x00)"};
-        offBrightBtn.Click+=(_,_)=>{if(!busy)SetBrightnessByte(LightingRecord.MinBrightnessByte);};
+        var moonlightBtn=new Button{Content="Moonlight (1%)",Style=DS.Style("ActionButton"),Padding=new(12,5,12,5),FontSize=12,Margin=new(0,0,8,0),ToolTip="Ultra-faint 1% moonlight glow (0x01)"};
+        moonlightBtn.Click+=(_,_)=>{if(!busy){SetBrightnessByte(LightingRecord.MoonlightBrightnessByte);TriggerInstantApply();}};
+        var offBrightBtn=new Button{Content="0% Off",Style=DS.Style("ActionButton"),Padding=new(12,5,12,5),FontSize=12,ToolTip="Turn LEDs off while keeping colour/mode (0x00)"};
+        offBrightBtn.Click+=(_,_)=>{if(!busy){SetBrightnessByte(LightingRecord.MinBrightnessByte);TriggerInstantApply();}};
         quickBright.Children.Add(moonlightBtn);quickBright.Children.Add(offBrightBtn);detail.Children.Add(quickBright);
-        brightness.ValueChanged+=(_,_)=>{if(syncingBrightness||busy)return;level=LightingRecord.BrightnessByteFor(brightness.Value);brightnessValue.Text=$"{Math.Round(brightness.Value):0}% (0x{level:X2})";};
-        square.Changed+=(x,y)=>{saturation=x;value=1-y;Refresh();};hueStrip.Changed+=(_,y)=>{hue=y*360;Refresh();};
-        hex.LostFocus+=(_,_)=>CommitHex();hex.KeyDown+=(_,e)=>{if(e.Key==Key.Enter){CommitHex();e.Handled=true;}};
-        var palette=new System.Windows.Controls.Primitives.UniformGrid{Columns=12,Margin=new(-3,10,-3,0)};
-        foreach(var preset in ColourPalette.Presets)
+        brightness.ValueChanged+=(_,_)=>{if(syncingBrightness||busy)return;level=LightingRecord.BrightnessByteFor(brightness.Value);brightnessValue.Text=$"{Math.Round(brightness.Value):0}% (0x{level:X2})";TriggerInstantApply();};
+        square.Changed+=(x,y)=>{saturation=x;value=1-y;Refresh();TriggerInstantApply();};hueStrip.Changed+=(_,y)=>{hue=y*360;Refresh();TriggerInstantApply();};
+        hex.LostFocus+=(_,_)=>CommitHex();hex.KeyDown+=(_,e)=>{if(e.Key==Key.Enter){if(CommitHex())TriggerInstantApply();e.Handled=true;}};
+        var palette=new System.Windows.Controls.Primitives.UniformGrid{Columns=8,Margin=new(-4,6,-4,0)};
+        foreach(var (name,rgbVal) in CuratedSwatches)
         {
-            var b=new Button{Height=40,Margin=new(3),Background=new SolidColorBrush(ToColour(preset.Rgb)),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),ToolTip=$"{preset.Name} · #{preset.Rgb:X6}"};
-            System.Windows.Automation.AutomationProperties.SetName(b,$"{preset.Name}, #{preset.Rgb:X6}");
+            var b=new Button{Height=44,Margin=new(4),Background=new SolidColorBrush(ToColour(rgbVal)),BorderBrush=DS.Brush("DS.Hairline"),BorderThickness=new(1),ToolTip=$"{name} · #{rgbVal:X6}"};
+            System.Windows.Automation.AutomationProperties.SetName(b,$"{name}, #{rgbVal:X6}");
             b.Template=SwatchTemplate();
-            b.Click+=(_,_)=>{if(!busy)SetColour(preset.Rgb);};palette.Children.Add(b);swatches.Add((b,preset.Rgb));
+            b.Click+=(_,_)=>{if(!busy){SetColour(rgbVal);TriggerInstantApply(immediate:true);}};palette.Children.Add(b);swatches.Add((b,rgbVal));
         }
-        panel.Children.Add(palette);panel.Children.Add(Kit.Text("48 prepared colours · hover for names",13,"DS.TextSoft").Also(t=>t.Margin=new(0,16,0,8)));
-        detail.Children.Add(Kit.Text("Effect",13,"DS.TextSoft").Also(t=>t.Margin=new(0,24,0,8)));
-        modes.HorizontalAlignment=HorizontalAlignment.Stretch;modes.Margin=new(0);modes.MinHeight=44;detail.Children.Add(modes);
-        detail.Children.Add(Kit.Text("Solid · Rainbow (0x01) · Breathe · Cycle · Off · Battery",13,"DS.TextMuted").Also(t=>t.Margin=new(0,10,0,24)));
+        panel.Children.Add(palette);panel.Children.Add(Kit.Text("16 curated quick colours · click any swatch to apply instantly",12.5,"DS.TextMuted").Also(t=>t.Margin=new(0,12,0,4)));
+        detail.Children.Add(Kit.Text("Hardware Mode",13,"DS.TextSoft").Also(t=>t.Margin=new(0,18,0,8)));
+        detail.Children.Add(modes);
+        var modeGrid=new WrapPanel{Margin=new(0,0,0,8)};
+        string[] modeNames=["Solid","Rainbow","Breathe","Cycle","Off","Battery"];
+        for(int i=0;i<modeNames.Length;i++)
+        {
+            int idx=i;
+            var mb=new Button{Content=modeNames[i],Padding=new(12,6,12,6),FontSize=12.5,Margin=new(0,0,6,6),Style=DS.Style(i==0?"DS.Primary":"ActionButton")};
+            mb.Click+=(_,_)=>{if(!busy){modes.SelectedIndex=idx;TriggerInstantApply(immediate:true);}};
+            modePills[i]=mb;modeGrid.Children.Add(mb);
+        }
+        detail.Children.Add(modeGrid);
         batteryPanel.Children.Add(Kit.Text("Battery level colours",13,"DS.TextSoft").Also(t=>t.Margin=new(0,0,0,8)));
         var gauge=new System.Windows.Controls.Primitives.UniformGrid{Columns=4,Margin=new(-3,0,-3,0)};
         for(int i=0;i<4;i++)
@@ -93,8 +113,10 @@ internal sealed class LightingWindow : Window
         apply.Style=DS.Style("DS.Primary");apply.MinWidth=160;Grid.SetColumn(apply,1);footer.Children.Add(apply);
         var actionPanel=Kit.Panel(null,null,null,footer,new Thickness(20,14,20,14));actionPanel.Margin=new(0,16,0,0);actionFooter=actionPanel;Grid.SetRow(actionPanel,2);root.Children.Add(actionPanel);
         BuildTopStudioBarAndSections(root);
-        read.Click+=async(_,_)=>await Run(false);apply.Click+=async(_,_)=>{if(!CommitHex()||modes.SelectedIndex<0)return;await LightingEffectsService.StopAsync(restoreBaseline:false);if(BatterySelected)await ApplyBattery();else await Run(true,ModeValues[modes.SelectedIndex]);};
-        modes.SelectionChanged+=(_,_)=>{apply.IsEnabled=!busy&&modes.SelectedIndex>=0;batteryPanel.Visibility=BatterySelected?Visibility.Visible:Visibility.Collapsed;if(BatterySelected)EditLevel(editingLevel);};
+        read.Click+=async(_,_)=>await Run(false);apply.Click+=async(_,_)=>await ApplyActiveSelectionAsync();
+        instantDebounce.Tick+=async(_, _)=>{instantDebounce.Stop();await ApplyActiveSelectionAsync();};
+        instantToggleBtn.Click+=(_,_)=>{instantApply=!instantApply;instantToggleBtn.Content=instantApply?"Instant Apply: ON":"Instant Apply: OFF";instantToggleBtn.Style=DS.Style(instantApply?"DS.Primary":"ActionButton");status.Text=instantApply?"Instant Apply is ON — changes sync immediately.":"Instant Apply is OFF — click Apply when ready.";};
+        modes.SelectionChanged+=(_,_)=>{apply.IsEnabled=!busy&&modes.SelectedIndex>=0;batteryPanel.Visibility=BatterySelected?Visibility.Visible:Visibility.Collapsed;for(int i=0;i<modePills.Length;i++)if(modePills[i]!=null)modePills[i].Style=DS.Style(i==modes.SelectedIndex?"DS.Primary":"ActionButton");if(BatterySelected)EditLevel(editingLevel);};
         SetColour(0xff0000);ShowLevel(0x50);
         if(BatteryLightingService.Load().Enabled)modes.SelectedIndex=BatteryMode;
     }
@@ -124,11 +146,11 @@ internal sealed class LightingWindow : Window
         effectsView=effectsSection.EffectsView;Grid.SetRow(effectsView,1);root.Children.Add(effectsView);
         presetsView=effectsSection.PresetsAndGamesView;Grid.SetRow(presetsView,1);root.Children.Add(presetsView);
 
-        string[] labels=["Colours & Battery","Effects Studio","Presets & Game Auto"];
+        string[] labels=["Colours","Effects Studio","Presets & Auto"];
         for(int i=0;i<labels.Length;i++)
         {
             int idx=i;
-            var btn=new Button{Content=labels[i],Padding=new(12,6,12,6),FontSize=12.5,Margin=new(0,0,8,4),Style=DS.Style(i==0?"DS.Primary":"ActionButton")};
+            var btn=new Button{Content=labels[i],Padding=new(14,7,14,7),FontSize=12.5,Margin=new(0,0,8,0),Style=DS.Style(i==0?"DS.Primary":"ActionButton")};
             btn.Click+=(_,_)=>ShowSection(idx);
             sectionBtns[i]=btn;
             viewTabs.Children.Add(btn);
@@ -141,6 +163,7 @@ internal sealed class LightingWindow : Window
         ledPreviewStrip.Children.Add(Kit.Text("R ",11.5,"DS.TextMuted").Also(t=>t.VerticalAlignment=VerticalAlignment.Center));
         ledPreviewStrip.Children.Add(rightLedBar);
         ledPreviewStrip.Children.Add(ledBarLabel);
+        ledPreviewStrip.Children.Add(instantToggleBtn);
 
         var headerWrap=new WrapPanel{VerticalAlignment=VerticalAlignment.Center};
         viewTabs.Margin=new(0,0,14,0);
@@ -168,9 +191,27 @@ internal sealed class LightingWindow : Window
             frame=new((byte)((selected>>16)&0xff),(byte)((selected>>8)&0xff),(byte)(selected&0xff),level,ModeValues[Math.Clamp(modes.SelectedIndex,0,ModeValues.Length-1)]);
 
         double alpha=frame.Brightness==0?0.06:Math.Clamp(0.14+0.86*(frame.Brightness/255.0),0.06,1.0);
-        var brush=new SolidColorBrush(Color.FromArgb((byte)Math.Round(alpha*255),frame.R,frame.G,frame.B));
+        var glowColor=Color.FromArgb((byte)Math.Round(alpha*255),frame.R,frame.G,frame.B);
+        var brush=new SolidColorBrush(glowColor);
         leftLedBar.Background=rightLedBar.Background=brush;
-        ledBarLabel.Text=$"{frame.Hex} · 0x{frame.Brightness:X2} (2 bars linked)";
+        var shadow=new System.Windows.Media.Effects.DropShadowEffect{Color=Color.FromRgb(frame.R,frame.G,frame.B),BlurRadius=frame.Brightness>0?14:0,ShadowDepth=0,Opacity=frame.Brightness>0?0.85:0};
+        leftLedBar.Effect=rightLedBar.Effect=shadow;
+        ledBarLabel.Text=$"{frame.Hex} · {Math.Round(LightingRecord.BrightnessPercentFor(frame.Brightness))}%";
+    }
+    void TriggerInstantApply(bool immediate=false)
+    {
+        if(!instantApply||ReviewSandbox.Active)return;
+        if(immediate){instantDebounce.Stop();_=ApplyActiveSelectionAsync();}
+        else{instantDebounce.Stop();instantDebounce.Start();}
+    }
+    async Task ApplyActiveSelectionAsync()
+    {
+        if(busy){pendingInstantWrite=true;return;}
+        if(!CommitHex()||modes.SelectedIndex<0)return;
+        await LightingEffectsService.StopAsync(restoreBaseline:false);
+        if(BatterySelected)await ApplyBattery();
+        else await Run(true,ModeValues[modes.SelectedIndex]);
+        if(pendingInstantWrite){pendingInstantWrite=false;TriggerInstantApply(immediate:true);}
     }
     static Color ToColour(int colour)=>Color.FromRgb((byte)(colour>>16),(byte)(colour>>8),(byte)colour);
     static ControlTemplate SwatchTemplate()

@@ -18,11 +18,10 @@ internal sealed class LightingEffectsSection
 
     readonly WrapPanel kindPillsPanel = new() { Margin = new(0, 0, 0, 12) };
     readonly WrapPanel palettePanel = new() { Margin = new(0, 4, 0, 10) };
-    readonly WrapPanel writeCapPanel = new() { Margin = new(0, 2, 0, 10) };
 
     readonly Slider minBrightSlider = new() { Minimum = 0, Maximum = 255, Value = 1, SmallChange = 1, LargeChange = 16, TickFrequency = 1, IsSnapToTickEnabled = true, MinHeight = 26 };
-    readonly Slider maxBrightSlider = new() { Minimum = 1, Maximum = 255, Value = 192, SmallChange = 1, LargeChange = 16, TickFrequency = 1, IsSnapToTickEnabled = true, MinHeight = 26 };
-    readonly Slider intervalSlider = new() { Minimum = 330, Maximum = 3000, Value = 360, SmallChange = 20, LargeChange = 100, TickFrequency = 10, IsSnapToTickEnabled = true, MinHeight = 26 };
+    readonly Slider maxBrightSlider = new() { Minimum = 1, Maximum = 255, Value = 224, SmallChange = 1, LargeChange = 16, TickFrequency = 1, IsSnapToTickEnabled = true, MinHeight = 26 };
+    readonly Slider intervalSlider = new() { Minimum = 60, Maximum = 1500, Value = 80, SmallChange = 10, LargeChange = 50, TickFrequency = 10, IsSnapToTickEnabled = true, MinHeight = 26 };
     readonly Slider periodSlider = new() { Minimum = 800, Maximum = 15000, Value = 4200, SmallChange = 200, LargeChange = 1000, TickFrequency = 100, IsSnapToTickEnabled = true, MinHeight = 26 };
     readonly Slider idleSlider = new() { Minimum = 5, Maximum = 300, Value = 60, SmallChange = 5, LargeChange = 15, TickFrequency = 5, IsSnapToTickEnabled = true, MinHeight = 26 };
 
@@ -42,17 +41,17 @@ internal sealed class LightingEffectsSection
 
     static readonly LightingEffectKind[] AnimatedKinds =
     [
+        LightingEffectKind.ScreenAmbient,
         LightingEffectKind.SmoothHueWave,
         LightingEffectKind.PaletteFade,
         LightingEffectKind.PaletteStep,
         LightingEffectKind.MoonlightPulse,
-        LightingEffectKind.DualStrobe,
         LightingEffectKind.EmberShimmer,
+        LightingEffectKind.DualStrobe,
         LightingEffectKind.TriggerGlow,
         LightingEffectKind.StickHeat,
         LightingEffectKind.ButtonFlash,
         LightingEffectKind.IdleSleepDim,
-        LightingEffectKind.ScreenAmbient,
     ];
 
     static readonly (int Cap, string Label)[] WriteCapChoices =
@@ -141,29 +140,54 @@ internal sealed class LightingEffectsSection
         cols.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
 
         var leftStack = new StackPanel();
-        leftStack.Children.Add(Kit.Text("Animation & Reactive Effects", 13, "DS.TextSoft").Also(t => t.Margin = new(0, 0, 0, 6)));
+        leftStack.Children.Add(Kit.Text("Tap any effect to preview and start immediately", 12.5, "DS.TextMuted").Also(t => t.Margin = new(0, 0, 0, 10)));
 
+        var cardGrid = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2, Margin = new(-4, 0, -4, 12) };
         foreach (var kind in AnimatedKinds)
         {
             var captured = kind;
-            var btn = PillButton(ShortEffectName(kind), () =>
+            var (accentHex, subtitle) = EffectCardMeta(kind);
+            var dot = new Border
+            {
+                Width = 10, Height = 10, CornerRadius = new(5),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(accentHex)),
+                Margin = new(0, 2, 10, 0), VerticalAlignment = VerticalAlignment.Top,
+            };
+            var textCol = new StackPanel();
+            textCol.Children.Add(Kit.Text(ShortEffectName(kind), 13.5, "DS.Text", FontWeights.SemiBold));
+            textCol.Children.Add(Kit.Text(subtitle, 11.5, "DS.TextMuted").Also(t => { t.TextTrimming = TextTrimming.CharacterEllipsis; t.Margin = new(0, 2, 0, 0); }));
+            var row = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(dot, Dock.Left);
+            row.Children.Add(dot);
+            row.Children.Add(textCol);
+
+            var btn = new Button
+            {
+                Content = row,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new(12, 10, 12, 10),
+                Margin = new(4),
+                Style = DS.Style("ActionButton"),
+            };
+            btn.Click += async (_, _) =>
             {
                 selectedKind = captured;
+                if (captured == LightingEffectKind.ScreenAmbient && intervalSlider.Value > 120)
+                    intervalSlider.Value = 70;
                 UpdateSelectionPills();
                 UpdateSliderLabels();
-                LightingEffectsService.SetPreviewDraft(BuildCurrentEffectSpec());
-            });
-            btn.Margin = new(0, 0, 6, 6);
+                await LightingEffectsService.ApplyAsync(BuildCurrentEffectSpec());
+            };
             kindButtons[kind] = btn;
-            kindPillsPanel.Children.Add(btn);
+            cardGrid.Children.Add(btn);
         }
-        leftStack.Children.Add(kindPillsPanel);
+        leftStack.Children.Add(cardGrid);
 
-        leftStack.Children.Add(Kit.Text("Color stops (Left & Right LED bars are hardware linked)", 13, "DS.TextSoft").Also(t => t.Margin = new(0, 4, 0, 4)));
+        leftStack.Children.Add(Kit.Text("Color stops & quick themes", 13, "DS.TextSoft").Also(t => t.Margin = new(0, 2, 0, 6)));
         leftStack.Children.Add(palettePanel);
 
-        var paletteActions = new WrapPanel { Margin = new(0, 0, 0, 14) };
-        paletteActions.Children.Add(PillButton("+ Add active picker colour", () =>
+        var paletteActions = new WrapPanel { Margin = new(0, 0, 0, 6) };
+        paletteActions.Children.Add(PillButton("+ Add picker colour", () =>
         {
             if (palette.Count >= 8) return;
             palette.Add($"#{getPickerRgb() & 0xffffff:X6}");
@@ -183,23 +207,13 @@ internal sealed class LightingEffectsSection
                 palette.Clear();
                 palette.AddRange(stops);
                 RenderPaletteSwatches();
+                if (LightingEffectsService.Status.IsRunning)
+                    _ = LightingEffectsService.ApplyAsync(BuildCurrentEffectSpec());
             }).Also(b => b.Margin = new(0, 0, 6, 6)));
         }
         leftStack.Children.Add(paletteActions);
 
-        leftStack.Children.Add(Kit.Text("Quick built-in effects (1-click launch)", 13, "DS.TextSoft").Also(t => t.Margin = new(0, 2, 0, 6)));
-        var quickGrid = new WrapPanel();
-        foreach (var preset in LightingEffectEngine.BuiltInPresets.Where(p => p.Spec.IsStreamedSoftwareEffect))
-        {
-            quickGrid.Children.Add(PillButton(preset.Name, () =>
-            {
-                LoadFromSpec(preset.Spec);
-                _ = LightingEffectsService.ApplyAsync(preset.Spec);
-            }).Also(b => b.Margin = new(0, 0, 8, 8)));
-        }
-        leftStack.Children.Add(quickGrid);
-
-        var leftCard = Kit.Panel("Custom effects studio", "Software-driven animations & input-reactive lighting over one persistent BLE link.", null,
+        var leftCard = Kit.Panel("Effects Studio", "Full-screen Ambient sync, smooth gradients & input-reactive modes.", null,
             new ScrollViewer { Content = leftStack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }, new Thickness(20));
         leftCard.Margin = new(0, 0, 14, 0);
         cols.Children.Add(leftCard);
@@ -246,24 +260,9 @@ internal sealed class LightingEffectsSection
         rightStack.Children.Add(idleLabel);
         rightStack.Children.Add(idleSlider);
 
-        rightStack.Children.Add(Kit.Text("Session write limit", 13, "DS.TextSoft").Also(t => t.Margin = new(0, 8, 0, 4)));
-        foreach (var (cap, label) in WriteCapChoices)
-        {
-            int captured = cap;
-            var btn = PillButton(label, () =>
-            {
-                selectedWriteCap = captured;
-                UpdateSelectionPills();
-            });
-            btn.Margin = new(0, 0, 6, 6);
-            capButtons[cap] = btn;
-            writeCapPanel.Children.Add(btn);
-        }
-        rightStack.Children.Add(writeCapPanel);
-
         var startBtn = new Button
         {
-            Content = "Start Effect",
+            Content = "Apply / Restart",
             Style = DS.Style("DS.Primary"),
             Padding = new(18, 9, 18, 9),
             Margin = new(0, 0, 10, 6),
@@ -277,7 +276,7 @@ internal sealed class LightingEffectsSection
             Margin = new(0, 0, 0, 6),
         };
         stopBtn.Click += async (_, _) => await LightingEffectsService.StopAsync(restoreBaseline: true);
-        rightStack.Children.Add(new WrapPanel { Margin = new(0, 8, 0, 10), Children = { startBtn, stopBtn } });
+        rightStack.Children.Add(new WrapPanel { Margin = new(0, 12, 0, 12), Children = { startBtn, stopBtn } });
 
         rightStack.Children.Add(new Border
         {
@@ -289,7 +288,7 @@ internal sealed class LightingEffectsSection
             Child = liveTelemetryText,
         });
 
-        var rightCard = Kit.Panel("Timing, brightness floor & BLE stream", "Minimum 330 ms interval + 0 ms chunk gap keeps Bluetooth responsive.", null,
+        var rightCard = Kit.Panel("Speed, Brightness & Live Stream", "Down to 60 ms interval + 0 ms chunk gap for snappy BLE sync.", null,
             new ScrollViewer { Content = rightStack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }, new Thickness(20));
         Grid.SetColumn(rightCard, 1);
         cols.Children.Add(rightCard);
@@ -669,6 +668,22 @@ internal sealed class LightingEffectsSection
         LightingEffectKind.IdleSleepDim => "Idle Nightlight",
         LightingEffectKind.ScreenAmbient => "Ambient Sync",
         _ => kind.ToString(),
+    };
+
+    static (string AccentHex, string Subtitle) EffectCardMeta(LightingEffectKind kind) => kind switch
+    {
+        LightingEffectKind.ScreenAmbient => ("#38BDF8", "Full-screen dominant colour sync"),
+        LightingEffectKind.SmoothHueWave => ("#A855F7", "Smooth 360° rainbow sweep"),
+        LightingEffectKind.PaletteFade => ("#EC4899", "Blended multi-stop gradient"),
+        LightingEffectKind.PaletteStep => ("#F59E0B", "Crisp multi-colour step jump"),
+        LightingEffectKind.MoonlightPulse => ("#60A5FA", "Soft breathing down to 1%"),
+        LightingEffectKind.EmberShimmer => ("#FB923C", "Warm flickering lava glow"),
+        LightingEffectKind.DualStrobe => ("#EF4444", "High-energy dual-colour flash"),
+        LightingEffectKind.TriggerGlow => ("#3B82F6", "Reacts to LT / RT trigger pull"),
+        LightingEffectKind.StickHeat => ("#14B8A6", "Reacts to stick deflection"),
+        LightingEffectKind.ButtonFlash => ("#22D3EE", "Flashes on button presses"),
+        LightingEffectKind.IdleSleepDim => ("#818CF8", "Auto-dims when controller idles"),
+        _ => ("#94A3B8", "Custom lighting effect"),
     };
 
     static string? PromptText(string title, string label, string initial)

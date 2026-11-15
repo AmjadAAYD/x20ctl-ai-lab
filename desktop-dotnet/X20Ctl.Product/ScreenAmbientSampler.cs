@@ -1,14 +1,39 @@
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using X20Ctl.Zone.Lighting;
 
 namespace X20Ctl.Product;
 
 /// <summary>
-/// Samples the dominant colour of the primary screen for Ambient Screen Sync lighting.
-/// Uses a small 16x9 downsampled capture so each poll stays fast and allocation-light.
+/// Full-screen high-quality Ambient Screen Sync sampler.
+/// Downsamples the entire primary monitor into a 32x18 buffer via GDI StretchBlt (HALFTONE)
+/// in ~2 ms and extracts a saturation-weighted dominant colour with fast smoothing.
 /// </summary>
 internal static class ScreenAmbientSampler
 {
-    static (byte R, byte G, byte B) lastRgb = (0x1E, 0x88, 0xE5);
+    const int SampleWidth = 32;
+    const int SampleHeight = 18;
+    const int Halftone = 4;
+    const int SrcCopy = 0x00CC0020;
+
+    static (double R, double G, double B) smoothRgb = (30, 136, 229);
+
+    [DllImport("user32.dll")]
+    static extern IntPtr GetDC(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+    [DllImport("gdi32.dll")]
+    static extern int SetStretchBltMode(IntPtr hdc, int mode);
+
+    [DllImport("gdi32.dll")]
+    static extern bool SetBrushOrgEx(IntPtr hdc, int x, int y, IntPtr pt);
+
+    [DllImport("gdi32.dll")]
+    static extern bool StretchBlt(
+        IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest,
+        IntPtr hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, int rop);
 
     public static LightingFrame Sample(LightingEffectSpec spec)
     {
@@ -19,44 +44,91 @@ internal static class ScreenAmbientSampler
             if (bounds.Width <= 0 || bounds.Height <= 0)
                 return Fallback(spec);
 
-            using var raw = new System.Drawing.Bitmap(bounds.Width / 60 is > 8 and < 64 ? bounds.Width / 60 : 24,
-                                                     bounds.Height / 60 is > 6 and < 40 ? bounds.Height / 60 : 14);
-            // CopyFromScreen(0,0,0,0, raw.Size) doesn't scale; capture full screen into a scaled graphics surface?
-            // CopyFromScreen always copies 1:1 pixels, so sample a 3x3 grid of 1x1 screen points or CopyFromScreen at center+edges.
-            // Sampling a 4x3 grid of points across the screen avoids allocating a full-screen 4K bitmap!
-            using var pixel = new System.Drawing.Bitmap(1, 1);
-            using var g = System.Drawing.Graphics.FromImage(pixel);
-
-            long sumR = 0, sumG = 0, sumB = 0;
-            int count = 0;
-            int cols = 4, rows = 3;
-            for (int row = 0; row < rows; row++)
+            using var small = new System.Drawing.Bitmap(SampleWidth, SampleHeight, PixelFormat.Format32bppArgb);
+            IntPtr screenDc = GetDC(IntPtr.Zero);
+            if (screenDc == IntPtr.Zero) return Fallback(spec);
+            try
             {
-                int y = bounds.Top + (bounds.Height * (row + 1)) / (rows + 1);
-                for (int col = 0; col < cols; col++)
+                using var g = System.Drawing.Graphics.FromImage(small);
+                IntPtr destDc = g.GetHdc();
+                try
                 {
-                    int x = bounds.Left + (bounds.Width * (col + 1)) / (cols + 1);
-                    g.CopyFromScreen(x, y, 0, 0, new System.Drawing.Size(1, 1));
-                    var c = pixel.GetPixel(0, 0);
-                    sumR += c.R;
-                    sumG += c.G;
-                    sumB += c.B;
-                    count++;
+                    SetStretchBltMode(destDc, Halftone);
+                    SetBrushOrgEx(destDc, 0, 0, IntPtr.Zero);
+                    StretchBlt(
+                        destDc, 0, 0, SampleWidth, SampleHeight,
+                        screenDc, bounds.Left, bounds.Top, bounds.Width, bounds.Height,
+                        SrcCopy);
+                }
+                finally
+                {
+                    g.ReleaseHdc(destDc);
                 }
             }
+            finally
+            {
+                ReleaseDC(IntPtr.Zero, screenDc);
+            }
 
-            if (count == 0) return Fallback(spec);
+            var data = small.LockBits(
+                new System.Drawing.Rectangle(0, 0, SampleWidth, SampleHeight),
+                ImageLockMode.ReadOnly,
+                PixelFormat.Format32bppArgb);
 
-            byte avgR = (byte)(sumR / count);
-            byte avgG = (byte)(sumG / count);
-            byte avgB = (byte)(sumB / count);
+            double sumR = 0, sumG = 0, sumB = 0, totalWeight = 0;
+            try
+            {
+                int byteCount = Math.Abs(data.Stride) * SampleHeight;
+                byte[] pixels = new byte[byteCount];
+                Marshal.Copy(data.Scan0, pixels, 0, byteCount);
 
-            // Smooth transitions slightly toward the new screen sample to avoid jarring flicker.
-            byte r = (byte)Math.Clamp((lastRgb.R + avgR * 2) / 3, 0, 255);
-            byte gCh = (byte)Math.Clamp((lastRgb.G + avgG * 2) / 3, 0, 255);
-            byte b = (byte)Math.Clamp((lastRgb.B + avgB * 2) / 3, 0, 255);
-            lastRgb = (r, gCh, b);
-            return new LightingFrame(r, gCh, b, spec.MaxBrightness);
+                for (int y = 0; y < SampleHeight; y++)
+                {
+                    int row = y * data.Stride;
+                    for (int x = 0; x < SampleWidth; x++)
+                    {
+                        int i = row + x * 4;
+                        byte b = pixels[i];
+                        byte gCh = pixels[i + 1];
+                        byte r = pixels[i + 2];
+
+                        byte max = Math.Max(r, Math.Max(gCh, b));
+                        byte min = Math.Min(r, Math.Min(gCh, b));
+                        double sat = max > 0 ? (max - min) / (double)max : 0.0;
+
+                        // Weight vibrant colours higher and down-weight black letterbox/dark chrome pixels.
+                        double lumaWeight = max < 14 ? 0.05 : 0.35 + 0.65 * (max / 255.0);
+                        double weight = lumaWeight * (0.25 + sat * sat * 4.5);
+
+                        sumR += r * weight;
+                        sumG += gCh * weight;
+                        sumB += b * weight;
+                        totalWeight += weight;
+                    }
+                }
+            }
+            finally
+            {
+                small.UnlockBits(data);
+            }
+
+            if (totalWeight <= 0.001) return Fallback(spec);
+
+            double targetR = sumR / totalWeight;
+            double targetG = sumG / totalWeight;
+            double targetB = sumB / totalWeight;
+
+            // Fast exponential smoothing (75% new frame, 25% previous) for instant-feeling transitions without harsh jitter.
+            smoothRgb = (
+                smoothRgb.R * 0.25 + targetR * 0.75,
+                smoothRgb.G * 0.25 + targetG * 0.75,
+                smoothRgb.B * 0.25 + targetB * 0.75);
+
+            return new LightingFrame(
+                (byte)Math.Clamp(Math.Round(smoothRgb.R), 0, 255),
+                (byte)Math.Clamp(Math.Round(smoothRgb.G), 0, 255),
+                (byte)Math.Clamp(Math.Round(smoothRgb.B), 0, 255),
+                spec.MaxBrightness);
         }
         catch
         {

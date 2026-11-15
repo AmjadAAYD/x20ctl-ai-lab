@@ -42,7 +42,7 @@ public readonly record struct LightingInputState(
 
 public sealed record LightingEffectSpec
 {
-    public const int MinStepIntervalMs = 330;
+    public const int MinStepIntervalMs = 60;
     public const int MaxStepIntervalMs = 5000;
     public const int MinCyclePeriodMs = 800;
     public const int MaxCyclePeriodMs = 30000;
@@ -51,7 +51,7 @@ public sealed record LightingEffectSpec
     public string[] Palette { get; init; } = ["#00C8FF", "#FF00AA", "#FFB400"];
     public byte MaxBrightness { get; init; } = 0xB0;
     public byte MinBrightness { get; init; } = LightingRecord.MoonlightBrightnessByte;
-    public int StepIntervalMs { get; init; } = 360;
+    public int StepIntervalMs { get; init; } = 85;
     public int CyclePeriodMs { get; init; } = 4000;
     public int IdleTimeoutSeconds { get; init; } = 60;
     public bool RestoreOnStop { get; init; } = true;
@@ -169,7 +169,7 @@ public static class LightingEffectEngine
             MinBrightness = LightingRecord.MoonlightBrightnessByte,
             MaxBrightness = 0x58,
             CyclePeriodMs = 4800,
-            StepIntervalMs = 360,
+            StepIntervalMs = 95,
         }),
         BuiltIn("builtin-moonlight-dim", "Ultra-Dim Moonlight Cyan (0x01)", new LightingEffectSpec
         {
@@ -182,7 +182,7 @@ public static class LightingEffectEngine
             Kind = LightingEffectKind.SmoothHueWave,
             MaxBrightness = 0xC8,
             CyclePeriodMs = 6000,
-            StepIntervalMs = 340,
+            StepIntervalMs = 80,
         }),
         BuiltIn("builtin-cyber-fade", "Cyberpunk Cyan/Magenta Fade", new LightingEffectSpec
         {
@@ -190,7 +190,7 @@ public static class LightingEffectEngine
             Palette = ["#00FFFF", "#FF00FF", "#3A6CFF"],
             MaxBrightness = 0xD8,
             CyclePeriodMs = 4500,
-            StepIntervalMs = 360,
+            StepIntervalMs = 90,
         }),
         BuiltIn("builtin-police-strobe", "Dual Red/Blue Strobe", new LightingEffectSpec
         {
@@ -198,7 +198,7 @@ public static class LightingEffectEngine
             Palette = ["#FF0020", "#0055FF"],
             MaxBrightness = 0xFF,
             CyclePeriodMs = 900,
-            StepIntervalMs = 360,
+            StepIntervalMs = 180,
         }),
         BuiltIn("builtin-lava-ember", "Lava & Ember Shimmer", new LightingEffectSpec
         {
@@ -207,7 +207,7 @@ public static class LightingEffectEngine
             MinBrightness = 0x35,
             MaxBrightness = 0xE8,
             CyclePeriodMs = 3200,
-            StepIntervalMs = 380,
+            StepIntervalMs = 90,
         }),
         BuiltIn("builtin-trigger-glow", "Trigger Pull Glow (LT/RT)", new LightingEffectSpec
         {
@@ -215,7 +215,7 @@ public static class LightingEffectEngine
             Palette = ["#1B5CFF", "#FF2E00"],
             MinBrightness = 0x24,
             MaxBrightness = 0xFF,
-            StepIntervalMs = 350,
+            StepIntervalMs = 75,
         }),
         BuiltIn("builtin-stick-heat", "Stick Deflection Heat", new LightingEffectSpec
         {
@@ -223,7 +223,7 @@ public static class LightingEffectEngine
             Palette = ["#00E0FF", "#FFAA00", "#FF1E56"],
             MinBrightness = 0x28,
             MaxBrightness = 0xFF,
-            StepIntervalMs = 350,
+            StepIntervalMs = 75,
         }),
         BuiltIn("builtin-button-flash", "Button Press Flash", new LightingEffectSpec
         {
@@ -231,7 +231,7 @@ public static class LightingEffectEngine
             Palette = ["#1D3557", "#00F5D4"],
             MinBrightness = 0x20,
             MaxBrightness = 0xFF,
-            StepIntervalMs = 340,
+            StepIntervalMs = 75,
         }),
         BuiltIn("builtin-idle-nightlight", "Idle Auto-Dim (Moonlight)", new LightingEffectSpec
         {
@@ -240,14 +240,14 @@ public static class LightingEffectEngine
             MinBrightness = LightingRecord.MoonlightBrightnessByte,
             MaxBrightness = 0xA0,
             IdleTimeoutSeconds = 30,
-            StepIntervalMs = 500,
+            StepIntervalMs = 250,
         }),
         BuiltIn("builtin-screen-ambient", "Ambient Screen Sync", new LightingEffectSpec
         {
             Kind = LightingEffectKind.ScreenAmbient,
             Palette = ["#1E88E5"],
-            MaxBrightness = 0xE0,
-            StepIntervalMs = 360,
+            MaxBrightness = 0xE8,
+            StepIntervalMs = 70,
         }),
         BuiltIn("builtin-off", "LEDs Off (0x00)", new LightingEffectSpec
         {
