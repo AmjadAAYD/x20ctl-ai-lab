@@ -398,7 +398,12 @@ internal sealed class LightingEffectsSection
     void UpdateSelectionPills()
     {
         foreach (var (kind, btn) in kindButtons)
-            btn.Style = DS.Style(kind == selectedKind ? "DS.Primary" : "ActionButton");
+        {
+            var isSelected = kind == selectedKind;
+            btn.Style = DS.Style("ActionButton");
+            btn.BorderBrush = DS.Brush(isSelected ? "DS.AccentHi" : "DS.Hairline");
+            btn.BorderThickness = new System.Windows.Thickness(isSelected ? 2 : 1);
+        }
         foreach (var (cap, btn) in capButtons)
             btn.Style = DS.Style(cap == selectedWriteCap ? "DS.Primary" : "ActionButton");
     }
