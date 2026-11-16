@@ -156,6 +156,8 @@ internal static class LightingEffectsService
     public static async Task<LightingEffectsStatus> ApplyAsync(LightingEffectSpec rawSpec, bool remember = true)
     {
         var spec = rawSpec.Normalized();
+        LightingFrame frameToWrite;
+        bool writeNative = false;
         await ControlLock.WaitAsync();
         try
         {
@@ -174,6 +176,7 @@ internal static class LightingEffectsService
             }
 
             previewFrame = EvaluatePreview();
+            frameToWrite = previewFrame;
 
             if (spec.IsNativeMode)
             {
@@ -184,10 +187,8 @@ internal static class LightingEffectsService
                 }
                 else
                 {
-                    var mode = spec.ToNativeModeByte() ?? LightingRecord.ModeSolid;
-                    await LightingBleClient.RunAsync([previewFrame.R, previewFrame.G, previewFrame.B], mode, previewFrame.Brightness);
-                    totalWrites++;
-                    summary = $"{LightingEffectSpec.EffectLabel(spec.Kind)} applied ({previewFrame.Hex} @ 0x{previewFrame.Brightness:X2})";
+                    writeNative = true;
+                    summary = $"{LightingEffectSpec.EffectLabel(spec.Kind)} applying over BLE…";
                 }
             }
             else
@@ -199,17 +200,34 @@ internal static class LightingEffectsService
                     : $"{LightingEffectSpec.EffectLabel(spec.Kind)} starting on BLE ({spec.StepIntervalMs} ms)…";
             }
         }
-        catch (Exception ex)
-        {
-            wantRunning = false;
-            lastError = ex.Message;
-            summary = "Error: " + ex.Message;
-        }
         finally
         {
             ControlLock.Release();
         }
         Changed?.Invoke();
+
+        // Run BLE outside ControlLock so YieldForExclusiveBleAsync / StopAsync never deadlock on ControlLock.
+        if (writeNative)
+        {
+            try
+            {
+                var mode = spec.ToNativeModeByte() ?? LightingRecord.ModeSolid;
+                await LightingBleClient.RunWithoutYieldAsync([frameToWrite.R, frameToWrite.G, frameToWrite.B], mode, frameToWrite.Brightness);
+                totalWrites++;
+                if (currentSpec == spec)
+                    summary = $"{LightingEffectSpec.EffectLabel(spec.Kind)} applied ({frameToWrite.Hex} @ 0x{frameToWrite.Brightness:X2})";
+            }
+            catch (Exception ex)
+            {
+                if (currentSpec == spec)
+                {
+                    wantRunning = false;
+                    lastError = ex.Message;
+                    summary = "Error: " + ex.Message;
+                }
+            }
+            Changed?.Invoke();
+        }
         return Status;
     }
 
@@ -375,7 +393,7 @@ internal static class LightingEffectsService
                         var mode = subSpec.ToNativeModeByte() ?? LightingRecord.ModeSolid;
                         try
                         {
-                            await LightingBleClient.RunAsync([frame.R, frame.G, frame.B], mode, frame.Brightness);
+                            await LightingBleClient.RunWithoutYieldAsync([frame.R, frame.G, frame.B], mode, frame.Brightness, ct);
                             totalWrites++;
                             summary = exe == null
                                 ? "Game auto: Desktop fallback applied"

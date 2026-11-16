@@ -19,6 +19,12 @@ internal static class LightingBleClient
         try { return await ConnectedAsync(colour, mode, brightnessByte); }
         finally { }
     }
+    internal static async Task<byte[]> RunWithoutYieldAsync(byte[]? colour = null, byte? mode = null, byte? brightnessByte = null, CancellationToken ct = default)
+    {
+        await using var gate = await NativeBleClient.AcquireConfigGateAsync(ct, yieldActiveStream: false);
+        try { return await ConnectedAsync(colour, mode, brightnessByte); }
+        finally { }
+    }
 
     /// <summary>Reads the full 24-byte lighting record, and optionally probes a trailing RGB offset (7..21, or 0 = fill tail 7..23 with 0000FF) before restoring the original record.</summary>
     public static async Task<string> ProbeLightingAsync(int? testOffset = null)

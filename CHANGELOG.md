@@ -1,5 +1,11 @@
 # Changelog
 
+## [V0.022.8] - 2026-11-16
+
+### Fixed
+
+- **Fixed ControlLock self-deadlock breaking all RGB effects & streaming.** `LightingEffectsService.ApplyAsync` previously held `ControlLock` while calling `LightingBleClient.RunAsync`, whose `YieldForExclusiveBleAsync` hook re-awaited `ControlLock`, permanently deadlocking all native lighting modes (`Rainbow`, `Breathe`, `Cycle`, `Off`, `Solid`) and subsequent `Ambient` / `StopAsync` calls. Released `ControlLock` before running BLE I/O via `LightingBleClient.RunWithoutYieldAsync`.
+
 ## [V0.022.7] - 2026-11-16
 
 ### Improved

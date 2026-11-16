@@ -18,9 +18,9 @@ public static class NativeBleClient
 {
     internal static readonly SemaphoreSlim ConfigurationGate=new(1,1);
     internal static Func<CancellationToken, Task<IAsyncDisposable?>>? YieldActiveStreamAsync;
-    internal static async Task<IAsyncDisposable> AcquireConfigGateAsync(CancellationToken ct = default)
+    internal static async Task<IAsyncDisposable> AcquireConfigGateAsync(CancellationToken ct = default, bool yieldActiveStream = true)
     {
-        var yielded = YieldActiveStreamAsync is { } hook ? await hook(ct) : null;
+        var yielded = yieldActiveStream && YieldActiveStreamAsync is { } hook ? await hook(ct) : null;
         try
         {
             await ConfigurationGate.WaitAsync(ct);
