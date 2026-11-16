@@ -156,6 +156,10 @@ public sealed class OfflineAgent : IAgentModel
             return Plan(slots, (AgentVocabulary.LedEffect, AgentVocabulary.LightingTarget, effectWords)) with { Speech = $"I'll set {effectSummary}." };
         if (Regex.IsMatch(lower, @"\b(rgb|leds?|lights|lighting|backlights?)\b|\b(?:change|set|turn|make|switch|put|paint)\b.*\b(?:light|colou?r)\b"))
             return OfflinePlan.Say("Which colour or lighting effect should I set? Say a colour (like dark teal, warm white, or #FF8800) or an effect (like rainbow, breathe, cycle, moonlight pulse, hue sweep, strobe, or off).") with { Question = "Which colour or lighting effect should I set?" };
+        if (Regex.IsMatch(lower, @"\b(dongle|2\.4\s*g(?:hz)?|receiver|keylinker)\b") || (IsQuestion(lower) && Regex.IsMatch(lower, @"\b(ble|bluetooth|unpaired|paired)\b")))
+            return OfflinePlan.Say(
+                "The 2.4 GHz dongle carries 1000 Hz gameplay only (no USB HID config channel), so settings and RGB travel over the controller's simultaneous KeyLinker BLE service (d7f010e0) at the same time.",
+                "Just keep PC Bluetooth turned ON — no Windows Bluetooth pairing is needed while playing on the 2.4 GHz dongle.");
         if (Regex.IsMatch(lower, @"\b(vibration|vibrate|rumble|haptics?|battery|firmware|gyro|motion|volume|sound|mic|microphone|bluetooth)\b"))
             return OfflinePlan.Say("I can't change that yet. I can set sticks, triggers, buttons, turbo, paddles, lighting, mouse mode, PC mode, and measure drift.");
         if (Regex.IsMatch(lower, @"^\s*(hi|hello|hey|help|what can you do|who are you)\W*$")) return Intents.First(i => i.Id == "greeting").Build(new OfflineSlots());

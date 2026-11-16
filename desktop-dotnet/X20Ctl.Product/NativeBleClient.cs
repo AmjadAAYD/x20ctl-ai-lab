@@ -114,7 +114,7 @@ public static class NativeBleClient
         var seenServices = new HashSet<ulong>();
         var seenNames = new Dictionary<ulong, string>();
 
-        // Narrow filter: match specifically expected models and require the KeyLinker configuration service
+        // Narrow filter: match specifically expected models, KeyLinker service adverts on X20 Pro (including dongle+unpaired BLE), or cached address
         watcher.Received += (w, args) =>
         {
             ulong addr = args.BluetoothAddress;
@@ -136,8 +136,10 @@ public static class NativeBleClient
 
             string name = seenNames.TryGetValue(addr, out var n) ? n : rawName;
             bool nameMatch = BleDiscovery.MatchesTarget(targetModel, name);
+            bool x20ProSidecarMatch = targetModel == "x20_pro" && seenServices.Contains(addr) &&
+                (nameMatch || name.Contains("X20", StringComparison.OrdinalIgnoreCase) || name.Contains("Xpert", StringComparison.OrdinalIgnoreCase) || BleDiscovery.HasFamilyPrefix(addr));
 
-            if (nameMatch || (string.IsNullOrEmpty(name) && cachedAddress == addr))
+            if (nameMatch || x20ProSidecarMatch || (string.IsNullOrEmpty(name) && cachedAddress == addr))
             {
                 try { w.Stop(); } catch { }
                 tcs.TrySetResult(addr);
@@ -185,6 +187,10 @@ public static class NativeBleClient
             return (null, scanError);
         }
 
+        if (targetModel == "x20_pro")
+        {
+            return (null, "Controller not found over BLE. You can stay on the 2.4 GHz dongle or USB — just keep PC Bluetooth turned ON (no Windows pairing needed) and wake the controller so its KeyLinker BLE service answers.");
+        }
         return (null, "Controller not found over Bluetooth. Make sure Bluetooth is enabled and the controller is awake. If it still isn't found, switch the controller to Bluetooth mode and try again: some pads only answer settings there.");
     }
 

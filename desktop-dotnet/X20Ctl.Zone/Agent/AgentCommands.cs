@@ -97,7 +97,7 @@ public static class AgentCommands
         "low" => AgentVariety.Pick("battery-low", ["My battery is low. Plug me in soon, I'm getting sleepy.", "Battery low! *yawns* A charge would be lovely."]),
         "empty" => AgentVariety.Pick("battery-empty", ["My battery is nearly empty! Charge me before I nap mid-game.", "Running on fumes! Plug me in, please."]),
         "wired" => AgentVariety.Pick("battery-wired", ["I'm on a cable, so I'm running on wall power. No battery worries!", "Plugged in by cable, so no battery to worry about."]),
-        null => AgentVariety.Pick("battery-none", [$"Neither Windows nor Bluetooth told me my battery level. Is your {controllerName} connected by Bluetooth, or in Xbox (XInput) mode?", $"I can't feel my battery right now. Bluetooth is the surest way for me to read it: is your {controllerName} connected that way?"]),
+        null => AgentVariety.Pick("battery-none", [$"Neither Windows nor BLE reported my battery level. Is your {controllerName} connected on the 2.4 GHz dongle or Bluetooth? Keep PC Bluetooth ON (no pairing needed) so BLE can answer.", $"I can't feel my battery right now. Is your {controllerName} connected? On the 2.4 GHz dongle, just keep PC Bluetooth ON (no pairing needed) so my simultaneous BLE link can read it."]),
         _ => $"Windows says my battery is: {level}.",
     };
 }

@@ -285,6 +285,11 @@ public sealed class AgentSession(IAgentModel model, string modelId, string contr
 
             {AgentKnowledge.Prompt(compact: true)}
 
+            Dongle + BLE (verified hardware architecture):
+            - The 2.4 GHz dongle (VID 413D, PID 2131) is a transparent 1000 Hz gameplay transport (XInput 045E:028E, DInput, Switch) with zero HID feature/config reports — configuration packets cannot travel through the dongle's USB HID endpoints.
+            - Instead, the X20 Pro keeps its KeyLinker BLE GATT configuration service (d7f010e0-660d-46e9-96c3-19c4148bdab5) alive simultaneously even while playing on the 2.4 GHz dongle or USB cable, WITHOUT requiring Windows Bluetooth HID pairing — PC Bluetooth just needs to be turned ON.
+            - On X20 Pro, changes made in chat (remaps, curves, deadzones, RGB lighting, effects) automatically save directly to the controller's own memory over that simultaneous BLE link with read-back verification, so gameplay stays on the 2.4 GHz dongle while settings apply to the pad.
+
             Numbers are plain whole numbers (6, not "6%"). Use each action and target once.
             Limits: cannot adjust vibration/rumble strength from chat, flash firmware, pair Bluetooth, build multi-step timed macro sequences directly in chat (mention the Macros tab), or apply PC mode to consoles (PS5, Switch, Xbox — PC mode runs on this Windows PC while X20CTL is open).
             If the owner asks for a number outside its range, don't pick another number for them: tell them the range, with no actions.

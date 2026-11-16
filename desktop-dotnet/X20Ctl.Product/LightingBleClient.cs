@@ -372,11 +372,11 @@ internal static class LightingBleClient
     static async Task<BleConnection> ConnectAddressAsync(ulong address, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        var device = await BluetoothLEDevice.FromBluetoothAddressAsync(address) ?? throw new IOException("Cannot connect to the controller.");
+        var device = await BluetoothLEDevice.FromBluetoothAddressAsync(address).AsTask(ct) ?? throw new IOException("Cannot connect to the controller.");
         GattDeviceServicesResult services;
         try
         {
-            services = await device.GetGattServicesForUuidAsync(Guid.Parse("d7f010e0-660d-46e9-96c3-19c4148bdab5"), BluetoothCacheMode.Uncached);
+            services = await device.GetGattServicesForUuidAsync(Guid.Parse("d7f010e0-660d-46e9-96c3-19c4148bdab5"), BluetoothCacheMode.Uncached).AsTask(ct);
         }
         catch
         {
@@ -390,7 +390,7 @@ internal static class LightingBleClient
         }
         NativeBleClient.RememberAddress(address);
         var service = services.Services[0];
-        var chars = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+        var chars = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached).AsTask(ct);
         if (chars.Status != GattCommunicationStatus.Success)
         {
             service.Dispose();
@@ -418,7 +418,7 @@ internal static class LightingBleClient
             pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
             using var writer = new DataWriter();
             writer.WriteBytes(X20Codec.Frame(op, length, serial, (byte)RandomNumberGenerator.GetInt32(256), payload));
-            var result = await write.WriteValueWithResultAsync(writer.DetachBuffer(), GattWriteOption.WriteWithResponse);
+            var result = await write.WriteValueWithResultAsync(writer.DetachBuffer(), GattWriteOption.WriteWithResponse).AsTask(ct);
             if (result.Status != GattCommunicationStatus.Success) throw new IOException("Bluetooth request failed; no automatic retry.");
             try { return await pending.Task.WaitAsync(TimeSpan.FromSeconds(4), ct); }
             finally { pending = null; }
@@ -435,7 +435,7 @@ internal static class LightingBleClient
         };
         try
         {
-            if (await notify.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify)
+            if (await notify.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify).AsTask(ct)
                 != GattCommunicationStatus.Success) throw new IOException("Cannot subscribe to controller replies.");
             var identity = await Send(0x91, [], ++serialCounter, 5);
             if (identity.Length != 8 || identity[0] != 7 || !identity.AsSpan(1, 6).SequenceEqual(new byte[] { 0x10, 0x20, 0x20, 0x06, 0x01, 0x44 }))

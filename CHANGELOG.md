@@ -1,5 +1,11 @@
 # Changelog
 
+## [V0.022.7] - 2026-11-16
+
+### Improved
+
+- **Dongle + simultaneous unpaired BLE support & Agent awareness.** Expanded BLE discovery in `NativeBleClient` to also match KeyLinker `d7f010e0` service advertisements with `X20` / `Xpert` / family MAC prefixes (`98:B6:E9`, `98:B6:ED`), added proper WinRT cancellation propagation in `LightingBleClient`, and updated Agent Check-up, battery replies, offline phrasebook, and the LLM system prompt with the verified 2.4 GHz dongle (`413D:2131`) + simultaneous unpaired BLE architecture.
+
 ## [V0.022.6] - 2026-11-16
 
 ### Fixed
