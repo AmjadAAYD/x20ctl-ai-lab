@@ -54,7 +54,15 @@ public sealed partial class AgentPanel
     sealed class Either : IAgentModel
     {
         public string Name => Offline || state != ModelState.Ready ? offlineAgent.Name : model.Name;
-        public Task<ModelReply> Chat(IReadOnlyList<ChatMessage> messages, string schema, CancellationToken cancel) => (Offline || state != ModelState.Ready ? offlineAgent : (IAgentModel)model).Chat(messages, schema, cancel);
+        public async Task<ModelReply> Chat(IReadOnlyList<ChatMessage> messages, string schema, CancellationToken cancel)
+        {
+            if (Offline || state != ModelState.Ready) return await offlineAgent.Chat(messages, schema, cancel);
+            try { return await ((IAgentModel)model).Chat(messages, schema, cancel); }
+            catch (Exception error) when (!cancel.IsCancellationRequested && error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+            {
+                return await offlineAgent.Chat(messages, schema, cancel);
+            }
+        }
     }
     static string stateText = "";
     /// <summary>The model's readiness changed (starting, loading, ready, missing…).</summary>
@@ -218,27 +226,30 @@ public sealed partial class AgentPanel
         padChip.Text = name + " · Player " + (Math.Clamp(player, 0, 3) + 1);
         // one line (owner, 8 Nov 2026): the mark and the name, the pad in its colour, the brain's state, and what is set now
         mark.Width = mark.Height = 24; mark.Margin = new(0, 0, 8, 0);
-        var heading = new DockPanel { Margin = new(0, 0, 0, 10), LastChildFill = false };
-        settingsToggle.FontSize = 12.5;
+        var heading = new Grid { Margin = new(0, 0, 0, 10) };
+        heading.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        heading.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        settingsToggle.FontSize = 12;
         var newChatPill = PadKey(new Border
         {
-            CornerRadius = new(13), Height = 26, Padding = new(10, 0, 12, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card),
-            Child = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Icon("\uE710", 11, "DS.TextSoft").Also(i => i.Margin = new(0, 0, 6, 0)), Kit.Text("New chat", 12, "DS.TextSoft", FontWeights.SemiBold) } },
-        }, "Start a new chat", Restart).Also(b => { b.VerticalAlignment = VerticalAlignment.Center; b.Margin = new(0, 0, 8, 0); });
+            CornerRadius = new(13), Height = 26, Padding = new(10, 0, 11, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card),
+            Child = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Icon("\uE710", 11, "DS.TextSoft").Also(i => i.Margin = new(0, 0, 5, 0)), Kit.Text("New chat", 12, "DS.TextSoft", FontWeights.SemiBold) } },
+        }, "Start a new chat", Restart).Also(b => { b.VerticalAlignment = VerticalAlignment.Center; b.Margin = new(0, 0, 6, 0); });
         register(newChatPill);
-        var settingsPill = new Border { CornerRadius = new(13), Height = 26, Padding = new(10, 0, 12, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card), VerticalAlignment = VerticalAlignment.Center, Child = settingsToggle.Also(t => t.VerticalAlignment = VerticalAlignment.Center) };
-        DockPanel.SetDock(settingsPill, Dock.Right); heading.Children.Add(settingsPill);
-        DockPanel.SetDock(newChatPill, Dock.Right); heading.Children.Add(newChatPill);
-        statusDot.Margin = new(0, 0, 7, 0); padChip.FontSize = 12.5; status.FontSize = 12.5; status.MaxWidth = 150; status.TextTrimming = TextTrimming.CharacterEllipsis;
-        heading.Children.Add(new StackPanel
+        var settingsPill = new Border { CornerRadius = new(13), Height = 26, Padding = new(10, 0, 11, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card), VerticalAlignment = VerticalAlignment.Center, Child = settingsToggle.Also(t => t.VerticalAlignment = VerticalAlignment.Center) };
+        var rightHeader = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new(8, 0, 0, 0), Children = { newChatPill, settingsPill } };
+        Grid.SetColumn(rightHeader, 1); heading.Children.Add(rightHeader);
+        statusDot.Margin = new(0, 0, 6, 0); padChip.FontSize = 12; status.FontSize = 12; status.MaxWidth = 105; status.TextTrimming = TextTrimming.CharacterEllipsis;
+        var leftHeader = new StackPanel
         {
-            Orientation = Orientation.Horizontal,
+            Orientation = Orientation.Horizontal, ClipToBounds = true,
             Children =
             {
-                mark, Kit.Text("Agent XCTL", 19, "DS.Text", FontWeights.Bold).Also(t => { t.VerticalAlignment = VerticalAlignment.Center; t.Margin = new(0, 0, 12, 0); }),
+                mark, Kit.Text("Agent XCTL", 18, "DS.Text", FontWeights.Bold).Also(t => { t.VerticalAlignment = VerticalAlignment.Center; t.Margin = new(0, 0, 10, 0); }),
                 Chip(padSwatch, padChip).Also(c => { c.Height = 26; c.Margin = new(0, 0, 6, 0); }), Chip(statusDot, status).Also(c => c.Height = 26),
             },
-        });
+        };
+        Grid.SetColumn(leftHeader, 0); heading.Children.Add(leftHeader);
 
         // the conversation
         scroller = new ScrollViewer { Content = transcript, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -965,9 +976,14 @@ public sealed partial class AgentPanel
         Mine(said, reading);
         var thinking = Bubble("Working on your request…", mine: false);
         var elapsed = System.Diagnostics.Stopwatch.StartNew();
-        string phase = "Reading your request";
-        session.Progress = text => phase = text;
-        var waitTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        string phase = "Thinking";
+        void ShowPhase(string nextPhase)
+        {
+            phase = nextPhase;
+            if (thinking.Child is TextBlock label) label.Text = $"{phase} · {elapsed.Elapsed.TotalSeconds:0}s";
+        }
+        session.Progress = ShowPhase;
+        var waitTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         waitTimer.Tick += (_, _) => { if (thinking.Child is TextBlock label) label.Text = $"{phase} · {elapsed.Elapsed.TotalSeconds:0}s"; };
         waitTimer.Start();
         var before = Current;
@@ -980,13 +996,6 @@ public sealed partial class AgentPanel
         {
             var turn = demoChosen ? AgentDemo.Run(sentence, modelId, before) : await session.Ask(sentence, before, turnCancel);
             mood = AgentCharacter.Mood(turn);
-            transcript.Children.Remove(thinking);
-            // PC mode on or off, when asked: the switch itself, not a setting
-            string? switched = turn.Outcome.PcMode is { } on ? (link == null ? "PC mode isn't reachable from this window." : await PcModePage.SwitchFromAgent(link, on) ?? "") : null;
-            string? mouse = turn.Outcome.Mouse is { } mouseOn ? (MouseSwitch == null ? "Mouse mode isn't reachable from this window." : MouseSwitch(mouseOn) ?? "") : null;
-            string? lit = turn.Outcome.Lighting is { } colour ? await SetLights(colour)
-                : turn.Outcome.LightingEffect is { } effect ? await SetLightEffect(effect)
-                : null;
             if (turn.Outcome.Lighting is { } wear)
             {
                 lightingUpdated = true;
@@ -1001,26 +1010,48 @@ public sealed partial class AgentPanel
                 lightingUpdated = true;
                 StartVisualEffect(fxWear);
             }
+            if (turn.Outcome.Lighting != null || turn.Outcome.LightingEffect != null) ShowPhase("Sending lighting to controller");
+            else if (turn.Outcome.Changes.Count > 0) ShowPhase("Saving changes");
+            // PC mode on or off, when asked: the switch itself, not a setting
+            string? switched = turn.Outcome.PcMode is { } on ? (link == null ? "PC mode isn't reachable from this window." : await PcModePage.SwitchFromAgent(link, on) ?? "") : null;
+            string? mouse = turn.Outcome.Mouse is { } mouseOn ? (MouseSwitch == null ? "Mouse mode isn't reachable from this window." : MouseSwitch(mouseOn) ?? "") : null;
+            string? lit = null;
+            if (turn.Outcome.Lighting is { } colour || turn.Outcome.LightingEffect != null)
+            {
+                try
+                {
+                    var bleTask = turn.Outcome.Lighting is { } col ? SetLights(col) : SetLightEffect(turn.Outcome.LightingEffect!);
+                    lit = await bleTask.WaitAsync(TimeSpan.FromSeconds(12), turnCancel);
+                }
+                catch (TimeoutException) { lit = "controller did not respond over Bluetooth within 12s (preview shown here)."; }
+            }
             string? padSavedNote = null;
             AgentStep? step = null;
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
                 try { Store(next); if (!demoChosen) Applied(); }
-                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { transcript.Children.Remove(thinking); Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
                 step = history.Add(said, turn.Outcome.Changes, before, next);
                 if (!demoChosen && !ReviewSandbox.Active && modelId == AgentPad.Model && AgentPad.Offers(modelId, turn.Verdict.Applicable))
-                    padSavedNote = await AutoSaveToController(step.Id, turn.Verdict.Applicable.ToList(), next);
+                {
+                    ShowPhase("Saving to controller memory");
+                    try { padSavedNote = await AutoSaveToController(step.Id, turn.Verdict.Applicable.ToList(), next).WaitAsync(TimeSpan.FromSeconds(15), turnCancel); }
+                    catch (TimeoutException) { padSavedNote = "Controller did not respond over Bluetooth within 15s."; }
+                }
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
                 if (!demoChosen && Walkthrough != null)
                 {
                     waitTimer.Stop(); Circling(false); Searching(false);
+                    transcript.Children.Remove(thinking);
                     await Walkthrough(before, next, turn.Measured);
                 }
+                transcript.Children.Remove(thinking);
                 Say(turn, before, switched: switched, mouse: mouse, step: step, lit: lit, padSavedNote: padSavedNote);
                 ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
             else
             {
+                transcript.Children.Remove(thinking);
                 var extra = new List<AgentChange>();
                 if (turn.Outcome.Lighting is { } lc && lit == "")
                     extra.Add(new("Lights", lightsBefore is { Length: >= 3 } wb ? $"#{wb[0]:X2}{wb[1]:X2}{wb[2]:X2}" : "previous", lc.Hex));
@@ -1789,7 +1820,8 @@ public sealed partial class AgentPanel
             : $"Profile · Player {PcModePage.Player + 1}, {(PcModePage.ProfileKey == PcModeStore.DefaultKey ? "every game" : PcModePage.ProfileKey[PcModeStore.GamePrefix.Length..])}";
         settings.Children.Clear();
         var rows = AgentApplier.Diff(new PcModeProfile(), Current);
-        settingsToggle.Text = (rows.Count == 0 ? "Settings now · all default" : $"Settings now · {rows.Count} changed");
+        settingsToggle.Text = rows.Count == 0 ? "Settings" : $"Settings · {rows.Count}";
+        settingsToggle.ToolTip = rows.Count == 0 ? "Open agent settings (all default)" : $"Open agent settings ({rows.Count} changed from default)";
         if (rows.Count == 0) settings.Children.Add(Wrap("Everything is at its default.", 14, "DS.TextSoft"));
         foreach (var r in rows)
         {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [V0.022.6] - 2026-11-16
+
+### Fixed
+
+- **Keep thinking indicator visible & never hang on Bluetooth.** Keep the Agent thinking bubble visible with live phases (`Sending lighting to controller`, `Saving to controller memory`) until the final reply renders, start eye/LED visuals immediately, wrap Bluetooth writes in 12s/15s timeouts, and fall back to the offline phrasebook if the local LLM request errors.
+- **Clean non-overlapping Agent header.** Switched the Agent header to a 2-column grid with a compact `Settings · N` pill so `+ New chat` never collides with the status chip.
+
 ## [V0.022.5] - 2026-11-16
 
 ### Fixed
