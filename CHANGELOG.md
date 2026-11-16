@@ -1,5 +1,11 @@
 # Changelog
 
+## [V0.022.4] - 2026-11-16
+
+### Fixed
+
+- **Agent setup loading & undo polish.** Loading a saved setup (`load <name>`) now auto-saves to controller memory and refreshes History; undoing `NativeOff` or `NativeRainbow` lighting restores the corresponding eye LED state; updated the Agent settings target summary to reflect direct controller memory saving.
+
 ## [V0.022.3] - 2026-11-16
 
 ### Added

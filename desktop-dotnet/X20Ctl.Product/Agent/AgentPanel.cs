@@ -1538,7 +1538,11 @@ public sealed partial class AgentPanel
             StopVisualEffect();
             var prevBytes = lightStepSnapshots[lightSteps[^1].Id];
             await RestoreLights(prevBytes);
-            if (prevBytes.Length >= 3)
+            if (prevBytes.Length >= 7 && prevBytes[6] == 0)
+                StartVisualEffect(new X20Ctl.Zone.Lighting.LightingEffectSpec { Kind = X20Ctl.Zone.Lighting.LightingEffectKind.NativeOff, Palette = ["#000000"], MaxBrightness = 0 }.Normalized());
+            else if (prevBytes.Length >= 7 && prevBytes[6] == 1)
+                StartVisualEffect(new X20Ctl.Zone.Lighting.LightingEffectSpec { Kind = X20Ctl.Zone.Lighting.LightingEffectKind.NativeRainbow, Palette = ["#FF0000"], MaxBrightness = 0xB0 }.Normalized());
+            else if (prevBytes.Length >= 3)
             {
                 var c = Color.FromRgb(prevBytes[0], prevBytes[1], prevBytes[2]);
                 Wear(c);
@@ -1619,7 +1623,7 @@ public sealed partial class AgentPanel
     }
 
     /// <summary>A saved setup put in place, as one change: listed, undoable and in the history like any other.</summary>
-    public void Load(AgentSetup setup, string asked)
+    public async void Load(AgentSetup setup, string asked)
     {
         if (busy) return;
         var before = Current;
@@ -1629,12 +1633,22 @@ public sealed partial class AgentPanel
         try { Store(next); Applied(); }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say("Couldn't load it: " + error.Message, null); _ = Lights(AgentMood.Failed); return; }
         var step = history.Add(asked, changes, before, next);
+        string? padSavedNote = null;
+        if (!demoChosen && !ReviewSandbox.Active && modelId == AgentPad.Model)
+        {
+            var allActions = AgentVocabulary.Sticks.Concat(AgentVocabulary.Triggers).Select(t => new AgentAction(AgentVocabulary.StickCurvePoints, t, System.Text.Json.JsonSerializer.SerializeToElement("loaded"), "Loaded setup."))
+                .Concat(AgentVocabulary.Sticks.Select(t => new AgentAction(AgentVocabulary.StickDeadzone, t, System.Text.Json.JsonSerializer.SerializeToElement(0), "Loaded setup.")))
+                .Concat(AgentVocabulary.Triggers.Select(t => new AgentAction(AgentVocabulary.TriggerDeadzone, t, System.Text.Json.JsonSerializer.SerializeToElement(0), "Loaded setup.")))
+                .ToList();
+            padSavedNote = await AutoSaveToController(step.Id, allActions, next);
+        }
         var stack = new StackPanel { Children = { Wrap($"Loaded “{setup.Name}”" + (setup.Model != modelId ? $", saved on the {ModelName(setup.Model)}." : "."), 17, "DS.Text").Also(t => t.FontWeight = FontWeights.SemiBold) } };
         foreach (var c in changes) stack.Children.Add(Wrap($"{c.What}   {c.Before} → {c.After}", 14, "DS.AccentHi", 6));
-        var verdictText = Wrap($"Applied · {changes.Count} change{(changes.Count == 1 ? "" : "s")}{(link == null ? " · preview only" : "")}", 14, "DS.Success").Also(t => { t.FontWeight = FontWeights.SemiBold; t.VerticalAlignment = VerticalAlignment.Center; });
+        if (!string.IsNullOrEmpty(padSavedNote)) stack.Children.Add(Wrap(padSavedNote, 13.5, padSavedNote.StartsWith("Couldn't", StringComparison.Ordinal) ? "DS.Warn" : "DS.AccentHi", 6));
+        var verdictText = Wrap($"Applied · {changes.Count} change{(changes.Count == 1 ? "" : "s")}{(link == null ? " · preview only" : !string.IsNullOrEmpty(padSavedNote) && !padSavedNote.StartsWith("Couldn't", StringComparison.Ordinal) ? " · saved on controller" : "")}", 14, "DS.Success").Also(t => { t.FontWeight = FontWeights.SemiBold; t.VerticalAlignment = VerticalAlignment.Center; });
         stack.Children.Add(Footer(verdictText, step));
         var bubble = Bubble("", false); bubble.Child = stack; bubble.HorizontalAlignment = HorizontalAlignment.Stretch;
-        ShowSettings(changes.Select(c => c.What).ToHashSet()); scroller.ScrollToEnd(); _ = Lights(AgentMood.Good);
+        ShowSettings(changes.Select(c => c.What).ToHashSet()); RefreshPages(); scroller.ScrollToEnd(); _ = Lights(AgentMood.Good);
     }
 
     // ---- the live stick ----
@@ -1753,8 +1767,10 @@ public sealed partial class AgentPanel
     // ---- the settings panel ----
     void ShowSettings(IReadOnlySet<string> changed)
     {
-        target.Text = demoChosen ? AgentDemo.Label : link == null ? "Preview · PC mode isn't available in this window"
-            : $"PC mode · Player {PcModePage.Player + 1}, {(PcModePage.ProfileKey == PcModeStore.DefaultKey ? "every game" : PcModePage.ProfileKey[PcModeStore.GamePrefix.Length..])}{(link.Service.Enabled ? "" : " · PC mode is off, so games don't see these yet")}";
+        target.Text = modelId == AgentPad.Model
+            ? $"Controller memory · Player {PcModePage.Player + 1} ({padName}) — changes auto-save directly to the controller with read-back."
+            : link == null ? "Preview · controller settings aren't reachable from this window"
+            : $"Profile · Player {PcModePage.Player + 1}, {(PcModePage.ProfileKey == PcModeStore.DefaultKey ? "every game" : PcModePage.ProfileKey[PcModeStore.GamePrefix.Length..])}";
         settings.Children.Clear();
         var rows = AgentApplier.Diff(new PcModeProfile(), Current);
         settingsToggle.Text = (rows.Count == 0 ? "Settings now · all default" : $"Settings now · {rows.Count} changed");
