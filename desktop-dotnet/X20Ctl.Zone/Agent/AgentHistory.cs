@@ -74,7 +74,7 @@ public sealed class AgentHistory
         if (Regex.IsMatch(s, @"\b(default|defaults|factory|stock|original|box|scratch|baseline)\b")) return UndoAsk.None;
         if (Regex.IsMatch(s, @"\bwhat (did|have) you (just )?chang\w*|\b(show|list|see|view) (me )?(my |the |all |your )?(changes|edits)\b|^ (my |your )?changes (so far )?$")) return UndoAsk.Show;
         if (Regex.IsMatch(s, @"^ (please )?(just )?(undo|revert) (all|everything)\b|^ (please )?(undo|revert) all (of )?(my |the |your )?(changes|edits|tweaks)\b|^ (put|set) (it all|everything) back\b|^ go back to (how|where) (it was|we started|i started)\b")) return UndoAsk.All;
-        if (Regex.IsMatch(s, @"^ (please )?(just )?(undo|revert|take back)( (this|that|it|the last( change| one)?|my last change|last change|your last change))?( please)? $|^ (please )?(take|put) (that|it) back( please)? $")) return UndoAsk.Last;
+        if (Regex.IsMatch(s, @"^ (please )?(just )?(undo|revert|take back)( (this|that|it|back|the last( change| one)?|my last change|last change|your last change|last))?( please)? $|^ (please )?(take|put) (that|it) back( please)? $")) return UndoAsk.Last;
         return UndoAsk.None;
     }
 }

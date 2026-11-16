@@ -138,7 +138,7 @@ public static class AgentLightingEffects
     {
         if (string.IsNullOrWhiteSpace(sentence)) return null;
         string s = sentence.Trim().ToLowerInvariant().Replace('’', '\'');
-        if (OfflineAgent.IsQuestion(s)) return null;
+        if (Regex.IsMatch(s, @"\b(how|why|which|what)\b") && !Regex.IsMatch(s, @"\b(what\s+about|how\s+about|look\s+like)\b")) return null;
         if (Regex.IsMatch(s, @"\b(?:pc\s*mode|mouse\s*mode|dead\s*zone|anti[\s-]?dead|curve|turbo|remap|swap|paddle|recoil|drift|reset|slower|faster|speed|open\s+(?:diagnostics|tools|mouse|curves|buttons|macros|vibration|device)|left\s+(?:stick|trigger|bumper)|right\s+(?:stick|trigger|bumper))\b")
             || Regex.IsMatch(s, @"\band\s+(?:make|set|turn|switch|enable|disable|put|swap|remap|reset|open)\b"))
             return null;

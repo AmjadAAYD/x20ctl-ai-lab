@@ -54,6 +54,12 @@ public static class AgentDirect
             bool on = pc.Groups["on"].Value is "on" or "enable";
             return new($"I'll switch PC mode {(on ? "on" : "off")}.", [Act(AgentVocabulary.PcMode, AgentVocabulary.PcModeTarget, on ? "on" : "off", "As asked.")], "", [], [], "");
         }
+        var mouse = Regex.Match(s, @"^(?:turn|switch|put) (?<on>on|off) mouse mode$|^(?:turn|switch|put) mouse mode (?<on>on|off)$|^mouse mode (?<on>on|off)$|^(?<on>enable|disable) mouse mode$");
+        if (mouse.Success)
+        {
+            bool on = mouse.Groups["on"].Value is "on" or "enable";
+            return new($"I'll switch mouse mode {(on ? "on" : "off")}.", [Act(AgentVocabulary.MouseMode, AgentVocabulary.MouseTarget, on ? "on" : "off", "As asked.")], "", [], [], "");
+        }
         return null;
     }
 

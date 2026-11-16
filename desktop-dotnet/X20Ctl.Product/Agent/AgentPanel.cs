@@ -53,8 +53,8 @@ public sealed partial class AgentPanel
     }
     sealed class Either : IAgentModel
     {
-        public string Name => Offline ? offlineAgent.Name : model.Name;
-        public Task<ModelReply> Chat(IReadOnlyList<ChatMessage> messages, string schema, CancellationToken cancel) => (Offline ? offlineAgent : (IAgentModel)model).Chat(messages, schema, cancel);
+        public string Name => Offline || state != ModelState.Ready ? offlineAgent.Name : model.Name;
+        public Task<ModelReply> Chat(IReadOnlyList<ChatMessage> messages, string schema, CancellationToken cancel) => (Offline || state != ModelState.Ready ? offlineAgent : (IAgentModel)model).Chat(messages, schema, cancel);
     }
     static string stateText = "";
     /// <summary>The model's readiness changed (starting, loading, ready, missing…).</summary>
@@ -120,6 +120,13 @@ public sealed partial class AgentPanel
     // every change made here, to go back through (owner's idea, 19 Oct 2026), and each answer's own Undo
     readonly AgentHistory history = new();
     readonly Dictionary<int, (Button Undo, TextBlock Verdict)> undoButtons = [];
+    readonly List<(DateTime At, string Asked, string Outcome)> chatHistory = [];
+    readonly Dictionary<int, (ControllerSnapshot Before, ControllerSnapshot Written)> padStepSnapshots = [];
+    readonly Dictionary<int, byte[]> lightStepSnapshots = [];
+    X20Ctl.Zone.Lighting.LightingEffectSpec? activeVisualEffect;
+    DateTime visualEffectStarted;
+    readonly System.Windows.Threading.DispatcherTimer rgbVisualTimer = new() { Interval = TimeSpan.FromMilliseconds(60) };
+    readonly List<(Border LeftBar, Border RightBar, System.Windows.Shapes.Rectangle LeftEye, System.Windows.Shapes.Rectangle RightEye)> liveRgbCards = [];
     // saved setups: beside the PC mode file the window uses, one store per file for every agent window; a preview, or a
     // review run, keeps its own in a temp folder, so neither ever reaches the owner's own
     static readonly Dictionary<string, AgentSetupStore> setupStores = new(StringComparer.OrdinalIgnoreCase);
@@ -149,7 +156,7 @@ public sealed partial class AgentPanel
     readonly ScaleTransform pop = new(1, 1);
     PcModeProfile preview = new(); // the settings when PC mode isn't reachable from this window
     bool busy;
-    bool demoChosen;
+    readonly bool demoChosen = false;
     PcModeProfile demoPreview = new();
     readonly int player;
     readonly Border offlineCap, offlineKnob; readonly TextBlock offlineLabel;
@@ -178,6 +185,7 @@ public sealed partial class AgentPanel
         setups = OpenSetups(link == null || ReviewSandbox.Active ? Path.Combine(Path.GetTempPath(), "x20ctl-review-" + Environment.ProcessId, "agent-setups.json")
             : Path.Combine(Path.GetDirectoryName(link.Store.FilePath)!, Path.GetFileName(AgentSetupStore.DefaultPath)));
         liveTimer.Tick += (_, _) => LiveTick();
+        rgbVisualTimer.Tick += (_, _) => TickRgbVisual();
 
         // ---- the screen (owner's design, 19 Oct 2026): a rail of views on the left; a header with the controller and the
         // agent's state; topic pills; the conversation or the ideas; and the chat bar along the bottom ----
@@ -198,11 +206,8 @@ public sealed partial class AgentPanel
         var settingsHead = new DockPanel { Margin = new(0, 0, 0, 12) };
         DockPanel.SetDock(backToChat, Dock.Right); settingsHead.Children.Add(backToChat);
         settingsHead.Children.Add(Kit.Text("Agent settings", 22, "DS.Text", FontWeights.SemiBold));
-        var lab = AgentLab.Create(session, model, modelId, name,
-            on => { demoChosen = on; ShowState(); ShowSettings(new HashSet<string>()); },
-            () => busy, OpenFeedbackFromSettings);
         var settingsPage = new DockPanel(); DockPanel.SetDock(settingsHead, Dock.Top); settingsPage.Children.Add(settingsHead);
-        settingsPage.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 12)), offlineSwitch, settings, lab.Also(l => l.Margin = new(0, 14, 0, 0)), privacy } } });
+        settingsPage.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = new StackPanel { Children = { target.Also(t => t.Margin = new(0, 0, 0, 12)), offlineSwitch, settings, privacy } } });
         settingsBox = new Border { Visibility = Visibility.Collapsed, Padding = new(16), CornerRadius = new(12), Background = new SolidColorBrush(ScreenTop), Child = settingsPage };
         settingsToggle.Cursor = Cursors.Hand; settingsToggle.ToolTip = "Open agent settings";
         settingsToggle.MouseLeftButtonUp += (_, _) => ShowSettingsPage(true);
@@ -214,8 +219,15 @@ public sealed partial class AgentPanel
         mark.Width = mark.Height = 24; mark.Margin = new(0, 0, 8, 0);
         var heading = new DockPanel { Margin = new(0, 0, 0, 10), LastChildFill = false };
         settingsToggle.FontSize = 12.5;
+        var newChatPill = PadKey(new Border
+        {
+            CornerRadius = new(13), Height = 26, Padding = new(10, 0, 12, 0), Margin = new(0, 0, 8, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card), VerticalAlignment = VerticalAlignment.Center,
+            Child = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Icon("\uE710", 11, "DS.TextSoft").Also(i => i.Margin = new(0, 0, 6, 0)), Kit.Text("New chat", 12, "DS.TextSoft", FontWeights.SemiBold) } },
+        }, "Start a new chat", Restart);
+        register(newChatPill);
         var settingsPill = new Border { CornerRadius = new(13), Height = 26, Padding = new(10, 0, 12, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card), VerticalAlignment = VerticalAlignment.Center, Child = settingsToggle.Also(t => t.VerticalAlignment = VerticalAlignment.Center) };
         DockPanel.SetDock(settingsPill, Dock.Right); heading.Children.Add(settingsPill);
+        DockPanel.SetDock(newChatPill, Dock.Right); heading.Children.Add(newChatPill);
         statusDot.Margin = new(0, 0, 7, 0); padChip.FontSize = 12.5; status.FontSize = 12.5; status.MaxWidth = 150; status.TextTrimming = TextTrimming.CharacterEllipsis;
         heading.Children.Add(new StackPanel
         {
@@ -879,7 +891,7 @@ public sealed partial class AgentPanel
         if (busy) return;
         // the changes stay in the list on the settings page: a new conversation doesn't take away the way back
         diagnosing = feedbackPending = false; NextDiagnosticStep();
-        session.Forget(); transcript.Children.Clear(); undoButtons.Clear(); live.Clear(); StopLive(); Input.Text = ""; Search.Text = ""; Say(greeting, null); AddWelcome(); Input.Focus();
+        session.Forget(); transcript.Children.Clear(); undoButtons.Clear(); live.Clear(); liveRgbCards.Clear(); StopLive(); Input.Text = ""; Search.Text = ""; ShowView(View.Chat); Say(greeting, null); AddWelcome(); RefreshPages(); Input.Focus();
     }
 
     PcModeProfile Current => demoChosen ? demoPreview : link == null ? preview : link.Store.Get(PcModePage.StoreKey);
@@ -897,7 +909,7 @@ public sealed partial class AgentPanel
         statusDot.Background = busy ? new SolidColorBrush(Violet) : DS.Brush(Offline ? "DS.AccentHi" : state switch { ModelState.Ready => "DS.Success", ModelState.Starting or ModelState.Loading => "DS.Warn", _ => "DS.Danger" });
         if (!lightsOn) SetLights(busy ? Violet : Rest);
         ShowBrain();
-        send.IsEnabled = !busy && (demoChosen || Offline || state == ModelState.Ready); sendRound.IsEnabled = send.IsEnabled; sendRound.Opacity = send.IsEnabled ? 1 : .45;
+        send.IsEnabled = !busy; sendRound.IsEnabled = send.IsEnabled; sendRound.Opacity = send.IsEnabled ? 1 : .45;
         offlineSwitch.IsEnabled = !busy; offlineSwitch.Opacity = busy ? .5 : 1;
         offlineLabel.Text = offlineChosen ? "On" : "Off"; offlineLabel.Foreground = offlineChosen ? new SolidColorBrush(Amber) : DS.Brush("DS.TextMuted");
         offlineCap.Background = new SolidColorBrush(offlineChosen ? Amber : Card); offlineCap.BorderBrush = new SolidColorBrush(offlineChosen ? Amber : Line);
@@ -943,7 +955,6 @@ public sealed partial class AgentPanel
             Mine(said, reading); Search.Text = topic; ShowView(View.Ideas);
             Look(Gaze.Ideas); Say(AgentIdeas.TopicReply(topic), null); _ = Lights(AgentMood.Good); return null;
         }
-        if (!demoChosen && !Offline && state != ModelState.Ready) { Mine(said, reading); Say(state == ModelState.Missing ? stateText : "Not ready yet: " + stateText, null); _ = Lights(AgentMood.Failed); return null; }
         busy = true; Searching(true); ShowState(); Thinking?.Invoke(true); Circling(true);
         Mine(said, reading);
         var thinking = Bubble("Working on your request…", mine: false);
@@ -955,6 +966,7 @@ public sealed partial class AgentPanel
         waitTimer.Start();
         var before = Current;
         AgentMood? mood = null;
+        bool lightingUpdated = false;
         try
         {
             var turn = demoChosen ? AgentDemo.Run(sentence, modelId, before) : await session.Ask(sentence, before);
@@ -966,28 +978,59 @@ public sealed partial class AgentPanel
             string? lit = turn.Outcome.Lighting is { } colour ? await SetLights(colour)
                 : turn.Outcome.LightingEffect is { } effect ? await SetLightEffect(effect)
                 : null;
-            if (turn.Outcome.Lighting is { } wear) { wornBefore = worn; Wear(Color.FromRgb(wear.R, wear.G, wear.B)); }
+            if (turn.Outcome.Lighting is { } wear)
+            {
+                lightingUpdated = true;
+                StopVisualEffect();
+                wornBefore = worn;
+                var c = Color.FromRgb(wear.R, wear.G, wear.B);
+                Wear(c);
+                SetLights(c);
+            }
             else if (turn.Outcome.LightingEffect is { } fxWear)
             {
-                var sample = X20Ctl.Zone.Lighting.LightingEffectEngine.Evaluate(fxWear, TimeSpan.Zero);
-                wornBefore = worn;
-                Wear(Color.FromRgb(sample.R, sample.G, sample.B));
+                lightingUpdated = true;
+                StartVisualEffect(fxWear);
             }
+            string? padSavedNote = null;
+            AgentStep? step = null;
             if (turn.Outcome.Next is { } next && turn.Outcome.Changes.Count > 0)
             {
                 try { Store(next); if (!demoChosen) Applied(); }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say(turn, null, "Couldn't save: " + error.Message); mood = AgentMood.Failed; return turn; }
-                var step = history.Add(said, turn.Outcome.Changes, before, next);
+                step = history.Add(said, turn.Outcome.Changes, before, next);
+                if (!demoChosen && !ReviewSandbox.Active && modelId == AgentPad.Model && AgentPad.Offers(modelId, turn.Verdict.Applicable))
+                    padSavedNote = await AutoSaveToController(step.Id, turn.Verdict.Applicable.ToList(), next);
                 // the walk-through first, so the answer and its recap are waiting when the window comes back
                 if (!demoChosen && Walkthrough != null)
                 {
                     waitTimer.Stop(); Circling(false); Searching(false);
                     await Walkthrough(before, next, turn.Measured);
                 }
-                Say(turn, before, switched: switched, mouse: mouse, step: step, lit: lit); ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
-                if (!demoChosen && ControllerWrites?.Invoke() == true && AgentPad.Offers(modelId, turn.Verdict.Applicable)) PadOffer(turn.Verdict.Applicable.ToList(), next);
+                Say(turn, before, switched: switched, mouse: mouse, step: step, lit: lit, padSavedNote: padSavedNote);
+                ShowSettings(turn.Outcome.Changes.Select(c => c.What).ToHashSet());
             }
-            else { Say(turn, null, switched: switched, mouse: mouse, lit: lit); if (switched != null) ShowSettings(new HashSet<string>()); }
+            else
+            {
+                var extra = new List<AgentChange>();
+                if (turn.Outcome.Lighting is { } lc && lit == "")
+                    extra.Add(new("Lights", lightsBefore is { Length: >= 3 } wb ? $"#{wb[0]:X2}{wb[1]:X2}{wb[2]:X2}" : "previous", lc.Hex));
+                else if (turn.Outcome.LightingEffect is { } le && lit == "")
+                    extra.Add(new("Lighting effect", lightsBefore is { Length: >= 3 } wb ? $"#{wb[0]:X2}{wb[1]:X2}{wb[2]:X2}" : "previous", le.Kind.ToString()));
+                if (switched == "" && turn.Outcome.PcMode is { } pcOn)
+                    extra.Add(new("PC mode", pcOn ? "off" : "on", pcOn ? "on" : "off"));
+                if (mouse == "" && turn.Outcome.Mouse is { } mOn)
+                    extra.Add(new("Mouse mode", mOn ? "off" : "on", mOn ? "on" : "off"));
+                if (extra.Count > 0)
+                {
+                    step = history.Add(said, extra, before, before);
+                    if (lightsBefore is { Length: 24 } prevLights) lightStepSnapshots[step.Id] = prevLights;
+                }
+                Say(turn, null, switched: switched, mouse: mouse, step: step, lit: lit);
+                if (switched != null) ShowSettings(new HashSet<string>());
+            }
+            chatHistory.Add((DateTime.Now, said, turn.Verdict.Proposal?.Speech is { Length: > 0 } sp ? Short(sp) : "Answered"));
+            RefreshPages();
             Circling(false);
             if (turn.Verdict.Proposal?.Speech is { } spoken && AgentCharacter.IsSilly(spoken)) Laugh();
             if (!turn.Verdict.Valid || turn.Outcome.Error != null) { Look(Gaze.Down); await Task.Delay(1400); }
@@ -1001,7 +1044,7 @@ public sealed partial class AgentPanel
             Say(error is TaskCanceledException ? AgentCharacter.Dozed : "My brain isn't answering: " + error.Message, null);
             mood = AgentMood.Failed; return null;
         }
-        finally { session.Progress = null; waitTimer.Stop(); busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (mood is { } m) _ = Lights(m); }
+        finally { session.Progress = null; waitTimer.Stop(); busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (!lightingUpdated && mood is { } m) _ = Lights(m); }
     }
 
     // ---- the drift reading: a countdown while the sticks are read ----
@@ -1059,7 +1102,7 @@ public sealed partial class AgentPanel
     }
 
     /// <summary>One answer: the model's words, then what the app did, then the details on request.</summary>
-    void Say(AgentTurn turn, PcModeProfile? undo, string? failure = null, string? switched = null, string? mouse = null, AgentStep? step = null, string? lit = null)
+    void Say(AgentTurn turn, PcModeProfile? undo, string? failure = null, string? switched = null, string? mouse = null, AgentStep? step = null, string? lit = null, string? padSavedNote = null)
     {
         var stack = new StackPanel();
         var v = turn.Verdict;
@@ -1115,18 +1158,27 @@ public sealed partial class AgentPanel
             stack.Children.Add(Wrap(switched.Length == 0 ? $"PC mode   {(pc ? "on" : "off")}" : "PC mode · " + switched, 14, switched.Length == 0 ? "DS.AccentHi" : "DS.Warn", 6));
         if (lit != null && turn.Outcome.Lighting is { } colour)
         {
-            var swatch = new Border { Width = 18, Height = 18, CornerRadius = new(9), Margin = new(0, 0, 10, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)), Background = new SolidColorBrush(Color.FromRgb(colour.R, colour.G, colour.B)) };
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 6, 0, 0), Children = { swatch, Wrap(lit.Length == 0 ? $"Lights   {colour.Name} {colour.Hex}, read back from the controller" : "Lights · " + lit, 14, lit.Length == 0 ? "DS.AccentHi" : "DS.Warn") } };
+            var initial = Color.FromRgb(colour.R, colour.G, colour.B);
+            stack.Children.Add(BuildRgbVisualCard(initial, $"{colour.Name} · {colour.Hex}", liveAnimated: false));
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 6, 0, 0), Children = { Wrap(lit.Length == 0 ? $"Lights   {colour.Name} {colour.Hex}, applied to controller" : "Lights · " + lit, 14, lit.Length == 0 ? "DS.AccentHi" : "DS.Warn") } };
             if (lit.Length == 0 && lightsBefore is { } was)
             {
                 var back = Small("Old colour back").Also(b => b.Margin = new(12, 0, 0, 0)); register(back);
                 var wasWorn = wornBefore;
-                back.Click += async (_, _) => { back.IsEnabled = false; Wear(wasWorn); Say(await RestoreLights(was), null); };
+                back.Click += async (_, _) => { back.IsEnabled = false; StopVisualEffect(); Wear(wasWorn); Say(await RestoreLights(was), null); };
                 row.Children.Add(back);
             }
             stack.Children.Add(row);
-            stack.Children.Add(Wrap($"Agent XCTL wears it too: eyes, rings and light bars in {colour.Name}.", 13, "DS.TextSoft", 4));
+            stack.Children.Add(Wrap($"Agent XCTL eye & bar LEDs synced to {colour.Name}.", 13, "DS.TextSoft", 4));
         }
+        else if (lit != null && turn.Outcome.LightingEffect is { } fx)
+        {
+            var sample = X20Ctl.Zone.Lighting.LightingEffectEngine.Evaluate(fx, TimeSpan.Zero);
+            stack.Children.Add(BuildRgbVisualCard(Color.FromRgb(sample.R, sample.G, sample.B), $"{fx.Kind}", liveAnimated: true));
+            stack.Children.Add(Wrap(lit.Length == 0 ? $"Effect   {fx.Kind}, live on controller & eye LEDs" : "Lights · " + lit, 14, lit.Length == 0 ? "DS.AccentHi" : "DS.Warn", 6));
+        }
+        if (!string.IsNullOrEmpty(padSavedNote))
+            stack.Children.Add(Wrap(padSavedNote, 13.5, padSavedNote.StartsWith("Couldn't", StringComparison.Ordinal) ? "DS.Warn" : "DS.AccentHi", 6));
         if (mouse != null && turn.Outcome.Mouse is { } mo)
             stack.Children.Add(Wrap(mouse.Length == 0 ? $"Mouse mode   {(mo ? "on" : "off")}" : "Mouse mode · " + mouse, 14, mouse.Length == 0 ? "DS.AccentHi" : "DS.Warn", 6));
         // what it asks back: the missing detail, or whether the change feels right
@@ -1141,11 +1193,11 @@ public sealed partial class AgentPanel
             : turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && lit != null ? "Lights not changed"
             : turn.Outcome.Next != null && turn.Outcome.Changes.Count == 0 && mouse == "" ? "Applied · Mouse mode " + (turn.Outcome.Mouse == true ? "on" : "off")
             : v.Valid && turn.Outcome.Changes.Count == 0 && turn.Outcome.Page is { } goTo ? "Opening " + goTo
-            : turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(demoChosen || link == null ? " · preview only" : "")}"
+            : turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? $"Applied · {turn.Outcome.Changes.Count} change{(turn.Outcome.Changes.Count == 1 ? "" : "s")}{(demoChosen || link == null ? " · preview only" : !string.IsNullOrEmpty(padSavedNote) && !padSavedNote.StartsWith("Couldn't", StringComparison.Ordinal) ? " · saved on controller" : "")}"
             : !v.Valid ? "Rejected · nothing changed · " + AgentSession.Problems(v)
             : turn.Outcome.Error != null ? "Rejected · " + turn.Outcome.Error : "No changes");
         var verdictText = Wrap(verdict, 14, failure != null || !v.Valid || turn.Outcome.Error != null ? "DS.Danger" : turn.Outcome.Changes.Count > 0 ? "DS.Success" : "DS.TextMuted").Also(t => { t.FontWeight = FontWeights.SemiBold; t.VerticalAlignment = VerticalAlignment.Center; });
-        stack.Children.Add(Footer(verdictText, failure == null && turn.Outcome.Next != null && turn.Outcome.Changes.Count > 0 ? step : null));
+        stack.Children.Add(Footer(verdictText, failure == null && step != null ? step : null));
 
         stack.Children.Add(Kit.Text(demoChosen ? "Canned reply · no model metrics" : AgentSession.Stats(turn), 12, "DS.TextMuted").Also(t => t.Margin = new(0, 8, 0, 0)));
         var bubble = Bubble("", false); bubble.Child = stack; bubble.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -1247,6 +1299,129 @@ public sealed partial class AgentPanel
         catch (Exception error) when (PadFailure(error)) { return "Couldn't put the lights back: " + error.Message; }
     }
 
+    void StartVisualEffect(X20Ctl.Zone.Lighting.LightingEffectSpec spec)
+    {
+        activeVisualEffect = spec;
+        visualEffectStarted = DateTime.UtcNow;
+        if (spec.Kind == X20Ctl.Zone.Lighting.LightingEffectKind.NativeOff)
+        {
+            rgbVisualTimer.Stop();
+            var off = Color.FromRgb(28, 32, 40);
+            wornBefore = worn;
+            worn = off;
+            SaveLook();
+            SetLights(off);
+            return;
+        }
+        var sample = X20Ctl.Zone.Lighting.LightingEffectEngine.Evaluate(spec, TimeSpan.Zero);
+        var c = Color.FromRgb(sample.R, sample.G, sample.B);
+        wornBefore = worn;
+        Wear(c);
+        SetLights(c);
+        rgbVisualTimer.Start();
+    }
+
+    void StopVisualEffect()
+    {
+        activeVisualEffect = null;
+        rgbVisualTimer.Stop();
+    }
+
+    void TickRgbVisual()
+    {
+        if (activeVisualEffect == null) { rgbVisualTimer.Stop(); return; }
+        Color c;
+        if (activeVisualEffect.Kind == X20Ctl.Zone.Lighting.LightingEffectKind.ScreenAmbient && LightingEffectsService.Status.IsRunning)
+        {
+            var f = LightingEffectsService.PreviewFrame;
+            c = Color.FromRgb(f.R, f.G, f.B);
+        }
+        else
+        {
+            var sample = X20Ctl.Zone.Lighting.LightingEffectEngine.Evaluate(activeVisualEffect, DateTime.UtcNow - visualEffectStarted);
+            c = Color.FromRgb(sample.R, sample.G, sample.B);
+        }
+        SetLights(c);
+        foreach (var (leftBar, rightBar, leftEye, rightEye) in liveRgbCards)
+        {
+            var brush = new SolidColorBrush(c);
+            leftBar.Background = brush;
+            rightBar.Background = brush;
+            leftEye.Fill = brush;
+            rightEye.Fill = brush;
+            if (leftBar.Effect is DropShadowEffect lb) lb.Color = c;
+            if (rightBar.Effect is DropShadowEffect rb) rb.Color = c;
+            if (leftEye.Effect is DropShadowEffect le) le.Color = c;
+            if (rightEye.Effect is DropShadowEffect re) re.Color = c;
+        }
+    }
+
+    Border BuildRgbVisualCard(Color initial, string label, bool liveAnimated)
+    {
+        var brush = new SolidColorBrush(initial);
+        Border Bar() => new()
+        {
+            Width = 34, Height = 8, CornerRadius = new(4), Background = brush, VerticalAlignment = VerticalAlignment.Center,
+            Effect = new DropShadowEffect { Color = initial, BlurRadius = 12, ShadowDepth = 0, Opacity = 0.9 },
+        };
+        System.Windows.Shapes.Rectangle Eye() => new()
+        {
+            Width = 7, Height = 12, RadiusX = 3.5, RadiusY = 3.5, Fill = brush, Margin = new(3, 0, 3, 0),
+            Effect = new DropShadowEffect { Color = initial, BlurRadius = 10, ShadowDepth = 0, Opacity = 0.95 },
+        };
+        var leftBar = Bar();
+        var rightBar = Bar();
+        var leftEye = Eye();
+        var rightEye = Eye();
+        if (liveAnimated) liveRgbCards.Add((leftBar, rightBar, leftEye, rightEye));
+        var eyesPill = new Border
+        {
+            CornerRadius = new(8), Padding = new(6, 3, 6, 3), Margin = new(8, 0, 8, 0),
+            Background = new SolidColorBrush(ThemeCatalog.R(Color.FromRgb(9, 10, 13))),
+            BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line),
+            Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { leftEye, rightEye } },
+        };
+        return new Border
+        {
+            CornerRadius = new(10), Padding = new(12, 8, 12, 8), Margin = new(0, 8, 0, 0),
+            Background = new SolidColorBrush(ThemeCatalog.R(Color.FromRgb(14, 17, 22))),
+            BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line),
+            Child = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { leftBar, eyesPill, rightBar, Kit.Text(label, 12.5, "DS.TextSoft", FontWeights.SemiBold).Also(t => { t.Margin = new(12, 0, 0, 0); t.VerticalAlignment = VerticalAlignment.Center; }) },
+            },
+        };
+    }
+
+    async Task<string> AutoSaveToController(int stepId, IReadOnlyList<AgentAction> applied, PcModeProfile next)
+    {
+        if (padBusy) return "Controller busy; saved locally.";
+        padBusy = true;
+        try
+        {
+            ControllerSnapshot? before = null;
+            AgentPadPlan? plan = null;
+            int changed = await LightingBleClient.WriteConfigAsync(held => { before = held; plan = AgentPad.Plan(held, applied, next); return plan.Next; });
+            var seen = await LightingBleClient.ReadConfigAsync();
+            var real = AgentPad.Diff(before!, seen);
+            if (real.Count > 0)
+            {
+                padStepSnapshots[stepId] = (before!, seen);
+                ControllerWritten?.Invoke();
+                Applied();
+            }
+            string text = changed == 0 || real.Count == 0
+                ? "Controller already holds these settings."
+                : "Saved on controller: " + string.Join("; ", real.Select(c => $"{c.What} {c.Before} → {c.After}")) + ".";
+            if (plan!.PcOnly.Count > 0) text += " (PC mode only: " + string.Join("; ", plan.PcOnly) + ")";
+            return text;
+        }
+        catch (Exception error) when (PadFailure(error)) { return "Couldn't save to controller: " + error.Message; }
+        finally { padBusy = false; }
+    }
+
     /// <summary>The Pad target (class project): the same change saved in the controller's own memory, on request. Only
     /// what the X20 Pro's records hold with proven read-back goes there; the app reads the pad, writes the touched fields,
     /// reads every record back, and reports what it read, never what it meant to write.</summary>
@@ -1333,21 +1508,51 @@ public sealed partial class AgentPanel
     }
 
     /// <summary>Back to before a change: that change and every later one are undone, from the history, never guessed.</summary>
-    bool GoBack(int id)
+    async void GoBack(int id)
     {
-        if (busy) return false;
+        if (busy) return;
         var rewind = history.Plan(id, Current);
-        if (rewind == null) return false;
+        if (rewind == null) return;
         try { Store(rewind.Profile); }
-        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say("Couldn't undo: " + error.Message, null); _ = Lights(AgentMood.Failed); return false; }
-        history.Forget(id);
-        RefreshUndo(); ShowSettings(new HashSet<string>());
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { Say("Couldn't undo: " + error.Message, null); _ = Lights(AgentMood.Failed); return; }
         var undone = rewind.Undone;
+        string? padNote = null;
+        var padSteps = undone.Where(s => padStepSnapshots.ContainsKey(s.Id)).ToList();
+        if (padSteps.Count > 0 && !ReviewSandbox.Active && !demoChosen)
+        {
+            var earliestBefore = padStepSnapshots[padSteps[^1].Id].Before;
+            var latestWritten = padStepSnapshots[padSteps[0].Id].Written;
+            try
+            {
+                await LightingBleClient.WriteConfigAsync(held => AgentPad.Restore(held, earliestBefore, latestWritten));
+                var seen = await LightingBleClient.ReadConfigAsync();
+                var left = AgentPad.Diff(earliestBefore, seen with { Remap = ControllerRecords.SameRemap(earliestBefore.Remap, latestWritten.Remap) ? earliestBefore.Remap : seen.Remap });
+                padNote = left.Count == 0 ? "Controller memory restored." : "Controller restored with remaining diffs: " + string.Join("; ", left.Select(c => $"{c.What} {c.After}"));
+                ControllerWritten?.Invoke();
+            }
+            catch (Exception error) when (PadFailure(error)) { padNote = "Couldn't restore controller: " + error.Message; }
+        }
+        var lightSteps = undone.Where(s => lightStepSnapshots.ContainsKey(s.Id)).ToList();
+        if (lightSteps.Count > 0)
+        {
+            StopVisualEffect();
+            var prevBytes = lightStepSnapshots[lightSteps[^1].Id];
+            await RestoreLights(prevBytes);
+            if (prevBytes.Length >= 3)
+            {
+                var c = Color.FromRgb(prevBytes[0], prevBytes[1], prevBytes[2]);
+                Wear(c);
+                SetLights(c);
+            }
+        }
+        foreach (var s in undone) { padStepSnapshots.Remove(s.Id); lightStepSnapshots.Remove(s.Id); }
+        history.Forget(id);
+        RefreshUndo(); ShowSettings(new HashSet<string>()); RefreshPages();
         string text = undone.Count == 1 ? $"Undone: {undone[0].Summary}. Back to how it was."
             : $"Undone {undone.Count} changes, back to before “{Short(undone[^1].Asked)}”.";
+        if (padNote != null) text += " " + padNote;
         if (rewind.ChangedElsewhere) text += " Settings changed on other pages since then are back as they were too.";
-        Say(text, null); _ = Lights(AgentMood.Good);
-        return true;
+        Say(text, null); if (lightSteps.Count == 0) _ = Lights(AgentMood.Good);
     }
 
     static string Short(string text) => text.Length > 48 ? text[..48].TrimEnd() + "…" : text;
@@ -1357,7 +1562,7 @@ public sealed partial class AgentPanel
         if (ask == UndoAsk.Show)
         {
             Say(history.Steps.Count == 0 ? "I haven't changed anything since X20CTL opened." : $"Here's what I changed, newest first: {history.Steps.Count} change{(history.Steps.Count == 1 ? "" : "s")}. Pick one to go back to before it.", null);
-            if (history.Steps.Count > 0) ShowSettingsPage(true);
+            if (history.Steps.Count > 0) ShowView(View.History);
             _ = Lights(AgentMood.Good); return;
         }
         if (history.Steps.Count == 0)

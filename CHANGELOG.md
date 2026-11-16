@@ -1,5 +1,18 @@
 # Changelog
 
+## [V0.022.3] - 2026-11-16
+
+### Added
+
+- **New chat button & full History.** Added a **New chat** button to the Agent header, expanded History to track RGB, controller, PC mode, Mouse mode, and recent prompts with **Run again** and working **Undo / Revert**.
+- **Live RGB & Eye LED visualization.** Agent eyes, light bars, and inline chat RGB preview cards now animate live with active lighting effects and sync immediately to requested colours.
+
+### Changed
+
+- **Auto-save to controller memory.** Agent changes for supported controllers now write directly to controller memory with read-back verification, and **Undo / Revert** automatically restores controller memory and lighting.
+- **Direct recommendation cards & broader understanding.** Clicking any welcome recommendation runs it immediately, `AgentDirect` / `AgentColors` / `AgentLightingEffects` understand polite & preview phrasings, and the Agent falls back to the offline phrasebook while the local model loads.
+- **Hidden Lab / Safety panel.** Removed the internal `Lab / Safety` expander from public Agent settings.
+
 ## [V0.022.2] - 2026-11-16
 
 ### Added
