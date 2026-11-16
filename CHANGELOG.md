@@ -1,5 +1,17 @@
 # Changelog
 
+## [V0.022.2] - 2026-11-16
+
+### Added
+
+- **AI Lab Agent & full-coverage Tab autocomplete.** Restored the Qwen/Ollama Lab Agent, Lab panel, offline phrasebook, and compositional `Tab` inline autocomplete across X20CTL features.
+- **Ambient Screen Sync & Battery RGB mode.** Full-screen GDI `StretchBlt` (`HALFTONE`) dominant-colour screen sync, battery-level colour mode, and PaletteStep effect support.
+
+### Changed
+
+- **Redesigned RGB & Effects Studio.** Replaced the 2D picker with a 240×240 circular HSV Hue Wheel + Value strip, 12 curated swatches, Kelvin white presets (`2700K`, `4000K`, `6500K`), glowing Hero Colour Card with WCAG luminance-adaptive text, Hero Ambient Screen Sync card, 2-column Bento effect grid, and collapsible `Expander` sections for secondary controls.
+- **Faster colour streaming.** Reduced minimum effect step interval to `60 ms` and BLE chunk gap to `0 ms` with `Instant Apply: ON` enabled by default.
+
 ## [V0.022.1] - 2026-11-07
 
 ### Added
