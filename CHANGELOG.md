@@ -1,5 +1,13 @@
 # Changelog
 
+## [V0.022.5] - 2026-11-16
+
+### Fixed
+
+- **No silent crashes on unrecognized inputs.** `AgentPanel.Ask` now catches unexpected exceptions and always cleans up the thinking indicator, showing a clear message asking to rephrase instead of crashing or going silent.
+- **Typo & pronoun lighting support.** Added spelling correction (`AgentSpelling.Fix`) to `AgentLightingEffects.Asked` (fixing `"rainboew"` -> `"rainbow"`) and `"make it <colour>"` pronoun handling to `AgentColors.Asked`.
+- **Responsive New chat button.** Clicking **New chat** now cancels any in-flight request (`askCts`), resets `busy`, and starts a fresh chat immediately.
+
 ## [V0.022.4] - 2026-11-16
 
 ### Fixed

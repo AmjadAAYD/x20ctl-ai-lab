@@ -127,6 +127,7 @@ public sealed partial class AgentPanel
     DateTime visualEffectStarted;
     readonly System.Windows.Threading.DispatcherTimer rgbVisualTimer = new() { Interval = TimeSpan.FromMilliseconds(60) };
     readonly List<(Border LeftBar, Border RightBar, System.Windows.Shapes.Rectangle LeftEye, System.Windows.Shapes.Rectangle RightEye)> liveRgbCards = [];
+    CancellationTokenSource? askCts;
     // saved setups: beside the PC mode file the window uses, one store per file for every agent window; a preview, or a
     // review run, keeps its own in a temp folder, so neither ever reaches the owner's own
     static readonly Dictionary<string, AgentSetupStore> setupStores = new(StringComparer.OrdinalIgnoreCase);
@@ -221,9 +222,9 @@ public sealed partial class AgentPanel
         settingsToggle.FontSize = 12.5;
         var newChatPill = PadKey(new Border
         {
-            CornerRadius = new(13), Height = 26, Padding = new(10, 0, 12, 0), Margin = new(0, 0, 8, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card), VerticalAlignment = VerticalAlignment.Center,
+            CornerRadius = new(13), Height = 26, Padding = new(10, 0, 12, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card),
             Child = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Icon("\uE710", 11, "DS.TextSoft").Also(i => i.Margin = new(0, 0, 6, 0)), Kit.Text("New chat", 12, "DS.TextSoft", FontWeights.SemiBold) } },
-        }, "Start a new chat", Restart);
+        }, "Start a new chat", Restart).Also(b => { b.VerticalAlignment = VerticalAlignment.Center; b.Margin = new(0, 0, 8, 0); });
         register(newChatPill);
         var settingsPill = new Border { CornerRadius = new(13), Height = 26, Padding = new(10, 0, 12, 0), BorderThickness = new(1), BorderBrush = new SolidColorBrush(Line), Background = new SolidColorBrush(Card), VerticalAlignment = VerticalAlignment.Center, Child = settingsToggle.Also(t => t.VerticalAlignment = VerticalAlignment.Center) };
         DockPanel.SetDock(settingsPill, Dock.Right); heading.Children.Add(settingsPill);
@@ -888,10 +889,15 @@ public sealed partial class AgentPanel
 
     void Restart()
     {
-        if (busy) return;
+        askCts?.Cancel();
+        askCts = null;
+        busy = false;
+        Searching(false);
+        Circling(false);
+        Thinking?.Invoke(false);
         // the changes stay in the list on the settings page: a new conversation doesn't take away the way back
         diagnosing = feedbackPending = false; NextDiagnosticStep();
-        session.Forget(); transcript.Children.Clear(); undoButtons.Clear(); live.Clear(); liveRgbCards.Clear(); StopLive(); Input.Text = ""; Search.Text = ""; ShowView(View.Chat); Say(greeting, null); AddWelcome(); RefreshPages(); Input.Focus();
+        session.Forget(); transcript.Children.Clear(); undoButtons.Clear(); live.Clear(); liveRgbCards.Clear(); StopLive(); Input.Text = ""; Search.Text = ""; ShowView(View.Chat); Say(greeting, null); AddWelcome(); RefreshPages(); ShowState(); Input.Focus();
     }
 
     PcModeProfile Current => demoChosen ? demoPreview : link == null ? preview : link.Store.Get(PcModePage.StoreKey);
@@ -967,9 +973,12 @@ public sealed partial class AgentPanel
         var before = Current;
         AgentMood? mood = null;
         bool lightingUpdated = false;
+        askCts?.Cancel();
+        askCts = new CancellationTokenSource();
+        var turnCancel = askCts.Token;
         try
         {
-            var turn = demoChosen ? AgentDemo.Run(sentence, modelId, before) : await session.Ask(sentence, before);
+            var turn = demoChosen ? AgentDemo.Run(sentence, modelId, before) : await session.Ask(sentence, before, turnCancel);
             mood = AgentCharacter.Mood(turn);
             transcript.Children.Remove(thinking);
             // PC mode on or off, when asked: the switch itself, not a setting
@@ -1038,13 +1047,20 @@ public sealed partial class AgentPanel
             if (turn.Verdict.Valid && turn.Outcome.Page is { } page) { await Task.Delay(700); PageRequested?.Invoke(page); }
             return turn;
         }
-        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or OperationCanceledException or System.Text.Json.JsonException)
         {
             transcript.Children.Remove(thinking);
-            Say(error is TaskCanceledException ? AgentCharacter.Dozed : "My brain isn't answering: " + error.Message, null);
+            if (turnCancel.IsCancellationRequested) return null;
+            Say(error is TaskCanceledException or OperationCanceledException ? AgentCharacter.Dozed : "My brain isn't answering: " + error.Message + "\nTry rephrasing (for example: \"make my lights rainbow\", \"swap A and B\", or \"reduce right stick drift\").", null);
             mood = AgentMood.Failed; return null;
         }
-        finally { session.Progress = null; waitTimer.Stop(); busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (!lightingUpdated && mood is { } m) _ = Lights(m); }
+        catch (Exception error)
+        {
+            transcript.Children.Remove(thinking);
+            Say($"I didn't understand that or hit a snag ({error.Message}). Could you rephrase it?", null);
+            mood = AgentMood.Failed; return null;
+        }
+        finally { transcript.Children.Remove(thinking); session.Progress = null; waitTimer.Stop(); busy = false; Circling(false); if (measuring != null) { transcript.Children.Remove(measuring); measuring = null; } Searching(false); Look(Gaze.Idle); Thinking?.Invoke(false); Input.Focus(); if (!lightingUpdated && mood is { } m) _ = Lights(m); }
     }
 
     // ---- the drift reading: a countdown while the sticks are read ----

@@ -106,7 +106,16 @@ public static class AgentColors
         if (Regex.IsMatch(s, @"\b(how|why|which|what)\b") && !Regex.IsMatch(s, @"\b(what\s+about|how\s+about|look\s+like)\b")) return null;
         bool hasLightWord = Regex.IsMatch(s, @"\b(leds?|lights?|lighting|rgbs?|glow|backlight|light ?bar|light ?ring|eyes?)\b");
         bool hasPreviewVerb = Regex.IsMatch(s, @"\b(show|preview|try|test|visuali[sz]e)\b");
-        if (!hasLightWord && !hasPreviewVerb) return Pad(s);
+        if (!hasLightWord && !hasPreviewVerb)
+        {
+            var pronoun = Regex.Match(s, @"^(?:now\s+)?(?:please\s+|can you\s+|could you\s+)?(?:make|turn|set|change|switch)\s+it\s+(?:to\s+)?(?<c>[^.!?]+?)\s*(?:please|pls|now)?[.!?]*$");
+            if (pronoun.Success)
+            {
+                string p = Regex.Replace(pronoun.Groups["c"].Value, @"\b(colou?r|please|pls|now)\b", " ").Trim();
+                if (p.Length > 0 && TryParse(p, out _)) return p;
+            }
+            return Pad(s);
+        }
         var m = Regex.Match(s, @"\b(?:to|into|as|=|:|be|is|in|look\s+like)\s+(?<c>[^.!?]+?)\s*(?:please|pls|thanks|look\s+like)?[.!?]*$");
         if (!m.Success) m = Regex.Match(s, @"\b(?:leds?|lights?|lighting|rgb|glow|backlight|light ?bar|light ?ring|eyes?)(?:'s)?\s+(?:colou?r\s+)?(?<c>[^.!?]+?)\s*[.!?]*$");
         if (!m.Success) m = Regex.Match(s, @"^(?:please\s+|can you\s+|could you\s+|would you\s+)?(?:make|turn|set|change|paint|switch|show|preview|try|test|visuali[sz]e)\s+(?:me\s+|my\s+|the\s+)?(?:leds?|lights?|lighting|rgb\s+)?(?<c>[^.!?]+?)\s*[.!?]*$");
